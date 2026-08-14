@@ -64,7 +64,7 @@ const MOCK_FEEDBACK: AIFeedbackResponse = {
       confidence: 0.85,
     },
     {
-      errorType: "MISSING_WORD",
+      errorType: "UNKNOWN",
       expected: "the",
       actual: null,
       probableCauseVi: "Bạn có thể đã bỏ qua từ 'the' vì nó ngắn và không được nhấn mạnh.",

@@ -32,13 +32,6 @@ export async function GET() {
         title: true,
         cefrLevel: true,
         topic: true,
-        difficulty: true,
-        attempts: {
-          where: { userId },
-          select: { score: true },
-          orderBy: { createdAt: "desc" },
-          take: 1,
-        },
       },
     });
 
@@ -59,11 +52,11 @@ export async function GET() {
       title: l.title,
       cefrLevel: l.cefrLevel as CefrLevel,
       topic: l.topic,
-      difficulty: l.difficulty ?? 1.0,
-      completed: l.attempts.length > 0,
-      score: l.attempts[0]?.score ?? 0,
+      difficulty: 1.0,
+      completed: false,
+      score: 0,
       teacherPriority: 0,
-      isNew: l.attempts.length === 0,
+      isNew: true,
     }));
 
     const context = {
@@ -71,7 +64,7 @@ export async function GET() {
       listeningMastery: profile?.listeningMastery ?? 0.5,
       vocabularyMastery: profile?.vocabularyMastery ?? 0.5,
       spellingMastery: profile?.spellingMastery ?? 0.5,
-      preferredTopics: profile?.preferredTopics ?? [],
+      preferredTopics: (profile?.preferredTopics ? profile.preferredTopics.split(",").filter(Boolean) : []) as string[],
       weakSkills,
       vocabularyDueCount: vocabDueCount,
     };

@@ -17,7 +17,7 @@ export function requireRole(...roles: string[]) {
     if (!session?.user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    if (!roles.includes(session.user.role)) {
+    if (!roles.includes((session.user as any).role ?? "")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
     return NextResponse.next();

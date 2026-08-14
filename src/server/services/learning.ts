@@ -198,7 +198,8 @@ export async function submitAttempt(params: SubmitAttemptParams) {
   // 7. Create flashcards from errors
   const flashcards = [];
   for (const error of assessment.errors) {
-    if (error.type === "CORRECT") continue;
+    // Skip correct answers (no error)
+    if (!error.expected && !error.actual) continue;
     const word = error.expected || error.actual || "";
     if (word.length < 2) continue;
 

@@ -3,6 +3,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import type { CefrLevel } from "@prisma/client";
 
 export const learnerRepo = {
   async getProfile(userId: string) {
@@ -12,7 +13,7 @@ export const learnerRepo = {
   },
 
   async upsertProfile(userId: string, data: Partial<{
-    estimatedCefrLevel: string;
+    estimatedCefrLevel: CefrLevel;
     listeningMastery: number;
     vocabularyMastery: number;
     spellingMastery: number;
