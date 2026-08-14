@@ -1,0 +1,139 @@
+# Báo Cáo Tiến Độ - ListenAI
+
+**Ngày:** 2026-08-15  
+**Người báo cáo:** Antigravity Agent  
+**Dự án:** Hệ thống Học Tiếng Anh Thích Ứng với AI (ListenAI)  
+**Mục tiêu:** Chuẩn bị UI cho demo / báo cáo
+
+---
+
+## Tóm Tắt
+
+Đã migrate thành công xác thực từ NextAuth v4 lên v5. Server dev chạy ổn định và các luồng chính (landing page, dashboard học viên, xác thực) đã hoạt động để demo local. Tuy nhiên, dự án hiện có **30+ lỗi TypeScript** ngăn build production.
+
+**Trạng thái:** 🟡 **Demo được local** | 🔴 **Chưa deploy được**
+
+---
+
+## Công Việc Đã Hoàn Thành
+
+### 1. Sửa Lỗi Xác Thực (Quan Trọng)
+
+| File | Thay đổi | Kết quả |
+|------|----------|---------|
+| `src/app/api/auth/[...nextauth]/route.ts` | Chuyển từ `authOptions` + `NextAuth()` sang `handlers` (v5) | ✅ Xóa lỗi build auth |
+| `src/server/auth/helpers.ts` | `getServerSession` → `auth()` | ✅ Đồng bộ v5 API |
+| `src/app/api/teacher/generate-lesson/route.ts` | Tương tự | ✅ API giáo viên hoạt động |
+| `src/app/api/recommendation/route.ts` | Tương tự | ✅ API gợi ý hoạt động |
+| `src/app/api/flashcard/route.ts` | Tương tự | ✅ API flashcard hoạt động |
+
+**Kết quả:** Luồng xác thực (đăng nhập → session → đăng xuất) hoạt động trên `http://localhost:3000`.
+
+### 2. Server Dev
+
+- Server đang chạy ổn định tại **http://localhost:3000**
+- Hot reload hoạt động
+- Session API phản hồi đúng (`/api/auth/session` → 200)
+
+### 3. Giao Diện Sẵn Sàng Cho Demo
+
+**Trang Chủ** (`src/app/page.tsx`)
+- Hero section với tiêu đề gradient
+- 6 thẻ tính năng (luyện nghe, phân tích AI, ôn tập ngắt quãng, học thích ứng, công cụ giáo viên, cá nhân hóa)
+- Header dính + nút Đăng nhập/Đăng ký
+
+**Trải Nghiệm Học Viên**
+- `src/app/learner/layout.tsx` — Nav responsive (desktop + mobile), hiển thị session, đăng xuất
+- `src/app/learner/dashboard/page.tsx` — Lấy dữ liệu streak, điểm thành thạo, gợi ý, bài gần đây
+
+---
+
+## Trạng Thái Hiện Tại
+
+### Đang Hoạt Động
+
+| Khu vực | Trạng thái | Ghi chú |
+|---------|-----------|---------|
+| Server dev local | ✅ Ổn định | Chạy port 3000 |
+| Xác thực | ✅ OK | Đăng ký, đăng nhập, session, đăng xuất |
+| Trang chủ | ✅ Giao diện | Modern, responsive |
+| Nav học viên | ✅ Giao diện | Header dính, nav mobile dưới |
+| Dashboard data | ✅ Kết nối | Lấy profile, bài làm, flashcard sắp ôn |
+
+### Vấn Đề Chặn
+
+| Vấn đề | Mức độ | Chi tiết |
+|--------|--------|----------|
+| TypeScript compilation | 🔴 Cao | 30+ lỗi ở Prisma enums, recommendation engine, AI provider, learner repos |
+| Build production | 🔴 Cao | `npm run build` thất bại vì type-check |
+| Deploy Vercel | 🟡 Trung | SQLite không hỗ trợ; cần migrate PostgreSQL |
+| Chưa có test | 🟡 Trung | Chưa chạy unit test hay E2E |
+
+---
+
+## Danh Sách Lỗi TypeScript
+
+**Các lỗi chính:**
+- `src/server/auth/config.ts` — Kiểu `User` của Prisma thiếu `role`
+- `src/server/repos/learner.ts` — Enum `CefrLevel` không khớp (`string` vs `CefrLevel`)
+- `src/app/api/recommendation/route.ts` — Lỗi kiểu `difficulty`, `attempts`, `preferredTopics`
+- `src/server/ai/provider.ts` — Nhiều lỗi `ErrorType`, `unknown` output, `z` namespace
+- `src/server/services/learning.ts` — So sánh `ErrorType` với `"CORRECT"` không tương thích
+- `src/app/api/teacher/lesson/route.ts` — `session.user.role` không tồn tại, `string[]` vs `string`
+
+**Ghi chú kiến trúc:**
+- Hiện dùng SQLite (`file:./dev.db`) — tốt cho local, không tương thích Vercel serverless
+- Next.js 16.3.1 (Turbopack) với cảnh báo middleware deprecated
+
+---
+
+## Các File Đã Sửa
+
+```
+src/app/api/auth/[...nextauth]/route.ts
+src/server/auth/helpers.ts
+src/app/api/teacher/generate-lesson/route.ts
+src/app/api/recommendation/route.ts
+src/app/api/flashcard/route.ts
+```
+
+**Tổng dòng thay đổi:** ~25 dòng (giảm do API v5 gọn hơn)
+
+---
+
+## Môi Trường
+
+- **Next.js:** 16.3.1 (Turbopack)
+- **NextAuth:** v5 (beta)
+- **Prisma:** 6.6.0 + SQLite
+- **Server dev:** Đang chạy (task-90)
+
+---
+
+## Đề Xuất Bước Tiếp Theo
+
+1. **Trước mắt (Demo)**
+   - Dùng server dev local để trình diễn
+   - Không thay đổi gì thêm nếu không yêu cầu
+
+2. **Ngắn hạn (Sẵn sàng Production)**
+   - Sửa lỗi TypeScript (ước tính 15–20 file)
+   - Migrate database sang PostgreSQL (Neon / Supabase / Vercel Postgres)
+   - Thêm `.env.production` + cấu hình Vercel
+
+3. **Nền tảng Deploy**
+   - Vercel (khuyến nghị cho Next.js)
+   - Hoặc EC2 + Docker + PostgreSQL (nhiều việc hơn)
+
+---
+
+## Liên Kết Nhanh
+
+- **Demo (local):** http://localhost:3000
+- **Kế hoạch sửa lỗi:** `implementation_plan.md`
+- **Log server dev:** `task-90.log`
+
+---
+
+**Báo cáo tạo bởi Antigravity Agent**  
+*Người dùng yêu cầu không sửa code cho đến khi có lệnh tiếp theo.*

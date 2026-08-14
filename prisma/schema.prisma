@@ -1,0 +1,359 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  LEARNER
+  TEACHER
+  ADMIN
+}
+
+enum LessonStatus {
+  DRAFT
+  REVIEWED
+  PUBLISHED
+}
+
+enum ExerciseType {
+  GIST
+  PARTIAL_DICTATION
+  FULL_DICTATION
+  VOCABULARY
+}
+
+enum ErrorType {
+  SPELLING
+  MISSING_WORD
+  EXTRA_WORD
+  WORD_FORM
+  FUNCTION_WORD
+  PHONOLOGICAL
+  SEGMENTATION
+  GRAMMAR
+  VOCABULARY
+  UNKNOWN
+}
+
+enum CardRating {
+  AGAIN
+  HARD
+  GOOD
+  EASY
+}
+
+enum RecommendationStatus {
+  PENDING
+  ACCEPTED
+  DISMISSED
+}
+
+enum CefrLevel {
+  A1
+  A2
+  B1
+  B2
+  C1
+  C2
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   // hashed
+  role      Role     @default(LEARNER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  learnerProfile   LearnerProfile?
+  attempts         Attempt[]
+  vocabularyMastery VocabularyMastery[]
+  skillMastery     SkillMastery[]
+  flashcards       Flashcard[]
+  reviewLogs       ReviewLog[]
+  recommendations  Recommendation[]
+  aiInteractions   AIInteraction[]
+  coursesCreated   Course[]    @relation("CourseCreator")
+  lessonsCreated   Lesson[]    @relation("LessonCreator")
+  lessonsReviewed  Lesson[]    @relation("LessonReviewer")
+}
+
+model LearnerProfile {
+  id                String     @id @default(uuid())
+  userId            String     @unique
+  estimatedCefrLevel CefrLevel @default(A2)
+  listeningMastery  Float      @default(0.5)
+  vocabularyMastery  Float      @default(0.5)
+  spellingMastery   Float      @default(0.5)
+  preferredAccent   String?    @default("us")
+  preferredTopics   String     @default("")
+  recommendedPlaybackRate Float @default(1.0)
+  totalStudyMinutes Int        @default(0)
+  currentStreak     Int        @default(0)
+  lastActivityAt    DateTime?  @default(now())
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  cefrLevel   CefrLevel @default(A2)
+  status      LessonStatus @default(DRAFT)
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User @relation("CourseCreator", fields: [createdById], references: [id])
+  lessons   Lesson[]
+}
+
+model Lesson {
+  id                String       @id @default(uuid())
+  courseId          String
+  title             String
+  topic             String
+  cefrLevel         CefrLevel    @default(A2)
+  learningObjectives String     @default("")
+  transcript        String
+  audioUrl          String?
+  accent            String       @default("us")
+  defaultPlaybackRate Float      @default(1.0)
+  estimatedMinutes  Int          @default(10)
+  status            LessonStatus @default(DRAFT)
+  createdById       String
+  reviewedById      String?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  course     Course          @relation(fields: [courseId], references: [id])
+  createdBy  User            @relation("LessonCreator", fields: [createdById], references: [id])
+  reviewedBy User?           @relation("LessonReviewer", fields: [reviewedById], references: [id])
+  segments   LessonSegment[]
+  vocabulary LessonVocabulary[]
+  exercises  Exercise[]
+  attempts   Attempt[]
+  recommendations  Recommendation[]
+
+  @@index([courseId])
+  @@index([status])
+}
+
+model LessonSegment {
+  id        String  @id @default(uuid())
+  lessonId  String
+  position  Int
+  text      String
+  audioUrl  String?
+  startTime Float?
+  endTime   Float?
+  difficulty Float  @default(1.0)
+
+  lesson    Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exercises Exercise[]
+
+  @@index([lessonId])
+}
+
+model VocabularyItem {
+  id             String  @id @default(uuid())
+  lemma          String  @unique
+  displayText    String
+  ipa            String?
+  meaningVi      String
+  meaningEn      String?
+  partOfSpeech   String?
+  cefrLevel      CefrLevel @default(A2)
+  exampleSentence String?
+  audioUrl       String?
+
+  lessons    LessonVocabulary[]
+  mastery    VocabularyMastery[]
+  flashcards Flashcard[]
+}
+
+model LessonVocabulary {
+  lessonId        String
+  vocabularyItemId String
+  isTarget        Boolean @default(true)
+  importance      Float   @default(1.0)
+
+  lesson         Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
+
+  @@id([lessonId, vocabularyItemId])
+}
+
+model Exercise {
+  id           String       @id @default(uuid())
+  lessonId     String
+  segmentId    String?
+  type         ExerciseType
+  prompt       String
+  correctAnswer String
+  metadata     String?   @default("{}")
+  difficulty   Float        @default(1.0)
+  position     Int
+
+  lesson    Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  segment   LessonSegment? @relation(fields: [segmentId], references: [id])
+  attempts  Attempt[]
+
+  @@index([lessonId])
+}
+
+model Attempt {
+  id              String   @id @default(uuid())
+  userId          String
+  lessonId        String
+  exerciseId      String
+  submittedAnswer String
+  normalizedAnswer String?
+  score           Float?
+  completionTimeMs Int?
+  replayCount     Int      @default(0)
+  hintCount       Int      @default(0)
+  playbackRate    Float    @default(1.0)
+  createdAt       DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id])
+  lesson   Lesson   @relation(fields: [lessonId], references: [id])
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  errors   AttemptError[]
+  flashcards Flashcard[]
+
+  @@index([userId, lessonId])
+  @@index([userId, createdAt])
+}
+
+model AttemptError {
+  id              String   @id @default(uuid())
+  attemptId       String
+  errorType       ErrorType
+  expectedText    String
+  actualText      String?
+  position        Int
+  confidence      Float    @default(1.0)
+  aiExplanation   String?
+  remediationType String?
+  metadata        String?    @default("{}")
+
+  attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+
+  @@index([attemptId])
+}
+
+model VocabularyMastery {
+  id              String   @id @default(uuid())
+  userId          String
+  vocabularyItemId String
+  masteryScore    Float    @default(0.0)
+  correctCount    Int      @default(0)
+  incorrectCount  Int      @default(0)
+  lastReviewedAt  DateTime? @default(now())
+  nextReviewAt    DateTime? @default(now())
+  intervalDays    Float    @default(0.0)
+  easeFactor      Float    @default(2.5)
+  repetitionCount Int      @default(0)
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, vocabularyItemId])
+  @@index([userId, nextReviewAt])
+}
+
+model SkillMastery {
+  id           String   @id @default(uuid())
+  userId       String
+  skillKey     String
+  masteryScore Float    @default(0.5)
+  evidenceCount Int     @default(0)
+  lastUpdatedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, skillKey])
+  @@index([userId, skillKey])
+}
+
+model Flashcard {
+  id              String   @id @default(uuid())
+  userId          String
+  vocabularyItemId String
+  sourceAttemptId String?
+  front           String
+  back            String
+  cardType        String   @default("TEXT_MEANING") // TEXT_MEANING, MEANING_TEXT, AUDIO_TEXT
+  active          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id])
+  sourceAttempt  Attempt?       @relation(fields: [sourceAttemptId], references: [id])
+  reviewLogs     ReviewLog[]
+
+  @@index([userId, active])
+  @@index([userId, vocabularyItemId])
+}
+
+model ReviewLog {
+  id             String    @id @default(uuid())
+  flashcardId    String
+  userId         String
+  rating         CardRating
+  responseTimeMs Int?
+  previousInterval Float   @default(0.0)
+  nextInterval   Float     @default(0.0)
+  reviewedAt     DateTime  @default(now())
+
+  flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([flashcardId])
+  @@index([userId, reviewedAt])
+}
+
+model Recommendation {
+  id          String              @id @default(uuid())
+  userId      String
+  lessonId    String
+  reason      String
+  score       Float               @default(0.0)
+  status      RecommendationStatus @default(PENDING)
+  generatedAt DateTime            @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id])
+
+  @@index([userId, status])
+  @@index([userId, generatedAt])
+
+  @@unique([userId, lessonId])
+}
+
+model AIInteraction {
+  id             String   @id @default(uuid())
+  userId         String?
+  purpose        String
+  model          String?
+  promptVersion  String?
+  inputHash      String?
+  validatedOutput String?
+  latencyMs      Int?
+  success        Boolean  @default(true)
+  createdAt      DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+  @@index([purpose, success])
+}
