@@ -1,0 +1,52 @@
+# Render Blueprint - ListenAI
+
+# Deploy this app to Render: https://dashboard.render.com/blueprints
+# 1. Click "New" → "Blueprint"
+# 2. Connect your GitHub repo: tuanank2112-crypto/listena
+# 3. Render will auto-detect this file and create:
+#    - PostgreSQL database (free tier)
+#    - Web Service (Node 20, auto-deploy on push)
+
+services:
+  - type: web
+    name: listena
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: listena-db
+          property: connectionString
+      - key: NEXTAUTH_URL
+        value: https://listena.onrender.com
+      - key: NEXTAUTH_SECRET
+        generateValue: true
+      - key: AI_PROVIDER
+        value: mock
+      - key: TTS_PROVIDER
+        value: mock
+      - key: LOG_LEVEL
+        value: info
+
+  - type: pserv
+    name: listena-db
+    env: docker
+    region: oregon
+    plan: free
+    image:
+      owner: postgres
+      repo: postgres
+      tag: 16-alpine
+    envVars:
+      - key: POSTGRES_USER
+        value: listena
+      - key: POSTGRES_PASSWORD
+        generateValue: true
+      - key: POSTGRES_DB
+        value: listena
