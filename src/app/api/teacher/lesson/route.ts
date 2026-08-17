@@ -27,7 +27,7 @@ export async function POST(req: Request) {
         title: parsed.data.title,
         topic: parsed.data.topic,
         cefrLevel: parsed.data.cefrLevel as any,
-        learningObjectives: parsed.data.learningObjectives,
+        learningObjectives: parsed.data.learningObjectives.join("\n"),
         transcript: parsed.data.transcript,
         audioUrl: parsed.data.audioUrl,
         accent: parsed.data.accent,

@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         title: validated.data.title,
         topic: parsed.data.topic,
         cefrLevel: parsed.data.cefrLevel as any,
-        learningObjectives: parsed.data.learningObjectives,
+        learningObjectives: parsed.data.learningObjectives.join("\n"),
         transcript: validated.data.transcript,
         status: "DRAFT",
         createdById: session.user.id,

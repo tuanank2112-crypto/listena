@@ -5,6 +5,7 @@
 
 import type { AIFeedbackResponse, AILessonDraft } from "../validation/schemas";
 import { AIFeedbackResponseSchema, AILessonDraftSchema } from "../validation/schemas";
+import { z } from "zod";
 import logger from "@/lib/logger";
 
 // ── Types ────────────────────────────────────────────
@@ -187,13 +188,13 @@ export class OpenAIProvider implements AIProvider {
 
   async analyzeErrors(params: AIErrorAnalysisParams): Promise<AIFeedbackResponse> {
     const prompt = this.buildErrorAnalysisPrompt(params);
-    const result = await this.callAI(prompt, AIFeedbackResponseSchema);
+    const result = await this.callAI<AIFeedbackResponse>(prompt, AIFeedbackResponseSchema);
     return result;
   }
 
   async generateLesson(params: AILessonGenerationParams): Promise<AILessonDraft> {
     const prompt = this.buildLessonGenerationPrompt(params);
-    const result = await this.callAI(prompt, AILessonDraftSchema);
+    const result = await this.callAI<AILessonDraft>(prompt, AILessonDraftSchema);
     return result;
   }
 

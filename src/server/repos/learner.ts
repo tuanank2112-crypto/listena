@@ -18,7 +18,7 @@ export const learnerRepo = {
     vocabularyMastery: number;
     spellingMastery: number;
     preferredAccent: string;
-    preferredTopics: string[];
+    preferredTopics: string;
     recommendedPlaybackRate: number;
     totalStudyMinutes: number;
     currentStreak: number;

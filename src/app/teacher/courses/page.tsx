@@ -1,6 +1,7 @@
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { ChevronRight, PlusCircle, FileText, Users } from "lucide-react";
 
 export default async function TeacherCoursesPage() {
   const courses = await prisma.course.findMany({
@@ -12,13 +13,11 @@ export default async function TeacherCoursesPage() {
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6 sm:py-8">
+    <div className="mx-auto max-w-6xl px-6 py-8">
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Khóa học</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            {courses.length} khóa học
-          </p>
+          <h1 className="text-3xl font-bold text-white">Khóa học</h1>
+          <p className="mt-2 text-slate-400">{courses.length} khóa học</p>
         </div>
       </div>
 
@@ -26,25 +25,27 @@ export default async function TeacherCoursesPage() {
         {courses.map((course) => (
           <div
             key={course.id}
-            className="rounded-xl border border-gray-200 bg-white p-4"
+            className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:bg-white/[0.07]"
           >
             <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-medium text-gray-900">{course.title}</h3>
-                <p className="text-sm text-gray-500">{course.description}</p>
-                <div className="mt-2 flex items-center gap-3 text-xs text-gray-400">
-                  <span>{course.cefrLevel}</span>
-                  <span>{course._count.lessons} bài học</span>
+              <div className="flex-1">
+                <h3 className="text-lg font-semibold text-white">{course.title}</h3>
+                <p className="mt-1 text-sm text-slate-400">{course.description}</p>
+                <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
+                  <span className="inline-flex items-center gap-1">
+                    <FileText className="h-3.5 w-3.5" /> {course.cefrLevel}
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <Users className="h-3.5 w-3.5" /> {course._count.lessons} bài học
+                  </span>
                   <span>Bởi {course.createdBy.name}</span>
                 </div>
               </div>
-              <span
-                className={`rounded px-2 py-0.5 text-xs font-medium ${
-                  course.status === "PUBLISHED"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-amber-100 text-amber-700"
-                }`}
-              >
+              <span className={`rounded-full px-3 py-1 text-xs font-medium ${
+                course.status === "PUBLISHED"
+                  ? "bg-green-500/20 text-green-400"
+                  : "bg-amber-500/20 text-amber-400"
+              }`}>
                 {course.status === "PUBLISHED" ? "Đã xuất bản" : "Nháp"}
               </span>
             </div>

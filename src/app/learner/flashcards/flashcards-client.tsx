@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { RotateCw, Sparkles, CheckCircle, XCircle, HelpCircle, Zap } from "lucide-react";
 
 interface Flashcard {
   id: string;
@@ -14,10 +16,7 @@ interface Flashcard {
     meaningVi: string;
     ipa: string | null;
   };
-  reviewLogs: Array<{
-    rating: string;
-    reviewedAt: string;
-  }>;
+  reviewLogs: Array<{ rating: string; reviewedAt: string }>;
 }
 
 export function FlashcardsClient({
@@ -35,12 +34,8 @@ export function FlashcardsClient({
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Only show due flashcards
-  const dueFlashcards = flashcards;
-  // In a real app, we'd filter by due status from the server
-
-  const currentCard = dueFlashcards[currentIndex];
-  const hasCards = dueFlashcards.length > 0;
+  const currentCard = flashcards[currentIndex];
+  const hasCards = flashcards.length > 0;
 
   const handleRating = async (rating: "AGAIN" | "HARD" | "GOOD" | "EASY") => {
     if (!currentCard) return;
@@ -50,30 +45,20 @@ export function FlashcardsClient({
       const res = await fetch("/api/flashcard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          flashcardId: currentCard.id,
-          rating,
-          responseTimeMs: 1000,
-        }),
+        body: JSON.stringify({ flashcardId: currentCard.id, rating, responseTimeMs: 1000 }),
       });
-
       if (!res.ok) throw new Error("Failed to submit review");
 
       setMessage(
-        rating === "AGAIN"
-          ? "Sẽ ôn lại sau 10 phút"
-          : rating === "HARD"
-            ? "Sẽ ôn lại sau 1 giờ"
-            : rating === "GOOD"
-              ? "Sẽ ôn lại sau 1 ngày"
-              : "Sẽ ôn lại sau 3 ngày"
+        rating === "AGAIN" ? "Sẽ ôn lại sau 10 phút" :
+        rating === "HARD" ? "Sẽ ôn lại sau 1 giờ" :
+        rating === "GOOD" ? "Sẽ ôn lại sau 1 ngày" : "Sẽ ôn lại sau 3 ngày"
       );
-
       setFlipped(false);
       setTimeout(() => {
         setMessage("");
-        if (currentIndex < dueFlashcards.length - 1) {
-          setCurrentIndex((i) => i + 1);
+        if (currentIndex < flashcards.length - 1) {
+          setCurrentIndex(i => i + 1);
         }
       }, 1500);
     } catch (err) {
@@ -85,125 +70,105 @@ export function FlashcardsClient({
 
   if (!hasCards) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-        <h1 className="mb-2 text-2xl font-bold text-gray-900">Flashcard</h1>
-        <p className="mb-8 text-sm text-gray-500">
-          Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng
-        </p>
-        <div className="rounded-xl border border-gray-200 bg-white p-12 text-center">
-          <p className="text-2xl">🎉</p>
-          <p className="mt-4 text-gray-500">
-            Không có flashcard nào cần ôn hôm nay!
-          </p>
-          <p className="mt-2 text-sm text-gray-400">
-            Hãy làm bài tập để tạo flashcard mới.
-          </p>
+      <div className="mx-auto max-w-2xl px-6 py-8">
+        <h1 className="text-2xl font-bold text-white">Flashcard</h1>
+        <p className="mt-2 text-sm text-slate-400">Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng</p>
+        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-16 text-center">
+          <Sparkles className="mx-auto mb-4 h-16 w-16 text-slate-600" />
+          <p className="text-slate-300 text-lg">🎉 Không có flashcard nào cần ôn hôm nay!</p>
+          <p className="mt-2 text-sm text-slate-500">Hãy làm bài tập để tạo flashcard mới.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 sm:py-8">
-      <h1 className="mb-2 text-2xl font-bold text-gray-900">Flashcard</h1>
-      <p className="mb-2 text-sm text-gray-500">
-        Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng
-      </p>
-      <p className="mb-8 text-sm text-gray-400">
-        {dueCount} thẻ cần ôn • {totalCount} tổng số thẻ
-      </p>
+    <div className="mx-auto max-w-2xl px-6 py-8">
+      <h1 className="text-2xl font-bold text-white">Flashcard</h1>
+      <p className="mt-2 text-sm text-slate-400">Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng</p>
+      <p className="mt-1 text-sm text-slate-500">{dueCount} thẻ cần ôn • {totalCount} tổng số thẻ</p>
 
       {/* Progress */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between text-sm text-gray-500">
-          <span>
-            Thẻ {currentIndex + 1} / {dueFlashcards.length}
-          </span>
+      <div className="mt-8 mb-6">
+        <div className="flex items-center justify-between text-sm text-slate-500">
+          <span>Thẻ {currentIndex + 1} / {flashcards.length}</span>
         </div>
-        <div className="mt-2 h-2 rounded-full bg-gray-100">
-          <div
-            className="h-full rounded-full bg-indigo-500 transition-all"
-            style={{
-              width: `${((currentIndex + 1) / dueFlashcards.length) * 100}%`,
-            }}
+        <div className="mt-2 h-2 rounded-full bg-white/5">
+          <motion.div
+            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500"
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentIndex + 1) / flashcards.length) * 100}%` }}
+            transition={{ duration: 0.3 }}
           />
         </div>
       </div>
 
       {/* Flashcard */}
-      <div
-        className="mb-6 cursor-pointer"
-        onClick={() => !submitting && setFlipped(!flipped)}
+      <motion.div
+        key={currentCard?.id}
+        initial={{ opacity: 0, rotateY: flipped ? 180 : 0 }}
+        animate={{ opacity: 1, rotateY: 0 }}
+        className="mb-6"
       >
-        <div className="flex min-h-[200px] items-center justify-center rounded-xl border-2 border-gray-200 bg-white p-8 shadow-sm transition-all hover:shadow-md">
-          {!flipped ? (
-            <div className="text-center">
-              <p className="text-2xl font-bold text-gray-900">
-                {currentCard.front}
-              </p>
-              {currentCard.vocabularyItem.ipa && (
-                <p className="mt-2 text-sm text-gray-400">
-                  {currentCard.vocabularyItem.ipa}
-                </p>
-              )}
-              <p className="mt-4 text-xs text-gray-400">Nhấn để xem nghĩa</p>
+        <div
+          className="relative cursor-pointer"
+          onClick={() => !submitting && setFlipped(!flipped)}
+        >
+          <div className="relative min-h-[280px] rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all hover:bg-white/[0.07]">
+            {/* Card type indicator */}
+            <div className="absolute top-4 right-4 text-xs text-slate-600">
+              <RotateCw className="inline h-3.5 w-3.5 mr-1" /> Nhấn để lật
             </div>
-          ) : (
-            <div className="text-center">
-              <p className="text-xl font-medium text-gray-900">
-                {currentCard.vocabularyItem.meaningVi}
-              </p>
-              {currentCard.vocabularyItem.ipa && (
-                <p className="mt-2 text-sm text-gray-400">
-                  /{currentCard.vocabularyItem.ipa}/
-                </p>
-              )}
-              <p className="mt-1 text-sm text-gray-500">
-                {currentCard.front}
-              </p>
-              <p className="mt-4 text-xs text-gray-400">Nhấn để xem lại</p>
-            </div>
-          )}
+
+            {!flipped ? (
+              <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+                <p className="text-3xl font-bold text-white">{currentCard.front}</p>
+                {currentCard.vocabularyItem.ipa && (
+                  <p className="mt-3 text-sm text-slate-500">/{currentCard.vocabularyItem.ipa}/</p>
+                )}
+                <p className="mt-6 text-xs text-slate-600">Nhấn để xem nghĩa</p>
+              </div>
+            ) : (
+              <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
+                <p className="text-2xl font-medium text-white">{currentCard.vocabularyItem.meaningVi}</p>
+                {currentCard.vocabularyItem.ipa && (
+                  <p className="mt-2 text-sm text-slate-500">/{currentCard.vocabularyItem.ipa}/</p>
+                )}
+                <p className="mt-1 text-sm text-slate-400">{currentCard.front}</p>
+                <p className="mt-6 text-xs text-slate-600">Nhấn để xem lại mặt trước</p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      </motion.div>
 
       {message && (
-        <div className="mb-4 rounded-lg bg-indigo-50 px-4 py-3 text-center text-sm text-indigo-700">
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-4 py-3 text-center text-sm text-indigo-300">
           {message}
-        </div>
+        </motion.div>
       )}
 
-      {/* Rating buttons */}
-      <div className="grid grid-cols-4 gap-2">
-        <button
-          onClick={() => handleRating("AGAIN")}
-          disabled={!flipped || submitting}
-          className="rounded-lg bg-red-500 px-3 py-3 text-xs font-semibold text-white transition-colors hover:bg-red-600 disabled:opacity-50"
-        >
-          🔄 Lại
-        </button>
-        <button
-          onClick={() => handleRating("HARD")}
-          disabled={!flipped || submitting}
-          className="rounded-lg bg-amber-500 px-3 py-3 text-xs font-semibold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
-        >
-          😓 Khó
-        </button>
-        <button
-          onClick={() => handleRating("GOOD")}
-          disabled={!flipped || submitting}
-          className="rounded-lg bg-green-500 px-3 py-3 text-xs font-semibold text-white transition-colors hover:bg-green-600 disabled:opacity-50"
-        >
-          ✅ Tốt
-        </button>
-        <button
-          onClick={() => handleRating("EASY")}
-          disabled={!flipped || submitting}
-          className="rounded-lg bg-blue-500 px-3 py-3 text-xs font-semibold text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
-        >
-          ⚡ Dễ
-        </button>
-      </div>
+      {/* Rating buttons - only show when flipped */}
+      {flipped && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-4 gap-3">
+          {[
+            { rating: "AGAIN" as const, label: "Lại", icon: XCircle, color: "from-red-500 to-red-600", shadow: "shadow-red-500/20" },
+            { rating: "HARD" as const, label: "Khó", icon: HelpCircle, color: "from-amber-500 to-orange-500", shadow: "shadow-amber-500/20" },
+            { rating: "GOOD" as const, label: "Tốt", icon: CheckCircle, color: "from-green-500 to-emerald-500", shadow: "shadow-green-500/20" },
+            { rating: "EASY" as const, label: "Dễ", icon: Zap, color: "from-blue-500 to-indigo-500", shadow: "shadow-blue-500/20" },
+          ].map(({ rating, label, icon: Icon, color, shadow }) => (
+            <button
+              key={rating}
+              onClick={() => handleRating(rating)}
+              disabled={submitting}
+              className={`group flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br ${color} ${shadow} px-3 py-4 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 disabled:opacity-50`}
+            >
+              <Icon className="h-5 w-5" />
+              {label}
+            </button>
+          ))}
+        </motion.div>
+      )}
     </div>
   );
 }
