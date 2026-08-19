@@ -1,36 +1,62 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ListenAI
 
-## Getting Started
+Sản phẩm tự học tiếng Anh A2 với bài học ngắn, trò chơi từ vựng, chấm bài, flashcard SRS và gia sư AI có truy xuất dữ liệu giáo trình.
 
-First, run the development server:
+## Chạy local
 
 ```bash
+npm install
+npm run db:push
+npm run db:seed
+npm run dataset:import
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Mở `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Tài khoản demo:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Học viên: `learner@example.com` / `demo1234`
+- Giáo viên: `teacher@example.com` / `demo1234`
 
-## Learn More
+## Dataset
 
-To learn more about Next.js, take a look at the following resources:
+`npm run dataset:import` nhập idempotent 5 unit TATQHP1:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- 116 từ vựng đã chuẩn hóa nghĩa
+- 10 chủ điểm ngữ pháp
+- 54 bộ bài tập
+- 200 knowledge chunks cho tutor
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Bài Educaplay Đà Nẵng chỉ được dùng để đối chiếu format gameplay/audio và được giữ ở trạng thái `DRAFT`, không xuất hiện trong curriculum học viên.
 
-## Deploy on Vercel
+## Game Hub
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Trang `/learner/games` có ba chế độ dùng từ vựng thật theo từng unit:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Chọn nhanh
+- Ghép cặp
+- Nghe & viết
+
+Mỗi session có timer, tim, điểm, feedback và chơi lại.
+
+## Gia sư AI
+
+Mặc định tutor dùng retrieval nội bộ từ dataset, không cần API key. Để dùng model tương thích OpenAI:
+
+```env
+AI_PROVIDER=openai
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_BASE_URL=https://api.openai.com/v1
+```
+
+Nếu provider lỗi, hệ thống tự fallback về dataset retrieval.
+
+## Kiểm tra
+
+```bash
+npm run type-check
+npm test
+npm run build
+```

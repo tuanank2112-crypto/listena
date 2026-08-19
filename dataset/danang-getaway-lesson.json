@@ -1,0 +1,311 @@
+{
+  "courseTitle": "English 1 - Listening and Vocabulary",
+  "lesson": {
+    "title": "Da Nang Family Getaway",
+    "topic": "travel, family, Da Nang, vacation, hotel",
+    "cefrLevel": "A2",
+    "learningObjectives": [
+      "Nghe và chép chính tả 6 câu về kỳ nghỉ gia đình ở Đà Nẵng",
+      "Hiểu nghĩa từ vựng du lịch: luxurious, facilities, shoreline, treasure",
+      "Luyện phát âm và nhận diện âm cuối trong câu dài"
+    ],
+    "transcript": "Last summer, I traveled with my family to Da Nang We stayed in a beautiful hotel near the beach The hotel was quite luxurious with amazing facilities It had a swimming pool and a great restaurant We enjoyed long walks along the sunny shoreline daily The trip created wonderful memories that we will treasure",
+    "audioUrl": null,
+    "accent": "us",
+    "defaultPlaybackRate": 1,
+    "estimatedMinutes": 12,
+    "segments": [
+      {
+        "position": 1,
+        "text": "Last summer, I traveled with my family to Da Nang",
+        "difficulty": 1,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bb88ef1c.mp3"
+      },
+      {
+        "position": 2,
+        "text": "We stayed in a beautiful hotel near the beach",
+        "difficulty": 1,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bb99d4e1.mp3"
+      },
+      {
+        "position": 3,
+        "text": "The hotel was quite luxurious with amazing facilities",
+        "difficulty": 1.2,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bba98dfb.mp3"
+      },
+      {
+        "position": 4,
+        "text": "It had a swimming pool and a great restaurant",
+        "difficulty": 1,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bbbafcab.mp3"
+      },
+      {
+        "position": 5,
+        "text": "We enjoyed long walks along the sunny shoreline daily",
+        "difficulty": 1.3,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bbcb87d4.mp3"
+      },
+      {
+        "position": 6,
+        "text": "The trip created wonderful memories that we will treasure",
+        "difficulty": 1.3,
+        "audioUrl": "https://cloud.educaplay.com/recursos/944/30215767/audio6a7e9bbdda2f9.mp3"
+      }
+    ],
+    "vocabulary": [
+      {
+        "lemma": "beach",
+        "displayText": "beach",
+        "ipa": "/biːtʃ/",
+        "meaningVi": "bãi biển",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A1",
+        "exampleSentence": "We stayed in a beautiful hotel near the beach",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "beautiful",
+        "displayText": "beautiful",
+        "ipa": "/ˈbjuːtɪfəl/",
+        "meaningVi": "đẹp, xinh đẹp",
+        "meaningEn": null,
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "exampleSentence": "We stayed in a beautiful hotel near the beach",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "luxurious",
+        "displayText": "luxurious",
+        "ipa": "/lʌɡˈʒʊəriəs/",
+        "meaningVi": "xa xỉ, sang trọng",
+        "meaningEn": null,
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "exampleSentence": "The hotel was quite luxurious with amazing facilities",
+        "isTarget": true,
+        "importance": 1.3
+      },
+      {
+        "lemma": "facilities",
+        "displayText": "facilities",
+        "ipa": "/fəˈsɪlətiz/",
+        "meaningVi": "cơ sở vật chất, tiện nghi",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "exampleSentence": "The hotel was quite luxurious with amazing facilities",
+        "isTarget": true,
+        "importance": 1.3
+      },
+      {
+        "lemma": "shoreline",
+        "displayText": "shoreline",
+        "ipa": "/ˈʃɔːlaɪn/",
+        "meaningVi": "bờ biển, đường bờ",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "exampleSentence": "We enjoyed long walks along the sunny shoreline daily",
+        "isTarget": true,
+        "importance": 1.3
+      },
+      {
+        "lemma": "treasure",
+        "displayText": "treasure",
+        "ipa": "/ˈtreʒə(r)/",
+        "meaningVi": "trân trọng, quý trọng",
+        "meaningEn": null,
+        "partOfSpeech": "verb",
+        "cefrLevel": "A2",
+        "exampleSentence": "The trip created wonderful memories that we will treasure",
+        "isTarget": true,
+        "importance": 1.3
+      },
+      {
+        "lemma": "memories",
+        "displayText": "memories",
+        "ipa": "/ˈmeməriz/",
+        "meaningVi": "những kỷ niệm",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "exampleSentence": "The trip created wonderful memories that we will treasure",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "travel",
+        "displayText": "travel",
+        "ipa": "/ˈtrævl/",
+        "meaningVi": "đi du lịch",
+        "meaningEn": null,
+        "partOfSpeech": "verb",
+        "cefrLevel": "A2",
+        "exampleSentence": "Last summer, I traveled with my family to Da Nang",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "family",
+        "displayText": "family",
+        "ipa": "/ˈfæməli/",
+        "meaningVi": "gia đình",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A1",
+        "exampleSentence": "Last summer, I traveled with my family to Da Nang",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "hotel",
+        "displayText": "hotel",
+        "ipa": "/həʊˈtel/",
+        "meaningVi": "khách sạn",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "exampleSentence": "We stayed in a beautiful hotel near the beach",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "swimming pool",
+        "displayText": "swimming pool",
+        "ipa": "/ˈswɪmɪŋ puːl/",
+        "meaningVi": "hồ bơi",
+        "meaningEn": null,
+        "partOfSpeech": "noun phrase",
+        "cefrLevel": "A2",
+        "exampleSentence": "It had a swimming pool and a great restaurant",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "restaurant",
+        "displayText": "restaurant",
+        "ipa": "/ˈrestrɒnt/",
+        "meaningVi": "nhà hàng",
+        "meaningEn": null,
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "exampleSentence": "It had a swimming pool and a great restaurant",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "amazing",
+        "displayText": "amazing",
+        "ipa": "/əˈmeɪzɪŋ/",
+        "meaningVi": "tuyệt vời, đáng kinh ngạc",
+        "meaningEn": null,
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "exampleSentence": "The hotel was quite luxurious with amazing facilities",
+        "isTarget": true,
+        "importance": 1
+      },
+      {
+        "lemma": "wonderful",
+        "displayText": "wonderful",
+        "ipa": "/ˈwʌndəfl/",
+        "meaningVi": "tuyệt diệu",
+        "meaningEn": null,
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "exampleSentence": "The trip created wonderful memories that we will treasure",
+        "isTarget": true,
+        "importance": 1
+      }
+    ],
+    "exercises": [
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 1.",
+        "correctAnswer": "Last summer, I traveled with my family to Da Nang",
+        "segmentPosition": 1,
+        "difficulty": 1,
+        "position": 1
+      },
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 2.",
+        "correctAnswer": "We stayed in a beautiful hotel near the beach",
+        "segmentPosition": 2,
+        "difficulty": 1,
+        "position": 2
+      },
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 3.",
+        "correctAnswer": "The hotel was quite luxurious with amazing facilities",
+        "segmentPosition": 3,
+        "difficulty": 1.2,
+        "position": 3
+      },
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 4.",
+        "correctAnswer": "It had a swimming pool and a great restaurant",
+        "segmentPosition": 4,
+        "difficulty": 1,
+        "position": 4
+      },
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 5.",
+        "correctAnswer": "We enjoyed long walks along the sunny shoreline daily",
+        "segmentPosition": 5,
+        "difficulty": 1.3,
+        "position": 5
+      },
+      {
+        "type": "FULL_DICTATION",
+        "prompt": "Nghe và chép lại câu 6.",
+        "correctAnswer": "The trip created wonderful memories that we will treasure",
+        "segmentPosition": 6,
+        "difficulty": 1.3,
+        "position": 6
+      },
+      {
+        "type": "GIST",
+        "prompt": "Where did the family travel last summer?",
+        "correctAnswer": "They traveled to Da Nang.",
+        "difficulty": 0.8,
+        "position": 7
+      },
+      {
+        "type": "GIST",
+        "prompt": "Where did they stay?",
+        "correctAnswer": "They stayed in a beautiful hotel near the beach.",
+        "difficulty": 0.9,
+        "position": 8
+      },
+      {
+        "type": "VOCABULARY",
+        "prompt": "Từ 'luxurious' có nghĩa là gì?",
+        "correctAnswer": "xa xỉ, sang trọng",
+        "difficulty": 1,
+        "position": 9
+      },
+      {
+        "type": "VOCABULARY",
+        "prompt": "Từ 'shoreline' có nghĩa là gì?",
+        "correctAnswer": "bờ biển, đường bờ",
+        "difficulty": 1.1,
+        "position": 10
+      },
+      {
+        "type": "VOCABULARY",
+        "prompt": "Từ 'treasure' có nghĩa là gì?",
+        "correctAnswer": "trân trọng, quý trọng",
+        "difficulty": 1.1,
+        "position": 11
+      }
+    ]
+  }
+}

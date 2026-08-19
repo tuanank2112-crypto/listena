@@ -1,10 +1,30 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Play, SkipForward, Volume2, ChevronLeft, ChevronRight, HelpCircle, BookOpen, Gauge, Timer } from "lucide-react";
+import { AnimatePresence, motion } from "framer-motion";
+import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Bot,
+  Check,
+  ChevronDown,
+  Gamepad2,
+  Headphones,
+  HelpCircle,
+  LoaderCircle,
+  Play,
+  Send,
+  Sparkles,
+  Volume2,
+} from "lucide-react";
+
+interface ExerciseMetadata {
+  content?: string[];
+  answerMode?: "open" | "guided";
+}
 
 interface LessonData {
   id: string;
@@ -17,18 +37,14 @@ interface LessonData {
   defaultPlaybackRate: number;
   estimatedMinutes: number;
   course: { title: string };
-  segments: Array<{ id: string; position: number; text: string; difficulty: number }>;
+  segments: Array<{ id: string; position: number; text: string; audioUrl: string | null; difficulty: number }>;
   vocabulary: Array<{
-    isTarget: boolean;
-    importance: number;
     vocabularyItem: {
       id: string;
-      lemma: string;
       displayText: string;
       ipa: string | null;
       meaningVi: string;
-      partOfSpeech: string | null;
-      cefrLevel: string;
+      exampleSentence: string | null;
     };
   }>;
   exercises: Array<{
@@ -36,301 +52,225 @@ interface LessonData {
     type: string;
     prompt: string;
     correctAnswer: string;
-    difficulty: number;
+    metadata: string | null;
     position: number;
     segmentId: string | null;
   }>;
 }
 
-export function LessonDetailClient({
-  lesson,
-  lastAttemptMap,
-}: {
+interface LearningContext {
+  unit: number;
+  title: string;
+  objectives: string[];
+  grammar: Array<{ id: string; title: string; content: string }>;
+}
+
+interface TutorMessage {
+  role: "user" | "assistant";
+  content: string;
+  sources?: Array<{ id: string; title: string; type: string }>;
+}
+
+function parseMetadata(value: string | null): ExerciseMetadata {
+  try { return value ? JSON.parse(value) : {}; } catch { return {}; }
+}
+
+export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: {
   lesson: LessonData;
-  lastAttemptMap: Record<string, any>;
+  lastAttemptMap: Record<string, { score: number | null }>;
+  learningContext: LearningContext | null;
 }) {
   const router = useRouter();
-  const [activeExerciseIdx, setActiveExerciseIdx] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [index, setIndex] = useState(0);
   const [answer, setAnswer] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [replayCount, setReplayCount] = useState(0);
+  const [hint, setHint] = useState(false);
   const [hintCount, setHintCount] = useState(0);
-  const [playbackRate, setPlaybackRate] = useState(lesson.defaultPlaybackRate);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [showHint, setShowHint] = useState(false);
-  const [startTime] = useState(Date.now());
+  const [replayCount, setReplayCount] = useState(0);
+  const [rate, setRate] = useState(lesson.defaultPlaybackRate);
+  const [playing, setPlaying] = useState(false);
+  const [startedAt, setStartedAt] = useState(Date.now());
+  const [tutorOpen, setTutorOpen] = useState(false);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [messages, setMessages] = useState<TutorMessage[]>([]);
+
+  const exercise = lesson.exercises[index];
+  const metadata = parseMetadata(exercise?.metadata ?? null);
+  const segment = lesson.segments.find((item) => item.id === exercise?.segmentId);
+  const progress = ((index + 1) / Math.max(lesson.exercises.length, 1)) * 100;
+  const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || exercise?.type === "FULL_DICTATION");
 
   const speak = useCallback((text: string) => {
-    if (typeof window === "undefined") return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-US";
-    utterance.rate = playbackRate;
-    utterance.onstart = () => setIsPlaying(true);
-    utterance.onend = () => setIsPlaying(false);
-    utterance.onerror = () => setIsPlaying(false);
+    utterance.lang = lesson.accent === "uk" ? "en-GB" : "en-US";
+    utterance.rate = rate;
+    utterance.onstart = () => setPlaying(true);
+    utterance.onend = () => setPlaying(false);
+    utterance.onerror = () => setPlaying(false);
     window.speechSynthesis.speak(utterance);
-  }, [playbackRate]);
+  }, [lesson.accent, rate]);
 
-  const activeExercise = lesson.exercises[activeExerciseIdx];
-  const totalExercises = lesson.exercises.length;
+  const play = useCallback(async (target = segment) => {
+    const url = target?.audioUrl || lesson.audioUrl;
+    if (!url) return speak(target?.text ?? exercise?.correctAnswer ?? "");
+    audioRef.current?.pause();
+    const audio = new Audio(url);
+    audio.playbackRate = rate;
+    audio.onplay = () => setPlaying(true);
+    audio.onended = () => setPlaying(false);
+    audio.onerror = () => { setPlaying(false); speak(target?.text ?? ""); };
+    audioRef.current = audio;
+    try { await audio.play(); } catch { speak(target?.text ?? ""); }
+  }, [exercise?.correctAnswer, lesson.audioUrl, rate, segment, speak]);
 
-  const handlePlay = () => {
-    if (activeExercise?.type === "FULL_DICTATION") {
-      const segment = lesson.segments.find(s => s.id === activeExercise.segmentId);
-      speak(segment?.text ?? activeExercise.correctAnswer);
-    } else {
-      speak(activeExercise?.correctAnswer ?? "");
-    }
-  };
-
-  const handleReplay = () => {
-    setReplayCount(c => c + 1);
-    handlePlay();
-  };
-
-  const handleHint = () => {
-    setHintCount(c => c + 1);
-    setShowHint(true);
-  };
-
-  const handleSubmit = async () => {
-    if (!answer.trim()) {
-      setError("Vui lòng nhập câu trả lời");
-      return;
-    }
-    setSubmitting(true);
+  function move(next: number) {
+    setIndex(next);
+    setAnswer("");
     setError("");
+    setHint(false);
+    setHintCount(0);
+    setReplayCount(0);
+    setStartedAt(Date.now());
+  }
 
+  async function submit() {
+    if (!answer.trim()) return setError("Nhập câu trả lời trước nhé.");
+    setLoading(true);
+    setError("");
     try {
-      const res = await fetch("/api/attempt", {
+      const response = await fetch("/api/attempt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          exerciseId: activeExercise.id,
+          exerciseId: exercise.id,
           lessonId: lesson.id,
           submittedAnswer: answer.trim(),
-          completionTimeMs: Date.now() - startTime,
+          completionTimeMs: Date.now() - startedAt,
           replayCount,
           hintCount,
-          playbackRate,
+          playbackRate: rate,
         }),
       });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Không thể chấm bài");
+      router.push(`/learner/attempt/${payload.attempt.id}`);
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Thử lại nhé.");
+    } finally { setLoading(false); }
+  }
 
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Gửi bài thất bại");
-      }
+  async function askTutor() {
+    const text = question.trim();
+    if (!text || asking) return;
+    setQuestion("");
+    setMessages((items) => [...items, { role: "user", content: text }]);
+    setAsking(true);
+    try {
+      const response = await fetch("/api/tutor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: lesson.id, exerciseId: exercise.id, question: text }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error || "Tutor đang bận");
+      setMessages((items) => [...items, { role: "assistant", content: payload.answer, sources: payload.sources }]);
+    } catch (caught) {
+      setMessages((items) => [...items, { role: "assistant", content: caught instanceof Error ? caught.message : "Thử lại nhé." }]);
+    } finally { setAsking(false); }
+  }
 
-      const data = await res.json();
-      router.push(`/learner/attempt/${data.attempt.id}`);
-    } catch (err: any) {
-      setError(err.message || "Có lỗi xảy ra, vui lòng thử lại");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleNextExercise = () => {
-    if (activeExerciseIdx < totalExercises - 1) {
-      setActiveExerciseIdx(i => i + 1);
-      setAnswer("");
-      setReplayCount(0);
-      setHintCount(0);
-      setShowHint(false);
-      setError("");
-    }
-  };
-
-  const speeds = [0.75, 0.9, 1.0, 1.15];
-  const hintText = activeExercise?.correctAnswer.split(" ").slice(0, 3).join(" ") + "...";
-
-  const exerciseTypeLabel = {
-    GIST: "Ý chính",
-    PARTIAL_DICTATION: "Điền từ",
-    FULL_DICTATION: "Chép chính tả",
-    VOCABULARY: "Từ vựng",
-  }[activeExercise?.type as string] ?? "Bài tập";
+  const hintText = metadata.answerMode === "open" ? "Viết 2–3 câu ngắn. Ưu tiên đúng ý." : `${exercise?.correctAnswer.split(/\s+/).slice(0, 4).join(" ")}…`;
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
-      {/* Breadcrumb */}
-      <Link href="/learner/lessons" className="mb-6 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-white transition-colors">
-        <ChevronLeft className="h-4 w-4" /> Quay lại danh sách
-      </Link>
+    <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 sm:py-8">
+      <header className="mb-5 flex items-center gap-3">
+        <Link href="/learner/lessons" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fffdf8] shadow-sm"><ArrowLeft className="h-5 w-5" /></Link>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-black uppercase tracking-[.13em] text-[#ef765d]">{lesson.cefrLevel} · {lesson.estimatedMinutes} phút</p>
+          <h1 className="truncate text-xl font-black tracking-[-.04em] sm:text-2xl">{lesson.title.replace(/^Bài \d+ - /, "")}</h1>
+        </div>
+        <Link href="/learner/games" className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white sm:flex"><Gamepad2 className="h-4 w-4" /> Chơi</Link>
+      </header>
 
-      {/* Lesson Header */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="mb-8">
-        <div className="flex items-center gap-3 mb-3">
-          <span className="rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-0.5 text-xs font-medium text-indigo-300">
-            {lesson.cefrLevel}
-          </span>
-          <span className="text-xs text-slate-500">{lesson.course.title}</span>
-        </div>
-        <h1 className="text-2xl font-bold text-white">{lesson.title}</h1>
-        <p className="mt-1 text-sm text-slate-400">{lesson.topic}</p>
-        <div className="mt-3 flex items-center gap-4 text-xs text-slate-500">
-          <span className="flex items-center gap-1"><Timer className="h-3.5 w-3.5" /> {lesson.estimatedMinutes} phút</span>
-          <span className="flex items-center gap-1"><BookOpen className="h-3.5 w-3.5" /> {totalExercises} bài tập</span>
-          <span className="flex items-center gap-1"><Gauge className="h-3.5 w-3.5" /> {lesson.accent}</span>
-        </div>
-      </motion.div>
-
-      {/* Exercise Navigation */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-sm font-medium text-slate-300">
-            Bài tập {activeExerciseIdx + 1}/{totalExercises}
-          </span>
-          <span className="text-xs text-slate-500">{exerciseTypeLabel}</span>
-        </div>
-        <div className="h-2 rounded-full bg-white/5 overflow-hidden">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${((activeExerciseIdx + 1) / totalExercises) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
+      <div className="mb-5 flex items-center gap-3">
+        <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ded8cc]"><motion.div className="h-full rounded-full bg-[#176b55]" animate={{ width: `${progress}%` }} /></div>
+        <span className="text-xs font-black text-[#77817b]">{index + 1}/{lesson.exercises.length}</span>
       </div>
 
-      {/* Exercise Card */}
-      <motion.div
-        key={activeExercise?.id}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="mb-8 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur-sm"
-      >
-        {/* Prompt */}
-        <p className="mb-6 text-sm leading-relaxed text-slate-300">{activeExercise?.prompt}</p>
-
-        {/* Audio Controls */}
-        <div className="mb-6 flex flex-wrap items-center gap-3">
-          <button
-            onClick={handlePlay}
-            className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 text-white shadow-lg shadow-indigo-500/20 transition-all hover:scale-105"
-          >
-            {isPlaying ? <Volume2 className="h-5 w-5" /> : <Play className="h-5 w-5 ml-0.5" />}
-          </button>
-          <button
-            onClick={handleReplay}
-            disabled={isPlaying}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400 transition-all hover:bg-white/10 disabled:opacity-50"
-          >
-            Nghe lại ({replayCount})
-          </button>
-          <button
-            onClick={handleHint}
-            disabled={showHint}
-            className="rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-400 transition-all hover:bg-white/10 disabled:opacity-50"
-          >
-            <HelpCircle className="inline h-3.5 w-3.5 mr-1" /> Gợi ý
-          </button>
-          <div className="flex items-center gap-1 ml-auto">
-            <span className="text-xs text-slate-500">Tốc độ:</span>
-            {speeds.map(speed => (
-              <button
-                key={speed}
-                onClick={() => setPlaybackRate(speed)}
-                className={`rounded-xl px-2.5 py-1.5 text-xs font-medium transition-all ${
-                  playbackRate === speed
-                    ? "bg-indigo-500/20 text-indigo-300 border border-indigo-500/30"
-                    : "text-slate-500 hover:bg-white/5"
-                }`}
-              >
-                {speed}x
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {showHint && (
-          <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="mb-4 rounded-xl bg-amber-500/10 border border-amber-500/20 p-3 text-sm text-amber-300">
-            💡 Gợi ý: {hintText}
-          </motion.div>
-        )}
-
-        {/* Segment buttons for FULL_DICTATION */}
-        {activeExercise?.type === "FULL_DICTATION" && (
-          <div className="mb-6">
-            <p className="text-xs font-medium text-slate-500 uppercase tracking-wider mb-2">Nghe từng đoạn:</p>
-            <div className="flex flex-wrap gap-2">
-              {lesson.segments.map(seg => (
-                <button
-                  key={seg.id}
-                  onClick={() => speak(seg.text)}
-                  disabled={isPlaying}
-                  className="rounded-xl border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-slate-400 transition-all hover:bg-white/10 disabled:opacity-50"
-                >
-                  Đoạn {seg.position}
-                </button>
-              ))}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <main>
+          <motion.section key={exercise?.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="paper-card rounded-[30px] p-5 sm:p-8">
+            <div className="flex items-start gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#dff2e8] text-sm font-black text-[#176b55]">{index + 1}</span>
+              <div className="min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-[.14em] text-[#879088]">{exercise?.type === "VOCABULARY" ? "Từ vựng" : exercise?.type === "FULL_DICTATION" ? "Nghe" : "Thực hành"}</p>
+                <h2 className="mt-1 text-xl font-black leading-snug tracking-[-.03em] sm:text-2xl">{exercise?.prompt}</h2>
+              </div>
             </div>
-          </div>
-        )}
 
-        {/* Input */}
-        <div className="mb-4">
-          <textarea
-            id="answer"
-            value={answer}
-            onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Nhập câu trả lời của bạn..."
-            rows={3}
-            className="block w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-slate-500 backdrop-blur-sm transition-all focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
-            disabled={submitting}
-          />
-        </div>
+            {metadata.content?.length ? (
+              <div className="mt-6 max-h-[330px] space-y-2 overflow-y-auto rounded-2xl bg-[#f4efe5] p-4 sm:p-5">
+                {metadata.content.map((line, lineIndex) => <p key={lineIndex} className="whitespace-pre-wrap text-sm font-medium leading-6 text-[#45584f]">{line}</p>)}
+              </div>
+            ) : null}
 
-        {error && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4 rounded-xl bg-red-500/10 border border-red-500/20 px-4 py-3 text-sm text-red-400" role="alert">
-            {error}
-          </motion.div>
-        )}
+            {audioAvailable && (
+              <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl bg-[#18332d] p-3 text-white">
+                <button onClick={() => { setReplayCount((value) => value + 1); void play(); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#f7d779] px-4 text-sm font-black text-[#18332d]">{playing ? <Volume2 className="h-4 w-4 animate-pulse" /> : <Play className="h-4 w-4" />} {playing ? "Đang nghe" : "Nghe"}</button>
+                {[.75, .9, 1, 1.15].map((speed) => <button key={speed} onClick={() => setRate(speed)} className={`min-h-9 rounded-lg px-2 text-xs font-black ${rate === speed ? "bg-white text-[#18332d]" : "text-white/60"}`}>{speed}x</button>)}
+                {lesson.segments.length > 1 && <span className="ml-auto text-xs font-bold text-white/50">{lesson.segments.length} đoạn</span>}
+              </div>
+            )}
 
-        {/* Submit / Next */}
-        <div className="flex gap-3">
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !answer.trim()}
-            className="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-500 hover:to-cyan-500 disabled:opacity-50"
-          >
-            {submitting ? "Đang gửi..." : "Gửi bài"}
-          </button>
-          {activeExerciseIdx < totalExercises - 1 && (
-            <button
-              onClick={handleNextExercise}
-              className="flex items-center gap-1 rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-slate-400 transition-all hover:bg-white/10"
-            >
-              Bỏ qua <SkipForward className="h-4 w-4" />
+            <div className="mt-6 flex items-center justify-between">
+              <label htmlFor="answer" className="text-sm font-black">Câu trả lời</label>
+              <button onClick={() => { setHint(true); setHintCount((value) => value + 1); }} className="flex min-h-10 items-center gap-1.5 px-2 text-xs font-black text-[#d18b25]"><HelpCircle className="h-4 w-4" /> Gợi ý</button>
+            </div>
+            <AnimatePresence>{hint && <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 rounded-2xl bg-[#fff1c9] px-4 py-3 text-sm font-bold text-[#795c19]">{hintText}</motion.div>}</AnimatePresence>
+            <textarea id="answer" value={answer} onChange={(event) => setAnswer(event.target.value)} rows={4} className="mt-3 block w-full resize-none rounded-2xl border-2 border-[#ded8cc] bg-white px-4 py-3 text-sm font-bold outline-none placeholder:text-[#a4aaa6] focus:border-[#176b55]" placeholder="Nhập đáp án…" />
+            {error && <p role="alert" className="mt-2 text-sm font-bold text-[#d6534d]">{error}</p>}
+
+            <div className="mt-4 flex gap-2">
+              <button onClick={submit} disabled={loading || !answer.trim()} className="min-h-12 flex-1 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white disabled:opacity-40">{loading ? "Đang chấm…" : "Kiểm tra"}</button>
+              {index < lesson.exercises.length - 1 && <button onClick={() => move(index + 1)} className="flex min-h-12 items-center gap-1 rounded-2xl bg-[#eee7da] px-4 text-sm font-black">Tiếp <ArrowRight className="h-4 w-4" /></button>}
+            </div>
+          </motion.section>
+
+          <details className="paper-card group mt-4 rounded-[24px] px-5 py-4">
+            <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-black"><span>{lesson.vocabulary.length} từ trong bài</span><ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {lesson.vocabulary.map(({ vocabularyItem }) => <button key={vocabularyItem.id} onClick={() => speak(vocabularyItem.displayText)} className="flex min-h-14 items-center gap-3 rounded-2xl bg-[#f4efe5] px-3 text-left"><Volume2 className="h-4 w-4 shrink-0 text-[#176b55]" /><div className="min-w-0"><p className="truncate text-sm font-black">{vocabularyItem.displayText}</p><p className="truncate text-xs font-bold text-[#7b857f]">{cleanVocabularyMeaning(vocabularyItem.meaningVi)}</p></div></button>)}
+            </div>
+          </details>
+        </main>
+
+        <aside className="xl:sticky xl:top-6">
+          <div className="paper-card overflow-hidden rounded-[28px]">
+            <button onClick={() => setTutorOpen((value) => !value)} className="flex min-h-16 w-full items-center gap-3 px-4 text-left">
+              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#ffe5dc] text-[#ef765d]"><Bot className="h-5 w-5" /></span>
+              <div className="flex-1"><p className="text-sm font-black">Hỏi AI</p><p className="text-xs font-bold text-[#879088]">Gợi ý theo bài</p></div>
+              <Sparkles className="h-4 w-4 text-[#d89a2b]" />
             </button>
-          )}
-        </div>
-      </motion.div>
-
-      {/* Vocabulary Preview */}
-      {lesson.vocabulary.length > 0 && (
-        <details className="group rounded-2xl border border-white/10 bg-white/5 overflow-hidden backdrop-blur-sm">
-          <summary className="flex cursor-pointer items-center justify-between px-6 py-4 text-sm font-medium text-slate-300 hover:bg-white/5">
-            <span>📖 Từ vựng trong bài ({lesson.vocabulary.length} từ)</span>
-            <ChevronRight className="h-4 w-4 transition-transform group-open:rotate-90" />
-          </summary>
-          <div className="border-t border-white/10 px-6 py-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              {lesson.vocabulary.map((v) => (
-                <div key={v.vocabularyItem.id} className="text-sm">
-                  <span className="font-medium text-white">{v.vocabularyItem.displayText}</span>
-                  {v.vocabularyItem.ipa && (
-                    <span className="ml-2 text-slate-500">{v.vocabularyItem.ipa}</span>
-                  )}
-                  <p className="text-slate-400">{v.vocabularyItem.meaningVi}</p>
-                </div>
-              ))}
+            <div className={`${tutorOpen ? "block" : "hidden xl:block"} border-t border-[#ded8cc]`}>
+              <div className="max-h-[360px] space-y-3 overflow-y-auto p-4">
+                {!messages.length && <div className="rounded-2xl bg-[#f4efe5] p-4 text-sm font-bold leading-6 text-[#65746c]">Hỏi một từ hoặc điểm ngữ pháp bạn chưa rõ.</div>}
+                {messages.map((message, messageIndex) => <div key={messageIndex} className={`rounded-2xl px-3.5 py-3 text-sm font-bold leading-6 ${message.role === "user" ? "ml-8 bg-[#176b55] text-white" : "mr-3 bg-[#f4efe5] text-[#45584f]"}`}>{message.content.length > 700 ? `${message.content.slice(0,700)}…` : message.content}</div>)}
+                {asking && <LoaderCircle className="h-5 w-5 animate-spin text-[#176b55]" />}
+              </div>
+              <div className="flex gap-2 border-t border-[#ded8cc] p-3">
+                <input value={question} onChange={(event) => setQuestion(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void askTutor(); }} className="min-h-11 min-w-0 flex-1 rounded-xl bg-[#f4efe5] px-3 text-sm font-bold outline-none" placeholder="Hỏi nhanh…" />
+                <button onClick={askTutor} disabled={!question.trim() || asking} className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#ef765d] text-white disabled:opacity-40"><Send className="h-4 w-4" /></button>
+              </div>
             </div>
           </div>
-        </details>
-      )}
+
+          {learningContext && <div className="mt-4 hidden rounded-[24px] bg-[#18332d] p-5 text-white xl:block"><p className="text-xs font-black uppercase tracking-[.14em] text-[#f7d779]">Trọng tâm</p><div className="mt-3 space-y-2">{learningContext.grammar.slice(0,2).map((item) => <p key={item.id} className="flex items-start gap-2 text-sm font-bold"><Check className="mt-0.5 h-4 w-4 shrink-0 text-[#f7d779]" />{item.title}</p>)}</div></div>}
+        </aside>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,259 @@
+{
+  "environment": "educaplay.com",
+  "title": "Da Nang Family Getaway",
+  "url": "https://www.educaplay.com/learning-resources/30215767-da_nang_family_getaway.html",
+  "user": false,
+  "texts": {
+    "common": {
+      "shared": {
+        "loading": "Loading..."
+      },
+      "main": {
+        "start": "Start",
+        "copy": "All rights reserved",
+        "clickHereToIdentifyYourself": "Click here to identify yourself"
+      },
+      "game": {
+        "lives": "Lives",
+        "points": "Score",
+        "abandon": "Are you sure you want to quit the game?",
+        "question": "Question",
+        "correctAnswerWas": "Incorrect. The correct answer was:"
+      },
+      "final": {
+        "gameWinTitle": "You Won!",
+        "gameWinSubtitle": "Congratulations!",
+        "gameAchievedTitle": "Achieved!",
+        "retry": "Retry",
+        "share": "Share",
+        "time": "Time",
+        "correct": "Correct",
+        "results": "Report",
+        "ratingTitle": "Rate Game",
+        "ratingSkip": "Skip"
+      },
+      "settings": {
+        "title": "Settings",
+        "sound": "Sound",
+        "generalEffects": "General effects",
+        "specificAudios": "Specific audios",
+        "info": "Information",
+        "print": "Print",
+        "abandon": "Quit",
+        "disableSounds": "Are you sure you want to deactivate the audios specific to this game?",
+        "accept": "OK",
+        "cancel": "Cancel"
+      },
+      "accesibility": {
+        "settings": "Settings",
+        "exitFullscreen": "Exit full screen",
+        "fullscreen": "Full screen"
+      },
+      "multiplayer": {
+        "lobby": {
+          "joinedTitle": "Waiting for the Session to start",
+          "leaveButton": "Leave",
+          "leaveConfirm": "Are you sure you want to leave the Session?",
+          "leaveConfirmAction": "Leave",
+          "locked": "The Session is locked",
+          "lockedHint": "Wait for the host to open the Session to join.",
+          "waitingPlayers": "Waiting for players",
+          "start": "Start",
+          "minPlayers": "You need at least one player to start the Session",
+          "lock": "Lock lobby",
+          "unlock": "Unlock lobby",
+          "thisPlayer": "this player",
+          "playersCount": "Players",
+          "playerFallback": "Player",
+          "volume": "Volume",
+          "settingsAria": "Settings"
+        },
+        "nickname": {
+          "label": "Enter your name or nickname",
+          "placeholder": "Name or nickname",
+          "submit": "→ Enter"
+        },
+        "gamePin": {
+          "titleAt": "Game Pin at",
+          "joinAt": "Join at:",
+          "copyTitle": "Copy PIN",
+          "copied": "Copied",
+          "enlargeQr": "Enlarge QR"
+        },
+        "kick": {
+          "title": "Kick %nickname%?",
+          "confirm": "Kick",
+          "dontAskAgain": "Don't ask again",
+          "playerAria": "Kick player",
+          "playerTitle": "Kick"
+        },
+        "settings": {
+          "title": "Session options",
+          "close": "Close",
+          "uploading": "Uploading…",
+          "dropOrClick": "Drag or click to choose an image",
+          "imageInfo": ".JPG, .PNG, .WEBP, .GIF · max 5 MB",
+          "removeImage": "Remove image",
+          "background": "Background",
+          "invalidFormat": "Format not allowed (PNG, JPG, WEBP or GIF)",
+          "imageTooLarge": "The image exceeds 5 MB",
+          "noMatch": "Session not available",
+          "uploadFailed": "Could not upload the image",
+          "removeFailed": "Could not remove the image",
+          "randomizeQuestions": "Randomize questions",
+          "randomizeQuestionsDesc": "Questions appear in a random order in each game.",
+          "randomizeAnswers": "Randomize answers",
+          "randomizeAnswersDesc": "Answer choices appear in a random order.",
+          "enableEmojis": "Allow emojis",
+          "enableEmojisDesc": "Players can send emojis that all participants can see.",
+          "autoplay": "Auto-advance",
+          "autoplayDesc": "The answer summary and ranking screens move on automatically after a few seconds.",
+          "playerSecondScreen": "No shared screen",
+          "playerSecondScreenDesc": "Each player sees the questions, the ranking, and the results on their own device.",
+          "backgroundImage": "Background image",
+          "backgroundImageDesc": "Customize the background image of the shared screen.",
+          "interfaceLanguage": "Interface language",
+          "interfaceLanguageDesc": "Language of the game's texts (buttons, messages, instructions)."
+        },
+        "premium": {
+          "title": "This option requires a higher Plan",
+          "question": "Do you want to upgrade your Plan now?",
+          "upgrade": "Upgrade Plan"
+        },
+        "controller": {
+          "lastRound": "Countdown",
+          "next": "Next",
+          "startCountdown": "Start countdown",
+          "players": "PLAYERS",
+          "question": "QUESTION",
+          "answers": "ANSWERS",
+          "volume": "Volume",
+          "options": "Options"
+        },
+        "ranking": {
+          "title": "Leaderboard",
+          "you": "You",
+          "points": "POINTS",
+          "arcadePoints": "POINTS",
+          "realPoints": "ACCURACY",
+          "optionsAria": "Options"
+        },
+        "stats": {
+          "title": "Answer percentage",
+          "answers": "%count% / %total% answers"
+        },
+        "podium": {
+          "podium": "Podium",
+          "restart": "Restart",
+          "summary": "Summary",
+          "feedback": "Ratings",
+          "exit": "Back to my Profile",
+          "fullRanking": "Show full ranking"
+        },
+        "exitConfirm": {
+          "title": "Are you sure you want to leave the Session?"
+        },
+        "summary": {
+          "title": "Summary",
+          "empty": "No statistics available.",
+          "back": "Back to podium"
+        },
+        "feedback": {
+          "title": "Ratings",
+          "allVoted": "All participants have rated the Session",
+          "voting": "Participants are rating the Session (%count%/%total%)",
+          "gameRating": "Session rating",
+          "learning": "Learning feedback",
+          "recommend": "Recommended",
+          "average": "Average: %avg% / 5",
+          "showOnScreen": "Show rating on screen",
+          "back": "Back to podium"
+        },
+        "playerPostGame": {
+          "feedbackTitle": "Rate the Session",
+          "feedbackThanks": "Thanks for your feedback!",
+          "waiting": "Waiting for results...",
+          "suspense": "Revealing positions...",
+          "suspenseHint": "Watch the main screen",
+          "congrats": "Congratulations!",
+          "questionNumber": "Question %index%"
+        },
+        "feedbackForm": {
+          "submit": "Send",
+          "skip": "Skip",
+          "minStars": "Select at least 1 star to submit",
+          "error": "Error sending. Try again.",
+          "starsAria": "%count% stars",
+          "thumbUp": "Thumbs up",
+          "thumbDown": "Thumbs down"
+        },
+        "points": {
+          "unit": "pts"
+        },
+        "answer": {
+          "waitingForOthers": "Waiting for other players",
+          "youAnswered": "You answered:",
+          "correct": "Correct",
+          "incorrect": "Incorrect",
+          "position": "Position #%position%",
+          "messages": {
+            "correct1": "Well played",
+            "correct2": "Good answer",
+            "correct3": "You're on a streak",
+            "incorrect1": "Oops!",
+            "incorrect2": "Keep it up",
+            "incorrect3": "Better luck next time"
+          }
+        },
+        "emoji": {
+          "sendAria": "Send reaction"
+        },
+        "connectionLost": {
+          "title": "Connection lost",
+          "message": "We're trying to reconnect. If the problem persists, reload the page.",
+          "reload": "Reload"
+        },
+        "presenceBanner": {
+          "connected": "%nickname% has connected",
+          "disconnected": "%nickname% has disconnected",
+          "left": "%nickname% has left",
+          "kicked": "%nickname% has been kicked"
+        },
+        "host": {
+          "waitingForPlayers": "Waiting for players",
+          "questionCounter": "Question %current% / %total%"
+        }
+      }
+    },
+    "specific": {
+      "type": "Dictation",
+      "info_html": "<h2>Goal</h2><p>Type in the text you hear and press the Check button.</p><p>If the author has set a time limit, you have to type it in before the time runs out.</p><p>The game ends when you press Check on the last screen, or when you run out of time.</p><h2>Controls</h2><p>Simply use the keyboard to type in the text you are hearing, and press the Check button when you have typed in everything you have heard.</p><p>By default you can pause the audio, replay it, and change its playback speed. However, the author of the game can disable these options.</p><h2>Score</h2><p>You get 100 points if you type in the text you have heard correctly, exactly as the author has typed it. If there is more than one screen, each screen counts as 100 divided by the number of screens in the game.</p><p>By default, you lose 5 points on that screen for each misspelled word. However, the author can change the number of points that are not awarded for each error, and can even decide not to penalize errors.</p><p>By default, errors related to capitalization, accents, and punctuation marks are considered, and not those related to line breaks. However, the author can change these options.</p>",
+      "screen": "Screen",
+      "check": "Check",
+      "writedictation": "Write the dictation here"
+    }
+  },
+  "settings": {
+    "attempt": false,
+    "rating": false,
+    "resources": "https://cloud.educaplay.com/recursos/944/30215767/",
+    "videos": "https://videos.educaplay.com/activities/30215767/",
+    "mainResources": "https://cloud.educaplay.com/r/activitiesassets/",
+    "print": {
+      "url": "https://www.educaplay.com/printablegame/30215767-da_nang_family_getaway.html"
+    },
+    "login": {
+      "url": "https://www.educaplay.com/login/?min=true&anonymous=true&redirect=juego&extra=30215767,da_nang_family_getaway"
+    },
+    "ads": true
+  },
+  "assets": [
+    "audio6a7e9bb88ef1c.mp3",
+    "audio6a7e9bb99d4e1.mp3",
+    "audio6a7e9bba98dfb.mp3",
+    "audio6a7e9bbbafcab.mp3",
+    "audio6a7e9bbcb87d4.mp3",
+    "audio6a7e9bbdda2f9.mp3"
+  ],
+  "data": "QlojM2wBdRAacksKBxQbFGNwfDU+PRZyC28IZEs3LXhkf3V1fCcjM20daxxtBCg3N3d0c3ltditMSBY7UX0UajohJmV+dHt8ZisvPmAHa30CagcLShoVdXZ0ezEvIGsefRN3CyAgKXIVDBVKUFpCUHEecQt5GjY0KWNkd2QbA1oAHRZkGg99BigoIWx2dX52dycvMWABbh4acksXARQbFGd8dzkiO24JexZ3BkteXRoVdHt2aC0rIRZyYyQaHCw8PHkVDBV1WAsaUkc9VTJdOkVEIRZDRFZPXBQLFhQ/UStQaAQdSFBWW15VQFgaHRQMWX92KQcDShoVcXJ3fCovIGsJbRtxB0teDldbRVIVGzU7PmABdRp8AShGUm1MFGNgaT1MSBYpTTtRJ0tISmV4Y2V6fFpUUFU9XDZXfghTDQ9VVA8BXB5fERolSGwaZEspPXpjf3p8fTEvLXMNdhpqCS0rSgxDREJcRCUTXk9qbBpgHCZGUhRgUxdKTRkXF1BoUTEYKUkGDVdCQl5fTBROGls8XTMYJgwFGhZDXlIZWx0PEVxqFH1/DSchOndlaXZsfTEhUA4uWTNLLUVGJWN7Yn50fDwnMxZyYyQaHDA0LRQNFFZMXREBUBhqaxBtGiohSgwVV0JdUBdYEwMtAT1acVAAXFMGGFpJClpCUHkddAtxBSwgIXdocXJ3fCovNntqAitKPQwZNUsbTRVtfCA6PRZyGgtQLUkMB0JSWhdOWAtOA0EhTDoYJBwcHUReWUJKGQ8HBlxoWTJZMgAKDxZRV1RQVREaG1E7GnMaDywqLWR2ZGh4bDwnPRZyXj5UOwxISntiemNwdD0qO3VqAgRDaj09OHMVDBVYTBwHHRZkGgx3HTsnLRQNFFZMXREBRFV/XWZaKghdUFJRVBlUSUtMXhYFbRNsASQhLH92aXB8dz08M3AHGmVMOhwBFWtKGkwbbT02JntqAn1xPEkMCVIXVxdKThEDH10mX39IJwYISFdZUhdYGR8cF1U8GC1dOx0FHURWWEMbFVopN3oNah5qFygxLH94FA1fWBQdFxhqdQp0HCApLXJ+dxUDYgNMJm0YfX0CaggRDF9YFBsbajc7IHcNGmUaKRwAAVkBVwBcABoMEFUuWz5aZgQUWxQbFHpsdSwnP3EMcR5nDywqLWR2cngbAwwcB1E1ZSIUM0swLW5jeRUDGy8LUlEmUjBBLQ1EBFlZURdOWBQFARQpVDBWL0kQAFMXRUJXVwFOAVwnSjpUIQcBSFJWX1tAG1RMNXEGfQ15GjYlPXJ+eRUDXxkCAVFkGhJtBD0tJXNzf3YbAyMVUGARaBoacksFHVJeWRUVGyshJ2YLfX0CaggRDF9YAFYOXEEMEFcqAGhcfEcJGAUVGhV0bDQ6O3kNfBZ5Fy4hJnNld3N2G0IaAEEtRQJFZBJGPHNvYngbA1o6GlFoTC1ROEkHGlNWQlJdGQ8BHFAtSjlNJEkJDVtYRF5cSlgaGlU8GChdaB4NBFoXQkVcWAsbAFFqFH1/DSchOndlaXZsfTEhUA4uWTNLLUVGJWN7Yn50fDwnMxZyYyQaHDA0LRQNFFZMXREBUBhqaxBtGiohSgwVV0JdUBdYEwMtAT1aLA0FWlAOGFpJClpCUHkddAtxBSwgIXdocXJ3fCovNntqAitKPQwZNUtqGhV2ei0iJnUaZw15BiItJnEVDBUJGwU="
+}

@@ -1,0 +1,2723 @@
+{
+  "total": 200,
+  "items": [
+    {
+      "id": "vocab_1_skateboarding",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "skateboarding",
+      "text": "skateboarding /ˈskeɪtbɔːdɪŋ/ (noun). Nghĩa: môn trượt ván He enjoys skateboarding at the weekend.. Definition: the sport or activity of riding a skateboard. ",
+      "metadata": {
+        "lemma": "skateboarding",
+        "ipa": "/ˈskeɪtbɔːdɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "môn trượt ván He enjoys skateboarding at the weekend.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_civic_education",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "civic education",
+      "text": "civic education /ˈsɪvɪk edʒuˈkeɪʃn/ (noun phrase). Nghĩa: môn giáo dục công dân/ môn đạo đức.  ",
+      "metadata": {
+        "lemma": "civic education",
+        "ipa": "/ˈsɪvɪk edʒuˈkeɪʃn/",
+        "partOfSpeech": "noun phrase",
+        "cefrLevel": "A2",
+        "meaningVi": "môn giáo dục công dân/ môn đạo đức",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_gymnastics",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "gymnastics",
+      "text": "gymnastics /dʒɪmˈnæstɪks/ (noun). Nghĩa: thể dục dụng cụ She won several medals in the gymnastics..  ",
+      "metadata": {
+        "lemma": "gymnastics",
+        "ipa": "/dʒɪmˈnæstɪks/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "thể dục dụng cụ She won several medals in the gymnastics.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_ice_hockey",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "ice hockey",
+      "text": "ice hockey /ˈaɪs hɒki/ (noun). Nghĩa: môn khúc côn cầu trên băng There's no ice hockey in the Summer Olympics, of course.. Definition: a game played on ice between two teams of players who each have a curved stick with which they try to put a puck (= a small, hard disc) into the other team's goal. ",
+      "metadata": {
+        "lemma": "ice hockey",
+        "ipa": "/ˈaɪs hɒki/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "môn khúc côn cầu trên băng There's no ice hockey in the Summer Olympics, of course.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_ice_skating",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "ice skating",
+      "text": "ice skating /ˈaɪs skeɪtɪŋ/ (noun). Nghĩa: môn trượt băng Many people enjoy winter sports such as ice skating and skiing.. Definition: the sport or activity of moving on ice, wearing ice skates (= boots with thin metal bars attached to the bottoms). ",
+      "metadata": {
+        "lemma": "ice skating",
+        "ipa": "/ˈaɪs skeɪtɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "môn trượt băng Many people enjoy winter sports such as ice skating and skiing.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_wavy_hair",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "wavy hair",
+      "text": "wavy hair /ˈweɪvi heər/ (noun phrase). Nghĩa: tóc gợn sóng She has blonde wavy hair and blue eyes..  ",
+      "metadata": {
+        "lemma": "wavy hair",
+        "ipa": "/ˈweɪvi heər/",
+        "partOfSpeech": "noun phrase",
+        "cefrLevel": "A2",
+        "meaningVi": "tóc gợn sóng She has blonde wavy hair and blue eyes.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_beard",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "beard",
+      "text": "beard /bɪəd/ (noun). Nghĩa: râu He shaved off his beard.. Definition: Hair that grows on the chin and lower part of a person’s face. ",
+      "metadata": {
+        "lemma": "beard",
+        "ipa": "/bɪəd/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "râu He shaved off his beard.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_moustache",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "moustache",
+      "text": "moustache /məˈstɑːʃ/ (noun). Nghĩa: ria mép I do not believe that moustaches on officers are a widespread complaint.. Definition: hair that a man grows above his upper lip. ",
+      "metadata": {
+        "lemma": "moustache",
+        "ipa": "/məˈstɑːʃ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "ria mép I do not believe that moustaches on officers are a widespread complaint.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_sweatshirt",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "sweatshirt",
+      "text": "sweatshirt /ˈswetʃɜːt/ (noun). Nghĩa: áo nỉ. Definition: a piece of informal clothing with long sleeves, usually made of thick cotton, worn on the upper part of the body. ",
+      "metadata": {
+        "lemma": "sweatshirt",
+        "ipa": "/ˈswetʃɜːt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "áo nỉ",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_tracksuit",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "tracksuit",
+      "text": "tracksuit /ˈtræksuːt/ (noun). Nghĩa: bộ quần áo thể thao Students wear tracksuit uniform in PE lessons.. Definition: a loose top and trousers, worn either by people who are training for a sport or exercising, or as informal clothing. ",
+      "metadata": {
+        "lemma": "tracksuit",
+        "ipa": "/ˈtræksuːt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bộ quần áo thể thao Students wear tracksuit uniform in PE lessons.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_1_trainer",
+      "unit": 1,
+      "type": "vocabulary",
+      "title": "trainer",
+      "text": "trainer /ˈtreɪnər/ (noun). Nghĩa: người huấn luyện A lot of wealthy people have their own personal trainer.. Definition: - type of light, comfortable shoe that can be worn for sport/ giày thể thao We should have a good pair of trainers for better practice. -a person who teaches skills to people or animals and prepares them for a job, activity, or sport. ",
+      "metadata": {
+        "lemma": "trainer",
+        "ipa": "/ˈtreɪnər/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "người huấn luyện A lot of wealthy people have their own personal trainer.",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "vocab_2_anxious",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "anxious",
+      "text": "anxious /ˈæŋkʃəs/ (adjective). Nghĩa: lo âu, băn khoăn, khắc khoải The bus was late and Sue began to get anxious. (Xe buýt bị trễ và Sue đã bắt đầu trở nên lo âu.). Definition: feeling worried or nervous. ",
+      "metadata": {
+        "lemma": "anxious",
+        "ipa": "/ˈæŋkʃəs/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "lo âu, băn khoăn, khắc khoải The bus was late and Sue began to get anxious. (Xe buýt bị trễ và Sue đã bắt đầu trở nên lo âu.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_ashamed",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "ashamed",
+      "text": "ashamed /əˈʃeɪmd/ (adjective). Nghĩa: xấu hổ, hổ thẹn, ngượng You should be ashamed of yourself for telling such lies. (Câu nên cảm thấy hổ thẹn vì nói những lời dối trá như vậy.). Definition: ashamed of something/ somebody/ oneself. ",
+      "metadata": {
+        "lemma": "ashamed",
+        "ipa": "/əˈʃeɪmd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "xấu hổ, hổ thẹn, ngượng You should be ashamed of yourself for telling such lies. (Câu nên cảm thấy hổ thẹn vì nói những lời dối trá như vậy.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_confused",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "confused",
+      "text": "confused /kənˈfjuːzd/ (adjective). Nghĩa: bối rối, lúng túng, lộn xộn, không rõ ràng I'm getting really confused now. What has that got to do with it? (Tôi đang thực sự bối rối. Điều đó thì có liên quan gì?). Definition: unable to think clearly or to understand what is happening or what somebody is saying. ",
+      "metadata": {
+        "lemma": "confused",
+        "ipa": "/kənˈfjuːzd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "bối rối, lúng túng, lộn xộn, không rõ ràng I'm getting really confused now. What has that got to do with it? (Tôi đang thực sự bối rối. Điều đó thì có liên quan gì?)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_confusing",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "confusing",
+      "text": "confusing /kənˈfjuːzɪŋ/ (adjective). Nghĩa: khó hiểu, không rõ ràng The instructions on the box are very confusing. (Hướng dẫn trên hộp rất khó hiểu.). Definition: difficult to understand; not clear. ",
+      "metadata": {
+        "lemma": "confusing",
+        "ipa": "/kənˈfjuːzɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "khó hiểu, không rõ ràng The instructions on the box are very confusing. (Hướng dẫn trên hộp rất khó hiểu.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_disappointed",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "disappointed",
+      "text": "disappointed /dɪsəˈpɔɪntɪd/ (adjective). Nghĩa: thất vọng Fans of the original film will be sorely disappointed at this remake. (Những người hâm mộ bộ phim gốc sẽ vô cùng thất vọng với bản làm lại này.). Definition: upset because something you hoped for has not happened or been as good, successful, etc. as you expected. ",
+      "metadata": {
+        "lemma": "disappointed",
+        "ipa": "/dɪsəˈpɔɪntɪd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "thất vọng Fans of the original film will be sorely disappointed at this remake. (Những người hâm mộ bộ phim gốc sẽ vô cùng thất vọng với bản làm lại này.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_disappointing",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "disappointing",
+      "text": "disappointing /dɪsəˈpɔɪntɪŋ/ (adjective). Nghĩa: gây thất vọng The choices made on election day will always be disappointing to a significant number of voters. (Những lựa chọn được đưa ra trong ngày bầu cử sẽ luôn gây thất vọng cho một lượng lớn cử tri.). Definition: not as good, successful, etc. as you had hoped; making you feel disappointed. ",
+      "metadata": {
+        "lemma": "disappointing",
+        "ipa": "/dɪsəˈpɔɪntɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "gây thất vọng The choices made on election day will always be disappointing to a significant number of voters. (Những lựa chọn được đưa ra trong ngày bầu cử sẽ luôn gây thất vọng cho một lượng lớn cử tri.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_embarrassed",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "embarrassed",
+      "text": "embarrassed /ɪmˈbærəst/ (adjective). Nghĩa: lúng túng, bối rối, ngượng He felt embarrassed at being the centre of attention. (Anh ta cảm thấy bối rối khi là trung tâm của sự chú ý.). Definition: shy, uncomfortable or ashamed, especially in a social situation. ",
+      "metadata": {
+        "lemma": "embarrassed",
+        "ipa": "/ɪmˈbærəst/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "lúng túng, bối rối, ngượng He felt embarrassed at being the centre of attention. (Anh ta cảm thấy bối rối khi là trung tâm của sự chú ý.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_embarrassing",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "embarrassing",
+      "text": "embarrassing /ɪmˈbærəsɪŋ/ (adjective). Nghĩa: khiến bạn cảm thấy ngại, xấu hổ, không thoải mái His terrible acting is just embarrassing to watch. (Diễn xuất khủng khiếp của anh ấy thật đáng xấu hổ để xem.). Definition: making you feel shy, uncomfortable or ashamed. ",
+      "metadata": {
+        "lemma": "embarrassing",
+        "ipa": "/ɪmˈbærəsɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "khiến bạn cảm thấy ngại, xấu hổ, không thoải mái His terrible acting is just embarrassing to watch. (Diễn xuất khủng khiếp của anh ấy thật đáng xấu hổ để xem.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_envious",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "envious",
+      "text": "envious /ˈenviəs/ (adjective). Nghĩa: đố kị, muốn giống người khác They were envious of his success. (Họ đố kị vì sự thành công của anh ấy.). Definition: wanting to be in the same situation as somebody else. ",
+      "metadata": {
+        "lemma": "envious",
+        "ipa": "/ˈenviəs/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "đố kị, muốn giống người khác They were envious of his success. (Họ đố kị vì sự thành công của anh ấy.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_frightened",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "frightened",
+      "text": "frightened /ˈfraɪtnd/ (adjective). Nghĩa: cảm thấy sợ hãi Don't be frightened. I'm frightened of walking home alone in the dark. (Tôi sợ đi bộ một mình về nhà khi trời tối.). Definition: afraid; feeling fear. ",
+      "metadata": {
+        "lemma": "frightened",
+        "ipa": "/ˈfraɪtnd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "cảm thấy sợ hãi Don't be frightened. I'm frightened of walking home alone in the dark. (Tôi sợ đi bộ một mình về nhà khi trời tối.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_frightening",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "frightening",
+      "text": "frightening /ˈfraɪtnɪŋ/ (adjective). Nghĩa: khiến bạn thấy sợ hãi The noise was frightening. (Tiếng ồn thật đáng sợ.). Definition: making you feel afraid. ",
+      "metadata": {
+        "lemma": "frightening",
+        "ipa": "/ˈfraɪtnɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "khiến bạn thấy sợ hãi The noise was frightening. (Tiếng ồn thật đáng sợ.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_relieved",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "relieved",
+      "text": "relieved /rɪˈliːvd/ (adjective). Nghĩa: cảm thấy bớt căng thẳng, cảm thấy được giải tỏa, nhẹ nhõm I'm just relieved that nobody was hurt. (Tôi thấy nhẹ nhõm khi không ai bị thương.). Definition: feeling happy because something unpleasant has stopped or has not happened; showing this. ",
+      "metadata": {
+        "lemma": "relieved",
+        "ipa": "/rɪˈliːvd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "cảm thấy bớt căng thẳng, cảm thấy được giải tỏa, nhẹ nhõm I'm just relieved that nobody was hurt. (Tôi thấy nhẹ nhõm khi không ai bị thương.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_suspicious",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "suspicious",
+      "text": "suspicious /səˈspɪʃəs/ (adjective). Nghĩa: tỏ ra nghi ngờ, có sự nghi ngờ. Definition: feeling that somebody has done something wrong, illegal or dishonest, without having any proof. ",
+      "metadata": {
+        "lemma": "suspicious",
+        "ipa": "/səˈspɪʃəs/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "tỏ ra nghi ngờ, có sự nghi ngờ",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_exhausted",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "exhausted",
+      "text": "exhausted /ɪɡˈzɔːstɪd/ (adjective). Nghĩa: cảm thấy rất mệt I'm exhausted!. Definition: very tired. ",
+      "metadata": {
+        "lemma": "exhausted",
+        "ipa": "/ɪɡˈzɔːstɪd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "cảm thấy rất mệt I'm exhausted!",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_exhausting",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "exhausting",
+      "text": "exhausting /ɪɡˈzɔːstɪŋ/ (adjective). Nghĩa: khiến ai đó cảm thấy rất mệt Teaching young children is exhausting work. (Dạy trẻ nhỏ là một công việc mệt nhọc.). Definition: making sb very tired. ",
+      "metadata": {
+        "lemma": "exhausting",
+        "ipa": "/ɪɡˈzɔːstɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "khiến ai đó cảm thấy rất mệt Teaching young children is exhausting work. (Dạy trẻ nhỏ là một công việc mệt nhọc.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_disgusted",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "disgusted",
+      "text": "disgusted /dɪsˈɡʌstɪd/ (adjective). Nghĩa: cảm thấy chán ghét, phẫn nộ They are disgusted with their boss. (Họ chán ghét ông chủ của mình.).  ",
+      "metadata": {
+        "lemma": "disgusted",
+        "ipa": "/dɪsˈɡʌstɪd/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "cảm thấy chán ghét, phẫn nộ They are disgusted with their boss. (Họ chán ghét ông chủ của mình.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_2_disgusting",
+      "unit": 2,
+      "type": "vocabulary",
+      "title": "disgusting",
+      "text": "disgusting /dɪsˈɡʌstɪŋ/ (adjective). Nghĩa: cực kỳ không thoải mái The kitchen was in a disgusting state when she left. (Căn bếp đang trong tình trạng kinh tởm khi cô ấy rời đi.). Definition: extremely unpleasant. ",
+      "metadata": {
+        "lemma": "disgusting",
+        "ipa": "/dɪsˈɡʌstɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "cực kỳ không thoải mái The kitchen was in a disgusting state when she left. (Căn bếp đang trong tình trạng kinh tởm khi cô ấy rời đi.)",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "vocab_3_cliff",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "cliff",
+      "text": "cliff /klɪf/ (noun). Nghĩa: vách đá. Definition: a high area of rock with a steep side, often at the edge of the sea. Example: The house is built on the edge of a cliff..",
+      "metadata": {
+        "lemma": "cliff",
+        "ipa": "/klɪf/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "vách đá",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_desert",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "desert",
+      "text": "desert /ˈdezɚt/ (noun). Nghĩa: sa mạc. Definition: a large, dry area of land with very little rain and few plants. Example: Camels are well adapted to live in the desert..",
+      "metadata": {
+        "lemma": "desert",
+        "ipa": "/ˈdezɚt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sa mạc",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_shore",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "shore",
+      "text": "shore /ʃɔːr/ (noun). Nghĩa: bờ biển, bờ hồ, bờ sông. Definition: the land along the edge of a sea, lake, or river. Example: We walked along the shore at sunset..",
+      "metadata": {
+        "lemma": "shore",
+        "ipa": "/ʃɔːr/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bờ biển, bờ hồ, bờ sông",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_stream",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "stream",
+      "text": "stream /striːm/ (noun). Nghĩa: suối, dòng nước nhỏ. Definition: a small, narrow river. Example: A clear stream flows through the forest..",
+      "metadata": {
+        "lemma": "stream",
+        "ipa": "/striːm/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "suối, dòng nước nhỏ",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_valley",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "valley",
+      "text": "valley /ˈvæli/ (noun). Nghĩa: thung lũng. Definition: a low area of land between hills or mountains. Example: The river runs through a beautiful valley..",
+      "metadata": {
+        "lemma": "valley",
+        "ipa": "/ˈvæli/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "thung lũng",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_waterfall",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "waterfall",
+      "text": "waterfall /ˈwɑːt̬ɚfɑːl/ (noun). Nghĩa: thác nước. Definition: a place where water flows over a vertical drop. Example: We visited a stunning waterfall on our trip..",
+      "metadata": {
+        "lemma": "waterfall",
+        "ipa": "/ˈwɑːt̬ɚfɑːl/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "thác nước",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_rocky",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "rocky",
+      "text": "rocky /ˈrɒki/ (adjective). Nghĩa: đầy đá. Definition: covered with or consisting of rocks. Example: They climbed the rocky cliff..",
+      "metadata": {
+        "lemma": "rocky",
+        "ipa": "/ˈrɒki/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "đầy đá",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_steep",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "steep",
+      "text": "steep /stiːp/ (adjective). Nghĩa: dốc, dốc đứng. Definition: having a sharp inclination. Example: The hikers struggled up the steep valley..",
+      "metadata": {
+        "lemma": "steep",
+        "ipa": "/stiːp/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "dốc, dốc đứng",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_shallow",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "shallow",
+      "text": "shallow /ˈʃæləʊ/ (adjective). Nghĩa: nông. Definition: not deep. Example: The children played in the shallow stream..",
+      "metadata": {
+        "lemma": "shallow",
+        "ipa": "/ˈʃæləʊ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "nông",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_deep",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "deep",
+      "text": "deep /diːp/ (). Nghĩa: sâu. Definition: extending far down. Example: The river flowed through a deep valley..",
+      "metadata": {
+        "lemma": "deep",
+        "ipa": "/diːp/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "sâu",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_fantastic",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "fantastic",
+      "text": "fantastic /fænˈtæstɪk/ (adjective). Nghĩa: tuyệt vời e.g. She had a fantastic time at the party.. Definition: extremely good or impressive. ",
+      "metadata": {
+        "lemma": "fantastic",
+        "ipa": "/fænˈtæstɪk/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "tuyệt vời e.g. She had a fantastic time at the party.",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_filthy",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "filthy",
+      "text": "filthy /ˈfɪlθi/ (adjective). Nghĩa: rất bẩn, dơ bẩn, nhơ nhuốc. Definition: covered in dirt or extremely unclean. Example: His clothes were absolutely filthy after playing in the mud..",
+      "metadata": {
+        "lemma": "filthy",
+        "ipa": "/ˈfɪlθi/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "rất bẩn, dơ bẩn, nhơ nhuốc",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_starving",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "starving",
+      "text": "starving /ˈstɑːrvɪŋ/ (adjective). Nghĩa: đói cồn cào. Definition: in great need of food. Example: I haven’t eaten all day – I’m starving!.",
+      "metadata": {
+        "lemma": "starving",
+        "ipa": "/ˈstɑːrvɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "đói cồn cào",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_brilliant",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "brilliant",
+      "text": "brilliant /ˈbrɪliənt/ (). Nghĩa: xuất sắc. Definition: exceptionally smart or skillful/ tài giỏi. Example: That was a brilliant idea!.",
+      "metadata": {
+        "lemma": "brilliant",
+        "ipa": "/ˈbrɪliənt/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "xuất sắc",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_stunning",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "stunning",
+      "text": "stunning /ˈstʌnɪŋ/ (). Nghĩa: tuyệt đẹp. Definition: incredibly beautiful or impressive. Example: She looked stunning in her wedding dress..",
+      "metadata": {
+        "lemma": "stunning",
+        "ipa": "/ˈstʌnɪŋ/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "tuyệt đẹp",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_huge",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "huge",
+      "text": "huge /hjuːdʒ/ (adjective). Nghĩa: khổng lồ. Definition: of great size or amount. Example: They live in a huge house with ten rooms..",
+      "metadata": {
+        "lemma": "huge",
+        "ipa": "/hjuːdʒ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "khổng lồ",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_astonishing",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "astonishing",
+      "text": "astonishing /əˈstɒnɪʃɪŋ/ (adjective). Nghĩa: đáng kinh ngạc. Definition: causing great surprise or amazement. Example: The magician’s trick was astonishing!.",
+      "metadata": {
+        "lemma": "astonishing",
+        "ipa": "/əˈstɒnɪʃɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "đáng kinh ngạc",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_tragic",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "tragic",
+      "text": "tragic /ˈtrædʒɪk/ (adjective). Nghĩa: bi thảm. Definition: causing deep sadness or sorrow. Example: It was a tragic accident..",
+      "metadata": {
+        "lemma": "tragic",
+        "ipa": "/ˈtrædʒɪk/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "bi thảm",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_abseiling",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "abseiling",
+      "text": "abseiling /ˈæbseɪlɪŋ/ (adjective). Nghĩa: môn đu dây leo xuống vách đá. Definition: the sport of descending a steep drop using a rope and a harness. ",
+      "metadata": {
+        "lemma": "abseiling",
+        "ipa": "/ˈæbseɪlɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "môn đu dây leo xuống vách đá",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_jet-skiing",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "jet-skiing",
+      "text": "jet-skiing /ˈdʒet skiːɪŋ/ (adjective). Nghĩa: lái mô tô nước. Definition: the sport of riding a small motorized water vehicle. Example: We had fun jet-skiing along the beach..",
+      "metadata": {
+        "lemma": "jet-skiing",
+        "ipa": "/ˈdʒet skiːɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "lái mô tô nước",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_kayaking",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "kayaking",
+      "text": "kayaking /ˈkaɪækɪŋ/ (adjective). Nghĩa: chèo thuyền kayak. Definition: the sport of paddling a small boat on water. Example: They went kayaking in the river..",
+      "metadata": {
+        "lemma": "kayaking",
+        "ipa": "/ˈkaɪækɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "chèo thuyền kayak",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_orienteering",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "orienteering",
+      "text": "orienteering /ɔːriənˈtɪərɪŋ/ (adjective). Nghĩa: môn thể thao định hướng. Definition: a sport involving navigation with a map and compass. Example: We practiced orienteering in the forest..",
+      "metadata": {
+        "lemma": "orienteering",
+        "ipa": "/ɔːriənˈtɪərɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "môn thể thao định hướng",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_paintballing",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "paintballing",
+      "text": "paintballing /ˈpeɪntbɔːlɪŋ/ (adjective). Nghĩa: bắn súng sơn. Definition: a game where players shoot paint-filled pellets at each other. Example: They went paintballing for his birthday..",
+      "metadata": {
+        "lemma": "paintballing",
+        "ipa": "/ˈpeɪntbɔːlɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "bắn súng sơn",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_quad_biking",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "quad biking",
+      "text": "quad biking /ˈkwɒd baɪkɪŋ/ (adjective). Nghĩa: lái xe địa hình 4 bánh. Definition: riding a four-wheeled off-road vehicle. Example: We had an adventure quad biking through the mountains..",
+      "metadata": {
+        "lemma": "quad biking",
+        "ipa": "/ˈkwɒd baɪkɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "lái xe địa hình 4 bánh",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_kite_surfing",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "kite surfing",
+      "text": "kite surfing /ˈkaɪt sɜːfɪŋ/ (). Nghĩa: lướt ván diều. Definition: a sport using a kite to pull a surfboard over water. Example: He loves kite surfing in strong winds..",
+      "metadata": {
+        "lemma": "kite surfing",
+        "ipa": "/ˈkaɪt sɜːfɪŋ/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "lướt ván diều",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_bungee_jumping",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "bungee jumping",
+      "text": "bungee jumping /ˈbʌndʒi ˈdʒʌmpɪŋ/ (). Nghĩa: nhảy bungee. Definition: the sport of jumping from a high structure while attached to a flexible cord. Example: They went bungee jumping off a bridge..",
+      "metadata": {
+        "lemma": "bungee jumping",
+        "ipa": "/ˈbʌndʒi ˈdʒʌmpɪŋ/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "nhảy bungee",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_hang_gliding",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "hang gliding",
+      "text": "hang gliding /hæŋ ˈɡlaɪdɪŋ/ (). Nghĩa: bay dù treo. Definition: the sport of flying a lightweight, non-motorized glider by launching from high places. Example: They experienced hang gliding over the mountains..",
+      "metadata": {
+        "lemma": "hang gliding",
+        "ipa": "/hæŋ ˈɡlaɪdɪŋ/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "bay dù treo",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_karting",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "karting",
+      "text": "karting /ˈkɑːtɪŋ/ (noun). Nghĩa: đua xe kart. Definition: a form of racing with small, open, four-wheeled vehicles. Example: They went karting on a local track..",
+      "metadata": {
+        "lemma": "karting",
+        "ipa": "/ˈkɑːtɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "đua xe kart",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_paddleboarding",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "paddleboarding",
+      "text": "paddleboarding /ˈpædl bɔːrdɪŋ/ (noun). Nghĩa: chèo ván đứng. Definition: a water sport where one stands on a board and uses a paddle to move. Example: They enjoyed paddleboarding on the calm lake..",
+      "metadata": {
+        "lemma": "paddleboarding",
+        "ipa": "/ˈpædl bɔːrdɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "chèo ván đứng",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_snorkling",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "snorkling",
+      "text": "snorkling /ˈsnɔːrklɪŋ/ (noun). Nghĩa: lặn với ống thở. Definition: the activity of swimming near the surface of water using a mask and snorkel. Example: They spent the day snorkling among colorful fish..",
+      "metadata": {
+        "lemma": "snorkling",
+        "ipa": "/ˈsnɔːrklɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "lặn với ống thở",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_bat",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "bat",
+      "text": "bat /bæt/ (). Nghĩa: gậy đánh bóng. Definition: a wooden or metal club used in sports like baseball or cricket. Example: He swung the baseball bat with great force..",
+      "metadata": {
+        "lemma": "bat",
+        "ipa": "/bæt/",
+        "partOfSpeech": null,
+        "cefrLevel": "A2",
+        "meaningVi": "gậy đánh bóng",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_goggles",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "goggles",
+      "text": "goggles /ˈɡɒɡlz/ (noun). Nghĩa: kính bơi. Definition: protective eyewear used for swimming or safety. Example: She put on her goggles before diving into the pool..",
+      "metadata": {
+        "lemma": "goggles",
+        "ipa": "/ˈɡɒɡlz/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "kính bơi",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_helmet",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "helmet",
+      "text": "helmet /ˈhɛlmɪt/ (noun). Nghĩa: mũ bảo hiểm. Definition: protective headgear worn in sports or for safety. Example: He always wears a helmet when cycling..",
+      "metadata": {
+        "lemma": "helmet",
+        "ipa": "/ˈhɛlmɪt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "mũ bảo hiểm",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_hoop",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "hoop",
+      "text": "hoop /huːp/ (noun). Nghĩa: a circular ring, such as in basketball: rổ.  Example: He shot the ball through the hoop..",
+      "metadata": {
+        "lemma": "hoop",
+        "ipa": "/huːp/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "a circular ring, such as in basketball: rổ",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_puck",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "puck",
+      "text": "puck /pʌk/ (noun). Nghĩa: bóng khúc côn cầu. Definition: a small, flat, rubber disc used in ice hockey. Example: The player hit the puck into the goal..",
+      "metadata": {
+        "lemma": "puck",
+        "ipa": "/pʌk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bóng khúc côn cầu",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_racket",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "racket",
+      "text": "racket /ˈrækɪt/ (noun). Nghĩa: vợt tennis. Definition: a sports implement with a handle and netting used in tennis, badminton, etc./ vợt cầu lông. Example: She bought a new badminton racket..",
+      "metadata": {
+        "lemma": "racket",
+        "ipa": "/ˈrækɪt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "vợt tennis",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_harness",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "harness",
+      "text": "harness /ˈhɑːrnɪs/ (noun). Nghĩa: dây đai an toàn. Definition: a safety belt or straps used in climbing or extreme sports. Example: He secured his harness before climbing the rock wall..",
+      "metadata": {
+        "lemma": "harness",
+        "ipa": "/ˈhɑːrnɪs/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "dây đai an toàn",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_swimming_trunks",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "swimming trunks",
+      "text": "swimming trunks /ˈswɪmɪŋ trʌŋks/ (noun). Nghĩa: quần bơi nam e.g. He packed his swimming trunks for the trip.. Definition: shorts worn by men for swimming. ",
+      "metadata": {
+        "lemma": "swimming trunks",
+        "ipa": "/ˈswɪmɪŋ trʌŋks/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "quần bơi nam e.g. He packed his swimming trunks for the trip.",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_wetsuit",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "wetsuit",
+      "text": "wetsuit /ˈwɛtsuːt/ (noun). Nghĩa: bộ đồ lặn. Definition: a tight-fitting suit worn in water sports for warmth. Example: He put on a wetsuit before surfing..",
+      "metadata": {
+        "lemma": "wetsuit",
+        "ipa": "/ˈwɛtsuːt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bộ đồ lặn",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_3_stick",
+      "unit": 3,
+      "type": "vocabulary",
+      "title": "stick",
+      "text": "stick /stɪk/ (noun). Nghĩa: gậy chơi thể thao. Definition: a long, thin object used in sports like hockey or lacrosse. Example: He held his hockey stick tightly during the match..",
+      "metadata": {
+        "lemma": "stick",
+        "ipa": "/stɪk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "gậy chơi thể thao",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "vocab_4_animation",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "animation",
+      "text": "animation /ænɪˈmeɪʃn/ (noun). Nghĩa: phim hoạt hình Children enjoy animation.. Definition: a film in which drawings, models or images of people and animals seem to move. ",
+      "metadata": {
+        "lemma": "animation",
+        "ipa": "/ænɪˈmeɪʃn/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "phim hoạt hình Children enjoy animation.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_comedy",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "comedy",
+      "text": "comedy /ˈkɒmədi/ (noun). Nghĩa: hài kịch I really love comedy. It makes me laugh everytime I watch it.. Definition: a play, film or TV show that is intended to be funny, usually with a happy ending; plays, films and TV shows of this type. ",
+      "metadata": {
+        "lemma": "comedy",
+        "ipa": "/ˈkɒmədi/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "hài kịch I really love comedy. It makes me laugh everytime I watch it.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_documentary",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "documentary",
+      "text": "documentary /dɒkjuˈmentri/ (noun). Nghĩa: phim tài liệu There were some interesting interviews in the documentary.. Definition: a film or a radio or television programme giving facts about something. ",
+      "metadata": {
+        "lemma": "documentary",
+        "ipa": "/dɒkjuˈmentri/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "phim tài liệu There were some interesting interviews in the documentary.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_bulletin",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "bulletin",
+      "text": "bulletin /ˈbʊlətɪn/ (noun). Nghĩa: bản tin The government will issue an official bulletin later this week.. Definition: a short news report on the radio or television. ",
+      "metadata": {
+        "lemma": "bulletin",
+        "ipa": "/ˈbʊlətɪn/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bản tin The government will issue an official bulletin later this week.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_soundtrack",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "soundtrack",
+      "text": "soundtrack /ˈsaʊndtræk/ (noun). Nghĩa: nhạc phim The soundtrack of ‘Casablanca’ took weeks to edit.. Definition: all the music, speech and sounds that are recorded for a film. ",
+      "metadata": {
+        "lemma": "soundtrack",
+        "ipa": "/ˈsaʊndtræk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "nhạc phim The soundtrack of ‘Casablanca’ took weeks to edit.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_character",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "character",
+      "text": "character /ˈkærəktə(r)/ (noun). Nghĩa: nhân vật Her character is the most sympathetic in the movie.. Definition: a person or an animal in a book, play or film. ",
+      "metadata": {
+        "lemma": "character",
+        "ipa": "/ˈkærəktə(r)/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "nhân vật Her character is the most sympathetic in the movie.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_script",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "script",
+      "text": "script /skrɪpt/ (noun). Nghĩa: kịch bản We're currently working on a script.. Definition: a written text of a play, film, broadcast, talk, etc.. ",
+      "metadata": {
+        "lemma": "script",
+        "ipa": "/skrɪpt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "kịch bản We're currently working on a script.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_special_effects",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "special effects",
+      "text": "special effects /speʃl ɪˈfekts/ (noun). Nghĩa: hiệu ứng I recently saw a really exciting action film. The special effects were amazing!. Definition: unsual or exciting pieces of action in films or television programmes, that are created by computers or clever photography to show things that do not normally exist or happen. ",
+      "metadata": {
+        "lemma": "special effects",
+        "ipa": "/speʃl ɪˈfekts/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "hiệu ứng I recently saw a really exciting action film. The special effects were amazing!",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_twists",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "twists",
+      "text": "twists /twɪst/ (noun). Nghĩa: những nút thắt trong một bộ phim The film has a clever plot with lots of twists..  ",
+      "metadata": {
+        "lemma": "twists",
+        "ipa": "/twɪst/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "những nút thắt trong một bộ phim The film has a clever plot with lots of twists.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_gripping",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "gripping",
+      "text": "gripping /ˈɡrɪpɪŋ/ (adjective). Nghĩa: thu hút The film was absolutely gripping.. Definition: exciting or interesting in a way that keeps your attention. ",
+      "metadata": {
+        "lemma": "gripping",
+        "ipa": "/ˈɡrɪpɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "thu hút The film was absolutely gripping.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_convincing",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "convincing",
+      "text": "convincing /kənˈvɪnsɪŋ/ (adjective). Nghĩa: mang tính thuyết phục She sounded very convincing to me.. Definition: that makes somebody believe that something is true. ",
+      "metadata": {
+        "lemma": "convincing",
+        "ipa": "/kənˈvɪnsɪŋ/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "mang tính thuyết phục She sounded very convincing to me.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_imaginative",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "imaginative",
+      "text": "imaginative /ɪˈmædʒɪnətɪv/ (adjective). Nghĩa: giàu trí tưởng tượng You’ll need to be a little more imaginative if you want to hold their attention.. Definition: having or showing new and exciting ideas. ",
+      "metadata": {
+        "lemma": "imaginative",
+        "ipa": "/ɪˈmædʒɪnətɪv/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "giàu trí tưởng tượng You’ll need to be a little more imaginative if you want to hold their attention.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_spectacular",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "spectacular",
+      "text": "spectacular /spekˈtækjələ(r)/ (adjective). Nghĩa: hùng vĩ, rất ấn tượng a spectacular display of fireworks. Definition: very impressive. ",
+      "metadata": {
+        "lemma": "spectacular",
+        "ipa": "/spekˈtækjələ(r)/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "hùng vĩ, rất ấn tượng a spectacular display of fireworks",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_unrealistic",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "unrealistic",
+      "text": "unrealistic /ʌnrɪəˈlɪstɪk/ (adjective). Nghĩa: phi thực tế It is unrealistic to expect them to be able to solve the problem immediately.. Definition: not showing or accepting things as they are. ",
+      "metadata": {
+        "lemma": "unrealistic",
+        "ipa": "/ʌnrɪəˈlɪstɪk/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "phi thực tế It is unrealistic to expect them to be able to solve the problem immediately.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_4_violent",
+      "unit": 4,
+      "type": "vocabulary",
+      "title": "violent",
+      "text": "violent /ˈvaɪələnt/ (adjective). Nghĩa: mang tính bạo lực They don't allow their kids to play violent video games.. Definition: involving or caused by physical force that is intended to hurt or kill somebody. ",
+      "metadata": {
+        "lemma": "violent",
+        "ipa": "/ˈvaɪələnt/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "mang tính bạo lực They don't allow their kids to play violent video games.",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "vocab_5_thunder",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "thunder",
+      "text": "thunder /ˈθʌndər/ (noun). Nghĩa: sấm The thunder was very loud last night. Definition: the loud sound that follows lightning. ",
+      "metadata": {
+        "lemma": "thunder",
+        "ipa": "/ˈθʌndər/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sấm The thunder was very loud last night",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_lightning",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "lightning",
+      "text": "lightning /ˈlaɪtnɪŋ/ (noun). Nghĩa: chớp, tia sét The lightning lit up the sky.. Definition: a flash of light in the sky during a storm. ",
+      "metadata": {
+        "lemma": "lightning",
+        "ipa": "/ˈlaɪtnɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "chớp, tia sét The lightning lit up the sky.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_foggy",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "foggy",
+      "text": "foggy /ˈfɒɡi/ (adjective). Nghĩa: có sương mù It was very foggy this morning.. Definition: full of fog; hard to see through. ",
+      "metadata": {
+        "lemma": "foggy",
+        "ipa": "/ˈfɒɡi/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "có sương mù It was very foggy this morning.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_hail",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "hail",
+      "text": "hail /heɪl/ (noun). Nghĩa: mưa đá Hail damaged many cars.. Definition: small balls of ice that fall from the sky. ",
+      "metadata": {
+        "lemma": "hail",
+        "ipa": "/heɪl/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "mưa đá Hail damaged many cars.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_wind",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "wind",
+      "text": "wind /wɪnd/ (noun). Nghĩa: the movement of air: gió The wind is very strong today..  ",
+      "metadata": {
+        "lemma": "wind",
+        "ipa": "/wɪnd/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "the movement of air: gió The wind is very strong today.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_snowflake",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "snowflake",
+      "text": "snowflake /ˈsnəʊfleɪk/ (noun). Nghĩa: bông tuyết Each snowflake has a unique shape.. Definition: a small piece of snow. ",
+      "metadata": {
+        "lemma": "snowflake",
+        "ipa": "/ˈsnəʊfleɪk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "bông tuyết Each snowflake has a unique shape.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_frost",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "frost",
+      "text": "frost /frɒst/ (noun). Nghĩa: sương giá The frost covered the grass.. Definition: a thin layer of ice that forms on surfaces. ",
+      "metadata": {
+        "lemma": "frost",
+        "ipa": "/frɒst/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sương giá The frost covered the grass.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_icy",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "icy",
+      "text": "icy /ˈaɪsi/ (adjective). Nghĩa: đóng băng, trơn trượt Be careful, the roads are icy.. Definition: covered with ice. ",
+      "metadata": {
+        "lemma": "icy",
+        "ipa": "/ˈaɪsi/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "đóng băng, trơn trượt Be careful, the roads are icy.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_mist",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "mist",
+      "text": "mist /mɪst/ (noun). Nghĩa: sương mù nhẹ The mist covered the valley. Definition: a thin layer of fog. ",
+      "metadata": {
+        "lemma": "mist",
+        "ipa": "/mɪst/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sương mù nhẹ The mist covered the valley",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_stormy",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "stormy",
+      "text": "stormy /ˈstɔːmi/ (adjective). Nghĩa: có bão It will be stormy tomorrow.. Definition: with strong winds and rain. ",
+      "metadata": {
+        "lemma": "stormy",
+        "ipa": "/ˈstɔːmi/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "có bão It will be stormy tomorrow.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_shower",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "shower",
+      "text": "shower /ˈʃaʊər/ (noun). Nghĩa: mưa rào There will be showers in the afternoon.. Definition: a short period of rain. ",
+      "metadata": {
+        "lemma": "shower",
+        "ipa": "/ˈʃaʊər/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "mưa rào There will be showers in the afternoon.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_thunderstorm",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "thunderstorm",
+      "text": "thunderstorm /ˈθʌndəstɔːm/ (noun). Nghĩa: dông bão A thunderstorm is approaching.. Definition: a storm with thunder and lightning. ",
+      "metadata": {
+        "lemma": "thunderstorm",
+        "ipa": "/ˈθʌndəstɔːm/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "dông bão A thunderstorm is approaching.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_breeze",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "breeze",
+      "text": "breeze /briːz/ (noun). Nghĩa: gió nhẹ A cool breeze is blowing.. Definition: a gentle wind. ",
+      "metadata": {
+        "lemma": "breeze",
+        "ipa": "/briːz/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "gió nhẹ A cool breeze is blowing.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_overcast",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "overcast",
+      "text": "overcast /ˈəʊvəkɑːst/ (adjective). Nghĩa: u ám The sky is overcast today.. Definition: covered with clouds; dark. ",
+      "metadata": {
+        "lemma": "overcast",
+        "ipa": "/ˈəʊvəkɑːst/",
+        "partOfSpeech": "adjective",
+        "cefrLevel": "A2",
+        "meaningVi": "u ám The sky is overcast today.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_avalanche",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "avalanche",
+      "text": "avalanche /ˈævəlæntʃ/ (noun). Nghĩa: tuyết lở The skiers were caught in an avalanche and had to be rescued.. Definition: a large amount of snow, ice, and rock falling quickly down a mountainside. ",
+      "metadata": {
+        "lemma": "avalanche",
+        "ipa": "/ˈævəlæntʃ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "tuyết lở The skiers were caught in an avalanche and had to be rescued.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_drought",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "drought",
+      "text": "drought /draʊt/ (noun). Nghĩa: hạn hán The drought has destroyed many crops in the region.. Definition: a long period without rain, causing water shortages. ",
+      "metadata": {
+        "lemma": "drought",
+        "ipa": "/draʊt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "hạn hán The drought has destroyed many crops in the region.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_earthquake",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "earthquake",
+      "text": "earthquake /ˈɜːθkweɪk/ (noun). Nghĩa: động đất A powerful earthquake hit the city, causing buildings to collapse.. Definition: a sudden and violent shaking of the ground. ",
+      "metadata": {
+        "lemma": "earthquake",
+        "ipa": "/ˈɜːθkweɪk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "động đất A powerful earthquake hit the city, causing buildings to collapse.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_epidemic",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "epidemic",
+      "text": "epidemic /epɪˈdemɪk/ (noun). Nghĩa: dịch bệnh The flu epidemic spread rapidly across the country.. Definition: a widespread occurrence of an infectious disease. ",
+      "metadata": {
+        "lemma": "epidemic",
+        "ipa": "/epɪˈdemɪk/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "dịch bệnh The flu epidemic spread rapidly across the country.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_flood",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "flood",
+      "text": "flood /flʌd/ (noun). Nghĩa: lũ lụt Heavy rains caused severe flooding in the town.. Definition: an overflow of water that covers normally dry land. ",
+      "metadata": {
+        "lemma": "flood",
+        "ipa": "/flʌd/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "lũ lụt Heavy rains caused severe flooding in the town.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_mudslide",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "mudslide",
+      "text": "mudslide /ˈmʌdslaɪd/ (noun). Nghĩa: lở bùn The heavy rain triggered a mudslide that buried several houses.. Definition: a large amount of mud moving down a slope. ",
+      "metadata": {
+        "lemma": "mudslide",
+        "ipa": "/ˈmʌdslaɪd/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "lở bùn The heavy rain triggered a mudslide that buried several houses.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_tornado",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "tornado",
+      "text": "tornado /tɔːˈneɪdəʊ/ (noun). Nghĩa: lốc xoáy The tornado destroyed everything in its path.. Definition: a violent, rotating column of air in contact with the ground. ",
+      "metadata": {
+        "lemma": "tornado",
+        "ipa": "/tɔːˈneɪdəʊ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "lốc xoáy The tornado destroyed everything in its path.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_tsunami",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "tsunami",
+      "text": "tsunami /tsuːˈnɑːmi/ (noun). Nghĩa: sóng thần The tsunami swept away entire villages along the coast.. Definition: a huge sea wave caused by an earthquake under the ocean. ",
+      "metadata": {
+        "lemma": "tsunami",
+        "ipa": "/tsuːˈnɑːmi/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sóng thần The tsunami swept away entire villages along the coast.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_volcanic_eruption",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "volcanic eruption",
+      "text": "volcanic eruption /vɒlˈkænɪk ɪˈrʌpʃən/ (noun). Nghĩa: núi lửa phun trào The volcanic eruption covered the nearby town in ash.. Definition: the release of magma, gas, and ash from a volcano. ",
+      "metadata": {
+        "lemma": "volcanic eruption",
+        "ipa": "/vɒlˈkænɪk ɪˈrʌpʃən/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "núi lửa phun trào The volcanic eruption covered the nearby town in ash.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_carbon_emissions",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "carbon emissions",
+      "text": "carbon emissions /ˈkɑːbən ɪˈmɪʃənz/ (noun). Nghĩa: khí thải carbon Factories should reduce carbon emissions to combat climate change.. Definition: The release of carbon dioxide into the atmosphere from burning fossil fuels. ",
+      "metadata": {
+        "lemma": "carbon emissions",
+        "ipa": "/ˈkɑːbən ɪˈmɪʃənz/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "khí thải carbon Factories should reduce carbon emissions to combat climate change.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_global_warming",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "global warming",
+      "text": "global warming /ˈɡləʊbəl ˈwɔːmɪŋ/ (noun). Nghĩa: sự nóng lên toàn cầu Global warming is causing ice caps to melt.. Definition: The gradual increase in Earth's temperature due to greenhouse gases. ",
+      "metadata": {
+        "lemma": "global warming",
+        "ipa": "/ˈɡləʊbəl ˈwɔːmɪŋ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "sự nóng lên toàn cầu Global warming is causing ice caps to melt.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_climate_change",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "climate change",
+      "text": "climate change /ˈklaɪmət tʃeɪndʒ/ (noun). Nghĩa: biến đổi khí hậu Climate change affects biodiversity worldwide.. Definition: Long-term changes in temperature and weather patterns. ",
+      "metadata": {
+        "lemma": "climate change",
+        "ipa": "/ˈklaɪmət tʃeɪndʒ/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "biến đổi khí hậu Climate change affects biodiversity worldwide.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_recycling_bin",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "recycling bin",
+      "text": "recycling bin /riːˈsaɪklɪŋ bɪn/ (noun). Nghĩa: thùng rác tái chế Please put plastic bottles in the recycling bin.. Definition: A container for waste materials that can be processed and reused. ",
+      "metadata": {
+        "lemma": "recycling bin",
+        "ipa": "/riːˈsaɪklɪŋ bɪn/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "thùng rác tái chế Please put plastic bottles in the recycling bin.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_green_lifestyle",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "green lifestyle",
+      "text": "green lifestyle /ɡriːn ˈlaɪfstaɪl/ (noun). Nghĩa: lối sống xanh Adopting a green lifestyle helps protect the planet.. Definition: A way of living that reduces harm to the environment. ",
+      "metadata": {
+        "lemma": "green lifestyle",
+        "ipa": "/ɡriːn ˈlaɪfstaɪl/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "lối sống xanh Adopting a green lifestyle helps protect the planet.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_fossil_fuels",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "fossil fuels",
+      "text": "fossil fuels /ˈfɒsəl fjʊəlz/ (noun). Nghĩa: nhiên liệu hóa thạch Fossil fuels contribute to air pollution.. Definition: Natural fuels like coal, oil, and gas formed from ancient remains. ",
+      "metadata": {
+        "lemma": "fossil fuels",
+        "ipa": "/ˈfɒsəl fjʊəlz/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "nhiên liệu hóa thạch Fossil fuels contribute to air pollution.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_plastic_waste",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "plastic waste",
+      "text": "plastic waste /ˈplæstɪk weɪst/ (noun). Nghĩa: rác thải nhựa Plastic waste is a major issue in oceans.. Definition: Discarded plastic materials that pollute the environment. ",
+      "metadata": {
+        "lemma": "plastic waste",
+        "ipa": "/ˈplæstɪk weɪst/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "rác thải nhựa Plastic waste is a major issue in oceans.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_carbon_footprint",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "carbon footprint",
+      "text": "carbon footprint /ˈkɑːbən ˈfʊtprɪnt/ (noun). Nghĩa: dấu chân carbon Reducing your carbon footprint can help slow down climate change.. Definition: The amount of carbon dioxide emitted due to an individual’s activities. ",
+      "metadata": {
+        "lemma": "carbon footprint",
+        "ipa": "/ˈkɑːbən ˈfʊtprɪnt/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "dấu chân carbon Reducing your carbon footprint can help slow down climate change.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_renewable_energy",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "renewable energy",
+      "text": "renewable energy /rɪˈnjuːəbəl ˈenədʒi/ (noun). Nghĩa: năng lượng tái tạo Many countries are investing in renewable energy.. Definition: Energy from natural sources that can be replenished, such as wind or solar power. ",
+      "metadata": {
+        "lemma": "renewable energy",
+        "ipa": "/rɪˈnjuːəbəl ˈenədʒi/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "năng lượng tái tạo Many countries are investing in renewable energy.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "vocab_5_endangered_species",
+      "unit": 5,
+      "type": "vocabulary",
+      "title": "endangered species",
+      "text": "endangered species /ɪnˈdeɪndʒəd ˈspiːʃiːz/ (noun). Nghĩa: loài có nguy cơ tuyệt chủng We must protect endangered species from habitat loss.. Definition: A group of animals or plants that are at risk of extinction. ",
+      "metadata": {
+        "lemma": "endangered species",
+        "ipa": "/ɪnˈdeɪndʒəd ˈspiːʃiːz/",
+        "partOfSpeech": "noun",
+        "cefrLevel": "A2",
+        "meaningVi": "loài có nguy cơ tuyệt chủng We must protect endangered species from habitat loss.",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "grammar_1_present_simple_vs_continuous",
+      "unit": 1,
+      "type": "grammar",
+      "title": "So sánh thì hiện tại đơn và hiện tại tiếp diễn",
+      "text": "So sánh thì hiện tại đơn và hiện tại tiếp diễn.\nHiện tại đơn | Hiện tại tiếp diễn\nCâu khẳng định | * To be: S + is/am/are + ... - She is a teacher - They are my children. * Verb: S + V(s/es) + ... - I drink a cup of coffee every morning. - Daniel loves ice-cream. | S + is/am/are + V-ing+... - She is teaching Literature now. - My children are playing in the yard at the moment.\nCâu phủ định | * To be: S + is/am/are + not ... - She isn’t a teacher. - They aren’t my children. * Verb: S + do/ does + not + V-inf + ... - I don’t drink a cup of coffee every morning. - Daniel doesn’t love ice-cream. | S + is /am/are+ not+ V-ing+... - She isn’t teaching Literature now. - My children aren’t playing in the yard at the moment.\nCâu hỏi Yes/No | * To be: Is/Am/Are + S ... Yes, S+ is/am/are No, S + isn’t/ ’m not / aren’t - Is she a teacher? Yes, she is. No, she isn’t. - Are they your children? Yes, they are. No, they aren’t. * Verb: Do/Does + S + V-inf + ...? Yes, S+ do/does No, S+ don’t/ doesn’t. - Do you drink a cup of coffee every morning? Yes, I do. No, I don’t.  - Does Daniel love ice-cream? Yes, he does No he doesn’t | Is/ Am/ Are + S + V-ing...? Yes, S + is/am/ are No, S + isn’t/ ’m not/ aren’t - Is she teaching Literature now? Yes, she is. No she isn’t. - Are your children playing in the yard at the moment? Yes, they are. No, they aren’t.\nCâu hỏi Wh- | * To be: Wh- + is/am/ are + S +...? - Where are your books? They are on the table. * Verb: Wh- + do/does + S + V-inf + ...? - Where do you often buy vegetables? I often buy them at the convenience store across the street. - What time does he often get up? He often gets up at about 6 a.m. | Wh- + is/am/are + S + V-ing? - What is she doing? She is packing her suitcase. she is flying to New York tomorrow morning. - Why are your children running so quickly? Because they are scared of getting to school late.\n\nHiện tại đơn | Hiện tại tiếp diễn\n* Diễn tả những sở thích, thói quen ở hiện tại. - She practices the piano every morning. (Cô ấy luyện đàn piano mỗi buổi sáng.) → Việc luyện đàn piano diễn ra vào buổi sáng hàng ngày, là thói quen, hành động lặp đi lặp lại. - Matthew likes sports. (Mathew thích thể thao) → Thể thao là sở thích của Matthew | * Diễn tả thói quen khiến người khác khó chịu (thường kết hợp với always, constantly, continuously, continually, etc.) - My mom is always yelling at me. (Mẹ liên tục quát mắng tôi.) → Hành động la mắng của mẹ diễn ra thường xuyên và khiến người con khó chịu.\n* Diễn tả một hành động kéo dài trong hiện tại hoặc một lịch trình, thời gian biểu cố định. - She works at a hospital. (Cô ấy làm việc tại một bệnh viện.) → Công việc mang tính lâu dài. - The train leaves at 7:00 a.m. (Tàu khởi hành lúc 7 giờ sáng) → Giờ tàu khởi hành theo lịch trình cố định. - The shop opens at 9 AM and closes at 10 PM.  (Cửa hàng mở cửa lúc 9 giờ sáng và đóng cửa lúc 10 giờ tối.)  → Lịch làm việc cố định. | * Diễn tả hành động xảy ra xung quanh thời điểm nói hoặc tình huống chỉ mang tính tạm thời. - He is working on his project this week. (Anh ấy đang thực hiện dự án của mình trong tuần này.)  → Anh ấy chưa hoàn thành dự án, vẫn đang làm trong tuần này, đây chỉ là tạm thời, có thể sau tuần này, anh ấy sẽ không làm nữa. * Diễn tả hành động đang xảy ra ngay tại thời điểm nói. - I am having breakfast now. (Bây giờ tôi đang ăn sáng.)  → Hành động ăn sáng đang diễn ra ngay tại thời điểm nói.\n* Diễn tả những quy luật, sự thật hiển nhiên, chân lý. - Water boils at 100 degrees Celsius. (Nước sôi ở nhiệt độ 100 độ C) → Sự thật khoa học: Nước luôn sôi ở 100°C dưới áp suất tiêu chuẩn. - Tiger isn’t reptile. (Hổ không phải là bò sát) → Sự thật hiển nhiên: Hổ là động vật có vú, không phải bò sát. | * Diễn tả hành động sẽ xảy ra trong tương lai gần – một sự sắp xếp hoặc một kế hoạch đã định. - We are going to the movies tonight. (Tối nay, chúng tôi sẽ đi xem phim.) → Kế hoạch đi xem phim đã được xác định, và sẽ diễn ra vào tối nay. - They are leaving for vacation tomorrow. (Họ sẽ đi nghỉ vào ngày mai.) → Hành động đi nghỉ đã được lên kế hoạch từ trước và sẽ diễn ra vào ngày mai.\n\nHiện tại đơn | Hiện tại tiếp diễn\nThì hiện tại đơn thường được sử dụng cùng các từ/ cụm từ: - Trạng từ chỉ tần suất: always, usually, often, frequently, regularly, sometimes; seldom, rarely, hardly ever, never,etc.  - Các trạng từ chỉ tần suất này thường đứng trước động từ thường nhưng đứng sau động từ to be và trợ động từ. - I usually wake up at 6.30. I am never late for school. - He doesn’t often go to the cinema because he doesn’t have much money. - Các cụm trạng từ đứng cuối câu như: every day/ week, month/year; once/twice a week; three times/ four times a year, etc. * Ngoại lệ:  Trong trường hợp diễn tả thói quen gây khó chịu cho người nói, thì không sử dụng thì hiện tại đơn mà sử dụng thì hiện tại tiếp diễn mặc dù trong câu có trạng từ chỉ tần suất như: always/ constantly/ continually, etc. ❌  You always chat in the class. ✅ You are always chatting in the class.  → Hành động nói chuyện riêng trong lớp không phải là thói quen bình thường mà là sự việc lặp lại và thường xuyên xảy ra, có thể gây phiền phức, khó chịu. | Thì hiện tại tiếp diễn thường được sử dụng cùng các từ/ cụm từ: - (right) now, at present, at the moment, tonight, today, this weekend/ week/month, tomorrow, etc. - Các trạng từ chỉ thời gian này có thể đứng cuối câu hoặc đầu câu. - She is studying now. - They are playing football tonight. - At the moment, we are discussing an important issue. - Tomorrow, I am flying to Paris. - Các động từ thường xuất hiện trong câu đề nghị hoặc câu mệnh lệnh như: Look! Listen! Watch out! Keep silent! Be quiet! etc. Be quiet! The baby is sleeping. Look! Someone is jumping. * Lưu ý: Không dùng thì hiện tại tiếp diễn với các động từ tình thái (stative verbs - những động từ không được sử dụng để mô tả hành động mà được dùng để mô tả tình trạng, trạng thái (cảm xúc, suy nghĩ)). Một số động từ tình thái phổ biến:\n\nCách thêm -s/es vào sau động từ (Hiện tại đơn- chủ ngữ ngôi thứ 3, số ít) | Cách thêm -ing vào sau động từ (Hiện tại tiếp diễn)\n- Thêm “s” vào sau hầu hết các động từ. work-works, love-loves, read-reads, etc. - Thêm “es” vào sau các động từ kết thúc là “ch, sh, x, s, z, o”  teach - teaches, fix - fixes, go – goes, etc. - Đối với những động từ tận cùng là “y” * Nếu trước “y” là một nguyên âm u, e, o, a, i, thì giữ nguyên “y” thêm “s”. play- plays, buy-buys, etc. * Nếu trước “y” là một phụ âm, thì đổi “y” thành “i” và thêm “s” study - studies, carry - carries, fly - flies, cry - cries, copy - copies Ngoại lệ: have - has. | - Thêm “-ing” vào sau hầu hết các động từ. work-working, read-reading, catch-catching, etc. -  Đối với những động từ kết thúc là “e”, thì bỏ “e” và thêm “-ing”. Lose - losing, change - changing, write - writing  Ngoại lệ: dye-dyeing - Đối với những động từ kết thúc là “ee”, thì giữ nguyên và thêm “-ing”. see-seeing - Đối với những động từ kết thúc là “ie”, thì đổi “ie” thành “y” và thêm “ing”.  lie - lying, tie - tying, die - dying - Đối với động từ 1 âm tiết, hoặc động từ 2 âm tiết nhưng trọng âm rơi vào âm tiết thứ 2 và kết thúc bằng “nguyên âm + phụ âm”, thì gấp đôi phụ âm cuối và thêm “-ing”. stop - stopping, sit - sitting,  swim - swimming, run - running,  drop - dropping, skip - skipping, etc.",
+      "metadata": {
+        "grammarId": "present_simple_vs_continuous",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "grammar_1_articles_a_an_the",
+      "unit": 1,
+      "type": "grammar",
+      "title": "Mạo từ: a/an/the",
+      "text": "Mạo từ: a/an/the.\na/an | the\nLoại danh từ | ✅ Dùng với danh từ đếm được số ít. | ✅ Dùng với danh từ đếm được (số ít & số nhiều) và danh từ không đếm được.\nXác định hay không xác định? | ✅ Dùng khi danh từ được nhắc đến lần đầu. There’s a rat in the kitchen. (Có một con chuột trong bếp.) → Nhắc đến lần đầu. | ✅ Dùng khi danh từ đã được nhắc đến trước đó. There’s a rat in the kitchen. The rat is big. (Con chuột đó rất to.) → Nhắc đến lần thứ hai, đã xác định.\nĐối tượng chung chung hay cụ thể? | ✅ Dùng khi nói đến một đối tượng chung chung, chưa xác định. A ball is round.  → (Trái bóng tròn → nghĩa chung chung khái quát, chỉ tất cả các quả bóng). | ✅ Dùng khi nói đến một đối tượng cụ thể, đã xác định. Could you pass me the salt? → Cả người nói và người nghe đều biết đó là “lọ muối” nào.\nDùng với nghề nghiệp | ✅ She is an engineer.  (Cô ấy là kỹ sư.) | ❌ Không dùng the với nghề nghiệp.\nDùng với danh từ tồn tại duy nhất (mặt trời, mặt trăng, trái đất…) | ❌ Không dùng. | ✅ The sun is bright today.  (Mặt trời hôm nay rất chói.)\nDùng với nhạc cụ | ❌ Không dùng. | ✅ She plays the piano.  (Cô ấy chơi piano.)\nDùng với quốc gia, địa danh | ❌ Không dùng với tên quốc gia, thành phố, đường phố, hồ, núi đơn lẻ. (Vietnam, Paris, Oxford Street, Lake Baikal). | ✅ Dùng với tên quần đảo, dãy núi, sông, biển, đại dương, quốc gia có“States/Kingdom/Republic” (the United States, the Himalayas, the Pacific Ocean).\nLưu ý | - a dùng trước danh từ bắt đầu bằng phụ âm hoặc nguyên âm “u” được phát âm là /juː/.  (a cat, a ball, a uniform, a university). - an đứng trước danh từ bắt đầu bằng nguyên âm hoặc nguyên âm “u” không được phát âm là /juː/.  (an apple, an orange, an hour, an umbrella). | ✅ Dùng the trong: listen to the radio, go to the cinema. ❌ Không dùng the trong: watch TV, listen to music, go to bed, go to school, be at home/work/in hospital/at university.",
+      "metadata": {
+        "grammarId": "articles_a_an_the",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "grammar_2_past_simple",
+      "unit": 2,
+      "type": "grammar",
+      "title": "Thì quá khứ đơn",
+      "text": "Thì quá khứ đơn.\nĐộng từ to be | Động từ thường\nCâu khẳng định | S + was/were + ....... - She was in Paris last month. - They were at home last weekend. | S + V2/V-ed + ...... - He went to London twice last year. - She stayed at a hotel last summer.\nCâu phủ định | S + was not/ were not +..... - He wasn’t at the party last Saturday. - They weren’t interested in the new film. | S + did not + V-inf - He didn’t stay with friends. - She didn’t go to France.\nCâu hỏi Yes/No | Was/ Were + S + ....? Yes, S + was/were. No, S + wasn’t/ weren’t. - Was she a doctor? No, she wasn’t. - Were they at school yesterday? Yes, they were. | Did + S + V-inf...? Yes, S + did No, S + didn’t - Did you stay for the weekend? Yes, I did. - Did you go to Madrid? No, we didn’t.\nCâu hỏi Wh- | Wh- + was/were + S +...? - Where were you yesterday? We were in the park. | Wh- + did + S + V-inf? - Who did you go with? I went with my friends.",
+      "metadata": {
+        "grammarId": "past_simple",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "grammar_3_past_continuous",
+      "unit": 3,
+      "type": "grammar",
+      "title": "Thì quá khứ tiếp diễn",
+      "text": "Thì quá khứ tiếp diễn.\nCấu trúc\nCâu khẳng định | S + was/were + V-ing - At 12 o’clock yesterday, we were having lunch.  (Lúc 12 giờ trưa hôm qua, chúng tôi đang ăn trưa.) - They were playing football when it started to rain. (Họ đang chơi bóng đá thì trời bắt đầu mưa.)\nCâu phủ định | S + was not/ were not + Ving -  He wasn’t sleeping at that time.  (Anh ấy đã không ngủ vào thời điểm đó.) - We weren’t watching TV when she arrived. (Chúng tôi không xem TV khi cô ấy đến.)\nCâu hỏi Yes/No | Was/ Were + S + V-ing? Yes, S + was/were. No, S + wasn’t/ weren’t. - Was she cooking dinner at 7 PM? (Cô ấy đang nấu bữa tối lúc 7 giờ tối à?)  - Yes, she was.  - No, she wasn’t.\nCâu hỏi Wh- | Wh- + was/were + S + V-ing? - What were you doing at 9 AM? ~ I was reading a book.  (Bạn đang làm gì lúc 9 giờ sáng? ~ Tôi đang đọc sách.) - Where was she going when you saw her? ~ She was heading to the supermarket. (Cô ấy đang đi đâu khi bạn nhìn thấy cô ấy? ~ Cô ấy đang đi đến siêu thị.) - How was she feeling at that moment? ~ She was feeling very happy. (Lúc đó cô ấy cảm thấy thế nào? ~ Cô ấy cảm thấy rất vui.) - Which book was she reading at 10 PM? ~ She was reading a novel by Jane Austen. (Cô ấy đang đọc cuốn sách nào lúc 10 giờ tối? ~ Cô ấy đang đọc một tiểu thuyết của Jane Austen.)",
+      "metadata": {
+        "grammarId": "past_continuous",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "grammar_3_past_simple_vs_continuous",
+      "unit": 3,
+      "type": "grammar",
+      "title": "So sánh thì quá khứ đơn và quá khứ tiếp diễn",
+      "text": "So sánh thì quá khứ đơn và quá khứ tiếp diễn.\nQuá khứ đơn với động từ thường | Quá khứ đơn với \"to be\" | Quá khứ tiếp diễn\nCấu trúc | Khẳng định:  S + V2/ed + O Phủ định: S + did not + V (bare-inf) + O. Nghi vấn:  Did + S + V (bare-inf) + O? Yes, S+did. No, S+didn’t. | Khẳng định:  S + was/were + C. Phủ định: S + was/were not + C. Nghi vấn: Was/Were + S + C? Yes, S +was/were. No, S+ wasn’t/weren’t. | Khẳng định:  S + was/were + V-ing + O. Phủ định:  S + was/were not + V-ing + O.  Nghi vấn: Was/Were + S + V-ing + O? Yes, S +was/were. No, S+ wasn’t/weren’t.\nCách dùng | - Hành động đã kết thúc tại thời điểm xác định trong quá khứ.  She visited Paris last summer. → Cô ấy đã đến Paris vào mùa hè năm ngoái. Hành động này đã kết thúc trong quá khứ - Một loạt các hoạt động xảy ra liên tiếp trong quá khứ.  He woke up, brushed his teeth, and went to work. → Anh ấy thức dậy, đánh răng, rồi đi làm.  - Hành động lặp lại thường xuyên trong quá khứ và hiện tại không diễn ra nữa. When I was a child, I often played outside every day, but now I don't have time for that anymore. → Khi tôi còn là một đứa trẻ, tôi thường chơi ngoài trời mỗi ngày, nhưng bây giờ tôi không còn thời gian cho việc đó nữa. -Hành động chen ngang vào một hành động đang diễn ra trong quá khứ. I was watching TV when the phone rang. → Tôi đang xem TV thì điện thoại reo. Hành động “reo” xen ngang vào quá trình “đang xem TV”. Hành động xen ngang chia quá khứ đơn, hành động bối cảnh chia quá khứ tiếp diễn (xem thêm phần dấu hiệu nhận biết ở mục 3.2.1.) - Kể lại câu chuyện hoặc một sự kiện lịch sử The Wright brothers invented the airplane in 1903. → Anh em nhà Wright đã phát minh ra máy bay vào năm 1903. | -Diễn tả trạng thái, tính chất, cảm xúc trong quá khứ.  She was very tired after work yesterday. → Hôm qua, cô ấy rất mệt sau khi làm việc. -Diễn tả vị trí hoặc sự tồn tại của một người/vật trong quá khứ.  They were at the park in the morning. → Họ đã ở công viên vào buổi sáng. | - Hành động đang diễn ra tại một thời điểm cụ thể trong quá khứ.  At 8 p.m. last night, I was studying English. → Vào lúc 8 giờ tối qua, tôi đang học tiếng Anh. -Hai hành động xảy ra đồng thời trong quá khứ.  She was cooking while he was reading a book. → Cô ấy đang nấu ăn trong khi anh ấy đang đọc sách. -Hành động đang diễn ra thì có hành động khác xen vào (hành động đang diễn ra chia thì quá khứ tiếp diễn, hành động xen vào chia thì quá khứ đơn). I was walking to school when it started to rain. → Tôi đang đi bộ đến trường thì trời bắt đầu mưa.\nDấu hiệu nhận biết | Yesterday, last week/month/year, ago, in + mốc thời gian trong quá khứ, when+ sự việc trong quá khứ, this morning/afternoon/evening | Giống với dấu hiệu quá khứ đơn dùng động từ thường (yesterday, last week, ago,etc.) | At + giờ + thời gian trong quá khứ , at this time + thời gian trong quá khứ while, when, all day yesterday, all night last night, while, when, as, etc.\nVí dụ | She visited her parents last Saturday. (Cô ấy đến thăm bố mẹ vào thứ Bảy tuần trước.) | She was tired yesterday. (Cô ấy đã mệt vào hôm qua.)  They were not at home last night. (Họ đã không ở nhà tối qua.) | She was watching TV at 8 PM yesterday. (Cô ấy đang xem TV vào lúc 8 giờ tối hôm qua.)",
+      "metadata": {
+        "grammarId": "past_simple_vs_continuous",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "grammar_4_quantifiers",
+      "unit": 4,
+      "type": "grammar",
+      "title": "Lượng từ (Quantifiers)",
+      "text": "Lượng từ (Quantifiers).\nLượng từ đi với danh từ đếm được | Lượng từ đi với danh từ không đếm được | Lượng từ đi với cả hai loại\nmany/ not many both several every / each a few / few a large/ great number of a majority of a couple of a pair of a number (of) | much/ not much  a great deal of  a quantity of a large/great amount of  a little/ little a bit (of) less | a lot of/ lots of some plenty of a (large) quantity of  most / most of any all enough no none",
+      "metadata": {
+        "grammarId": "quantifiers",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "grammar_4_must_have_to",
+      "unit": 4,
+      "type": "grammar",
+      "title": "Phân biệt must, mustn't, have to và needn't/don't have to",
+      "text": "Phân biệt must, mustn't, have to và needn't/don't have to.\nTiêu chí | Must (chủ quan) | Have to (khách quan)\nBản chất | Ý kiến, quan điểm cá nhân của người nói | Quy định, luật lệ, tình huống khách quan\nThì | Hiện tại, tương lai | Hiện tại, quá khứ, tương lai\nVí dụ | I must call my mom. (Tôi cảm thấy cần gọi mẹ.) | I have to call my mom. (Có lý do bên ngoài buộc tôi phải gọi.)",
+      "metadata": {
+        "grammarId": "must_have_to",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "grammar_5_comparisons",
+      "unit": 5,
+      "type": "grammar",
+      "title": "Câu so sánh (Comparisons)",
+      "text": "Câu so sánh (Comparisons).\nCác loại so sánh | Tính từ ngắn (1 âm tiết hoặc 2 âm tiết tận cùng bằng -y, -er, -ow, -le) | Tính từ dài (2 âm tiết trở lên, không tận cùng bằng -y, -er, -ow, -le)\nSo sánh bằng (Equality) | S + be + as + adj + as + N/pronoun - She is as tall as her brother.  (Cô ấy cao bằng anh trai.)  - This test isn’t as difficult as the last one.  (Bài kiểm tra này không khó như bài trước.) * Lưu ý:  Trong câu phủ định: “so …as” thường được sử dụng thay thế “as….as” để nhấn mạnh sự không bằng nhau. - She is not so beautiful as her mother. (Cô ấy không đẹp bằng mẹ cô ấy.)  Trong câu nghi vấn: “so…as” xuất hiện trong ngữ cảnh trang trọng hơn. - Is the new movie so interesting as the old one? (Bộ phim mới có thú vị như bộ phim cũ không?) | S + be + as + adj + as + N/pronoun - She is as tall as her brother.  (Cô ấy cao bằng anh trai.)  - This test isn’t as difficult as the last one.  (Bài kiểm tra này không khó như bài trước.) * Lưu ý:  Trong câu phủ định: “so …as” thường được sử dụng thay thế “as….as” để nhấn mạnh sự không bằng nhau. - She is not so beautiful as her mother. (Cô ấy không đẹp bằng mẹ cô ấy.)  Trong câu nghi vấn: “so…as” xuất hiện trong ngữ cảnh trang trọng hơn. - Is the new movie so interesting as the old one? (Bộ phim mới có thú vị như bộ phim cũ không?)\nSo sánh hơn (Comparative) | S + be + adj-er + than + N/pronoun - This bag is cheaper than that one. (Cái túi này rẻ hơn cái kia.) | S + be + more + adj + than + N/pronoun - This problem is more complicated than I expected. (Vấn đề này phức tạp hơn tôi nghĩ.)\nSo sánh nhất (Superlative) | S + be + the + adj-est + N - He is the fastest runner in the team. (Anh ấy là người chạy nhanh nhất trong đội.) | S + be + the most + adj + N - This is the most interesting book I've read.  (Đây là cuốn sách thú vị nhất tôi từng đọc.)\n\nAdj | Comparative | Superlative\ngood (tốt) | better (tốt hơn) | the best (tốt nhất)\nbad (tệ, xấu) | worse (tệ hơn) | the worst (tệ nhất)\nfar (xa) | farther / further (xa hơn) | the farthest / the furthest (xa nhất)\na little/little (ít) | less (ít hơn) | the least (ít nhất)\nmany / much (nhiều) | more (nhiều hơn) | the most (nhiều nhất)\nold (già, cũ) | older / elder  (già hơn, lớn tuổi hơn) | the oldest / the eldest  (già nhất, lớn tuổi nhất)",
+      "metadata": {
+        "grammarId": "comparisons",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "grammar_5_too_enough",
+      "unit": 5,
+      "type": "grammar",
+      "title": "Too and enough",
+      "text": "Too and enough.\nPosition | Meaning\nToo + adj | Quá... (vượt mức cần thiết, thường mang nghĩa tiêu cực) This jacket is too small for him.  (Chiếc áo khoác này quá nhỏ với anh ấy.)\nAdj + enough | Đủ... (có đủ điều kiện cần thiết) This jacket isn’t big enough for him.  (Chiếc áo này không đủ lớn với anh ấy.)\nEnough + noun | Đủ (về số lượng) He hasn’t got enough money.  (Anh ấy không có đủ tiền.)\nToo + adj + to V | Quá... đến mức không thể làm gì - It’s too cold to swim. (Trời quá lạnh để có thể bơi)\nAdj + enough + to V | Đủ... để làm gì He’s old enough to join the army.  (Cậu ấy đủ lớn để nhập ngũ.)",
+      "metadata": {
+        "grammarId": "too_enough",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "grammar_5_zero_conditional",
+      "unit": 5,
+      "type": "grammar",
+      "title": "Câu điều kiện loại 0 (Zero conditional)",
+      "text": "Câu điều kiện loại 0 (Zero conditional).\nCấu trúc | If + S + V (hiện tại đơn), S + V (hiện tại đơn).\nCách sử dụng | Câu điều kiện loại 0 dùng để diễn tả sự thật hiển nhiên, quy luật tự nhiên hoặc kết quả luôn xảy ra khi có điều kiện cụ thể. -If you heat ice, it melts. (Nếu bạn làm nóng đá, đá sẽ tan) -If you eat too much, you feel ill. (Nếu bạn ăn quá nhiều, bạn sẽ cảm thấy khó chịu.)\nLưu ý:   - Mệnh đề If có thể đứng đầu hoặc cuối câu. - Nếu đứng trước, dùng dấu phẩy sau mệnh đề If (If you eat too much, you feel ill.). - Nếu đứng sau, không dùng dấu phẩy (You feel ill if you eat too much.). | Lưu ý:   - Mệnh đề If có thể đứng đầu hoặc cuối câu. - Nếu đứng trước, dùng dấu phẩy sau mệnh đề If (If you eat too much, you feel ill.). - Nếu đứng sau, không dùng dấu phẩy (You feel ill if you eat too much.).",
+      "metadata": {
+        "grammarId": "zero_conditional",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u1_bt1",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.",
+      "text": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.\nWord — Definition\n1. skateboarding — a. an educational subject about citizenship and society.\n2. civic education — b. a sport that uses skates to move on ice.\n3. gymnastics — c. a sport that combines skating and hockey.\n4. ice hockey — d. performing exercises and routines that require strength and flexibility.\n5. ice skating — e. using a board with wheels to ride and perform tricks.\n6. wavy hair — f. a piece of clothing typically worn during exercise.\n7. beard — g. a style of hair on the upper lip.\n8. moustache — h. hair that grows on the chin and cheeks.\n9. sweatshirt — i. curly or slightly curved hair.\n10. tracksuit — j. a comfortable top, often with long sleeves, made of thick material.\n11. trainer — k. a shoe worn for sports or casual wear.\nĐáp án: 1. e       2. a\t 3. d\t   4. c\t     5. b      6. i      7. h\t8. g\t 9. j\t10. f\t   11. k",
+      "metadata": {
+        "exerciseNumber": 1,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt2",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 2. Fill in the blanks with the correct word from the box below.",
+      "text": "Bài tập 2. Fill in the blanks with the correct word from the box below.\n1. Lisa practices ________ every weekend. She’s learning how to do flips and cartwheels.\n2. The team arrived wearing matching ________ for the big game.\n3. People say he looks older because of his ________, which he’s growing for a contest.\n4. Tony enjoys ________ after school because he loves doing tricks on his board.\n5. I need to buy a new pair of ________ for my gym class.\n6. My uncle has a thick ________. It covers his chin and cheeks.\n7. Sarah prefers to keep her ________ natural instead of straightening it.\n8. We learned about voting and laws in our ________ class today.\n9. Every winter, my family goes ________ at the frozen lake.\n10. My brother plays ________ with his friends. They wear skates and carry sticks to hit a puck.\n11. She wore a ________ because it was cold outside.\nĐáp án: 1. gymnastics\t\t\t2. tracksuits\t\t\t3. moustache; 4. skateboarding \t\t\t5. trainers\t\t\t6. beard; 7. wavy hair\t\t\t\t8. civic education\t\t9. ice skating; 10. ice hockey\t\t\t11. sweatshirt",
+      "metadata": {
+        "exerciseNumber": 2,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt3",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 3. Vocabulary quiz - Answer the questions.",
+      "text": "Bài tập 3. Vocabulary quiz - Answer the questions.\n1. Which activity requires a puck and skates?\nAnswer: ____________________________\n2. What do you call hair that grows on the upper lip?\nAnswer: ____________________________\n3. What is the name of the subject where you learn about laws and citizenship?\nAnswer: ____________________________\n4. What do you call a type of shoe worn for sports or casual use?\nAnswer: ____________________________\n5. What do you call a sport where people perform routines that show strength and flexibility?\nAnswer: ____________________________\n6. What is the name of a comfortable top often made of thick material?\nAnswer: ____________________________\n7. Which activity involves skating on frozen surfaces?\nAnswer: ____________________________\n8. What do you call the facial hair that grows on the chin and cheeks?\nAnswer: ____________________________\n9. What sport uses a board with wheels to ride?\nAnswer: ____________________________\n10. Which item of clothing is commonly worn during exercise?\nAnswer: ____________________________\n11. What kind of hair is not straight but slightly curved or curly?\nAnswer: ____________________________\nĐáp án: 1. icy hockey\t\t\t2. moustache\t\t3. civic education; 4. trainer\t\t\t\t5. gymnastics\t\t6. sweatshirt; 7. ice skating\t\t\t8. beard\t\t\t9. skateboarding; 10. tracksuit\t\t\t\t11. wavy hair",
+      "metadata": {
+        "exerciseNumber": 3,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt4",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 4. Writing Practice.",
+      "text": "Bài tập 4. Writing Practice.\nInstructions: Write one sentence using each word from the box below. Make the sentences personal or about your daily life.\nE.g. I tried skateboarding yesterday, but I fell off the board!\nĐáp án: 1. My friend loves skateboarding in the park after school.; 2. In civic education class, we discussed the importance of voting.; 3. My younger sister is great at gymnastics and can do a perfect cartwheel.; 4. My cousin plays ice hockey, and his team won the championship last year.; 5. I went ice skating for the first time, and it was so much fun!; 6. My wavy hair looks wild on rainy days, but I kind of like it.; 7. My dad recently grew a beard, and now he looks completely different.; 8. He shaved off his beard but kept his moustache because it’s his signature look.; 9. I always wear a cozy sweatshirt when it gets chilly outside.; 10. Our team wore matching tracksuits to the tournament.; 11. I bought a new pair of trainers for my morning runs.",
+      "metadata": {
+        "exerciseNumber": 4,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt5",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 5. Complete the sentences using the present simple form of the verbs in brackets.",
+      "text": "Bài tập 5. Complete the sentences using the present simple form of the verbs in brackets.\n1. I rarely (go) ________   out in the evening, but Mary often (go) ________   out with her friends in the evening.\n2. My young brother never (play)________   tennis, but he usually (watch) ________ it on TV.\n3. My mother (be) ________   a teacher at a local board school.\n4.  ________ (you/ like) her? ~ No, I don’t.\n5. It (often/not/rain) ________   in the dry season.\n6. ________ (these twins/ not be) Vietnamese?\n7. Anna (always /try) ________   to finish his homework before going out with her parents.\n8. You (not be) ________ in this class.\n9. My grandma (often / have) ________ breakfast in her bed.\n10.   ________ (you/have) a good time in Hull?\nĐáp án: 1. go – goes\t\t\t2. plays – watches\t\t3. is\t\t4. Do you like; 5. doesn’t often rain\t6. Are these twins\t\t7. always tries; 8. aren’t\t\t\t9. often has\t\t\t10.  Do you have",
+      "metadata": {
+        "exerciseNumber": 5,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt6",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 6. Complete the sentences using the present continuous form of the verbs in brackets.",
+      "text": "Bài tập 6. Complete the sentences using the present continuous form of the verbs in brackets.\n1. My son (play) ________ games with his sister on computer now.\n2. The children (not/sleep) ________   in the bedroom at the moment. They (watch) ________ TV in the next room\n3. Where is Tom? ~ He (sit) ________ on the chair under the trees over there.\n4. We (repair) ________ the broken tables and Lin (read) ________ books in the library at present.\n5. Look! The girl (dance) ________ very beautifully.\n6. What she (do) ________ now?\n-She (teach) ________ the disabled children how to read and write.\n7.  Don’t stand in front of the TV I (try)________ to watch this programme.\n8. Tonight I (have)________ dinner with my darling.\n9.  ________ (your parents/ work) in the room now?\n10. Listen to that girl! She (sing) ________ really well.\nĐáp án: 1. is playing; 2. aren’t sleeping – are watching; 3.  is sitting; 4. are repairing – is reading;; 5. is dancing; 6. is she doing – is teaching; 7. ’m trying; 8. ’m having; 9. Are your parents working; 10. is singing",
+      "metadata": {
+        "exerciseNumber": 6,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt7",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 7. Complete the sentences using the present simple form or present continuous form of the verbs in brackets.",
+      "text": "Bài tập 7. Complete the sentences using the present simple form or present continuous form of the verbs in brackets.\n1. Tom/ usually/ go/ skateboarding/ park/ but today/ he/ practice ice hockey/ rink.\n→ _______________________________________________________\n2. My brother/ have/ wavy hair/ thick beard/ right now/ he/ trim/ moustache/ in front of/ mirror.\n→ _______________________________________________________\n3. Students/ learn/ civic education/ every Monday/ but today/they/ discuss/ environmental protection.\n→ _______________________________________________________\n4. Look! / she/ wear/ stylish sweatshirt/ trainers/ while ice skating.\n→ _______________________________________________________\n5. We/ always/ train/ gymnastics/ gym/ but today/ we/ rest/ because/coach/ be/ absent.\n→ _______________________________________________________\n6. He/ prefer/ wear/ tracksuits/ when/ he/ play/ ice hockey.\n→ _______________________________________________________\n7. At the moment/ ice hockey team/ have/ meeting/ discuss/ next game strategy.\n→ _______________________________________________________\n8. My friend/ not like/ skateboarding/ but/ he/ try/ it/ now/ for the first time.\n→ _______________________________________________________\n9. Right now/ she/ do/ gymnastics routine/ while/ wear/ tracksuit.\n→ _______________________________________________________\n10. Every weekend/ my father/ go jogging/ trainers/ but today/ watch/ ice hockey/ TV/ instead.\n→ _______________________________________________________\n11. Listen! / somebody/ shout/ ~ It’s Jack/ he/ continually/ shout/ children.\n→ _______________________________________________________\n12. My flight/ take off/ 7 a.m/ tomorrow.\n→ _______________________________________________________\n13. Sandra/ be tired/ she/ want/ go home/ now.\n→ _______________________________________________________\n14. We/ not be/ teacher/ university.\n→ _______________________________________________________\n15. My son/ love/ books/ so/ he/ read/ book/ every week.\n→ _______________________________________________________\n16. Not be/ scared! / that dog/ not bite\n→ _______________________________________________________\n17. sun/ always/ rise/ behind/ hills.\n→ _______________________________________________________\n18. Look! / sun/ shine/ really bright/ today.\n→ _______________________________________________________\n19. My cousin/ stay/ grandparents/ while/ mother/ work/ far from home.\n→ _______________________________________________________\n20. These days/ I/ work/ waitress/ to earn money/ buy/ favourite DVD.\n→ _______________________________________________________\nĐáp án: 1. Tom usually goes skateboarding in the park, but today he is practicing ice hockey at the rink.; 2. My brother has wavy hair and a thick beard. Right now, he is trimming his moustache in front of the mirror.; 3. Students learn civic education every Monday, but today they are discussing environmental protection.; 4. Look! She is wearing a stylish sweatshirt and trainers while ice skating.; 5. We always train gymnastics in the gym, but today we are resting because our/the coach is absent.; 6. He prefers wearing tracksuits when he plays ice hockey.; 7. At the moment, the ice hockey team is having a meeting to discuss their next game strategy.; 8. My friend does not like skateboarding, but he is trying it now for the first time.; 9. Right now, she is doing a gymnastics routine while wearing a tracksuit.; 10. Every weekend, my father goes jogging in his trainers, but today he is watching ice hockey on TV instead.; 11. Listen! Somebody is shouting ~ It’s Jack. He is continually shouting at his children.; 12. My flight takes off at 7 a.m tomorrow.; 13. Sandra is tired. She wants to go home now.; 14. We are not teachers at that/this/the university.; 15. My son loves books, so he reads a book every week.; 16. Don’t be scared! That/The dog does not bite.; 17. The sun always rises behind those/the/these hills.; 18. Look! The sun is shining really bright today.; 19. My cousin is staying with his grandparents while his mother is working far from home.; 20. These days, I am working as a waitress to earn money to buy/ for buying my favourite DVD.",
+      "metadata": {
+        "exerciseNumber": 7,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt8",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 8. Find the mistakes and correct the sentences.",
+      "text": "Bài tập 8. Find the mistakes and correct the sentences.\n1. She is always go to the gym at 7:00 a.m.\n2. We are liking coffee.\n3. My parents is usually waking up at 6:30 every day.\n4. They work at the new office this week.\n5. He is playing tennis every weekend.\n6. Right now, they walk to school.\n7. My brother never eat vegetables.\n8. We goes to visit our grandparents at the moment.\n9. I am usually catch the bus to work.\n10. They are study English every morning.\n11. I’m thirty now. I’m wanting a glass of water.\n12. I often goes to the movies with my darling at weekends.\n13. Laura don’t like watching action films on TV.\n14. Lin and Marry is good students. They are good at learning English.\n15. Mary usually spendes two hours a day speaking Vietnamese with her friend.\nĐáp án: 1. She always goes to the gym at 7:00 a.m.; 2. We like coffee.; 3. I usually wake up at 6:30 every day.; 4. They are working at the new office this week.; 5. He plays tennis every weekend.; 6. Right now, they are walking to school.; 7. My brother never eats vegetables.; 8. We are going to visit our grandparents at the moment.; 9. I usually take the bus to work.; 10. They study English every morning.; 11. I’m thirty now. I want a glass of water.; 12. I often go to the movies with my darling at weekends.; 13. Laura doesn’t like watching action films on TV.; 14. Lin and Marry are good students. They are good at learning English.; 15. Mary usually spends two hours a day speaking Vietnamese with her friend.",
+      "metadata": {
+        "exerciseNumber": 8,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt9",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 9. Complete the gaps with a/an, the or no article (-).",
+      "text": "Bài tập 9. Complete the gaps with a/an, the or no article (-).\nRobot Teachers\nIn some schools, there is ___ (1) robot teacher in the classroom. These robots have ___ (2) ability to explain lessons clearly and answer questions quickly. They never get tired or forget ___ (3) information that students need.\nRight now, there is ___ (4) new robot in my school. It is giving ___ (5) interesting lesson about science. ___ (6) students in my class are very excited about it.\nSome people think that using robots in education is ___ (7) good idea because they can help students learn better. However, robots cannot replace ___ (8) real teachers. Only ___ (9) human teacher can understand students' feelings and support them.\nIn my classroom, there are both robots and humans. I like learning in ___ (10) environment where we have both.\nĐáp án: 1. a \t\t\t\t\t2. the \t\t3. Ø\t\t4. a \t\t5. an; 6. the \t\t\t7. a \t\t8. Ø \t\t9. a\t\t10. the",
+      "metadata": {
+        "exerciseNumber": 9,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u1_bt10",
+      "unit": 1,
+      "type": "exercise",
+      "title": "Bài tập 10. Complete the dialogue. Use a/an/the or no article (-).",
+      "text": "Bài tập 10. Complete the dialogue. Use a/an/the or no article (-).\nEmma: I have ___ (1) new friend in my class.\nLiam: Really? What’s ___ (2) name of ___ (3) friend?\nEmma: Her name is Mia. She goes to ___ (4) small school near here.\nLiam: I think I know ___ (5) girl named Mia. She has curly hair.\nEmma: There’s ___ (6) Mia in my class with curly hair! Maybe it’s ___ (7) same person.\nLiam: Does she have green eyes and ___ (8) friendly smile?\nEmma: Yes! That’s her! Which school do you go to?\nLiam: I go to Greenfield Academy.\nEmma: Oh! My cousin is ___ (9) English teacher there. Her name is Mrs. Brown.\nLiam: No way! She’s my teacher too!\nĐáp án: 1. a \t\t\t\t\t2. the \t\t3. Ø\t\t4. a \t\t5. a; 6. a\t\t\t\t\t7. the \t\t8. a \t\t9. an\t\t10. the",
+      "metadata": {
+        "exerciseNumber": 10,
+        "hasAnswers": true,
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "exercise_u2_bt1",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.",
+      "text": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.\nWord — Definition\n1. anxious — a. feeling upset because something didn’t meet expectations.\n2. ashamed — b. feeling surprised and worried because something seems wrong.\n3. confused — c. feeling tired and without energy.\n4. disappointed — d. feeling happy because a stressful situation is over.\n5. embarrassed — e. feeling worried or nervous about something.\n6. envious — f. feeling unsure and not understanding something.\n7. frightened — g. feeling guilty or bad about something you did.\n8. relieved — h. feeling bad because of something awkward or silly.\n9. suspicious — i. feeling scared or afraid.\n10. exhausted — j. feeling extremely unpleasant because something is gross.\n11. disgusted — k. feeling jealous of what someone else has.\nĐáp án: 1. e\t2. g\t 3. f\t   4. a\t     5. h      6. k      7. i\t8. d\t 9. b\t10. c\t   11. j",
+      "metadata": {
+        "exerciseNumber": 1,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt2",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 2. Fill in the blanks with the correct word from the box below.",
+      "text": "Bài tập 2. Fill in the blanks with the correct word from the box below.\n1. I felt really ________ when I forgot my friend’s birthday.\n2. That movie was so ________ that I couldn’t even watch the ending.\n3. She was ________ after running the marathon.\n4. He looked ________ when he saw the strange package at the door.\n5. We were ________ to hear that our vacation was canceled.\n6. I was ________ before the exam, but it wasn’t as hard as I thought.\n7. After the test was over, I felt ________ knowing I did my best.\n8. Their team's loss in the championship was ________.\n9. He felt ________ because he spilled coffee on his shirt before the meeting.\n10. She was ________ of her friend’s new car and wished she had one too.\nĐáp án: 1. ashamed\t     \t2. disgusting\t \t3. exhausted        \t4. suspicious; 5. disappointed\t6. anxious         \t7. relieved          \t8. disappointing; 9. embarrassed    10. envious",
+      "metadata": {
+        "exerciseNumber": 2,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt3",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 3. Choose the correct form of the word to complete each sentence.",
+      "text": "Bài tập 3. Choose the correct form of the word to complete each sentence.\n1. The movie was so (frightened / frightening) that I couldn’t sleep all night.\n2. I felt (exhausted / exhausting) after working for 12 hours straight.\n3. The news was (disappointed / disappointing), and everyone looked sad.\n4. She looked (confused / confusing) when I explained the math problem.\n5. His behavior at the party was really (embarrassed / embarrassing).\n6. I felt (disgusted / disgusting) when I saw the moldy food in the fridge.\nĐáp án: 1. frightening\t2. exhausted\t\t3. disappointing; 4. confused\t\t5. embarrassing\t6. disgusted",
+      "metadata": {
+        "exerciseNumber": 3,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt4",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 4. Complete the text with the correct -ed or -ing adjective formed from the verbs in brackets.",
+      "text": "Bài tập 4. Complete the text with the correct -ed or -ing adjective formed from the verbs in brackets.\nA LONG WAY HOME\nSaroo was born in Madhya Pradesh in India. His family were very poor, so when Saroo was just five, he and his brother Guddu found work on trains as cleaners. One day the boys went to work at a station 70 km from home. The job was very (1)_______ (tire) for Saroo and he fell asleep at the station. He was so (2)_______(exhaust) that he slept for hours. When he woke up, Guddu was not there. Saroo was (3)_______(shock) and (4)_______ (worry). He looked for his brother, but couldn’t find him. It was a very (5)_______ (frighten) situation for a young child.\nAfter two weeks, the police found Saroo, but he could not tell them where his home was- he was too (6)_______ (confuse) and he didn’t know its name. In the end, the police decided he was officially lost and placed him with an adoption agency. An Australian family called Brierley took him to their home in Tasmania and he grew up with them.\nAs an adult, Saroo Brierley stayed in Australia, but he looked for his home town in India using the photos on Google Earth on his computer. It took months, but Saroo never got (7)_______ (bore) with looking. In the end, he found the town. He was (8)_______ (delight) and travelled there at once. When he saw his mother again for the first time in 25 years, it was a very (9)_______ (move) experience for both of them. Newspapers and TV stations became (10)_______ (interest) in Saroo’s (11)_______(astonish) story and Saroo himself wrote a book about it in 2012.\nĐáp án: 1. tiring \t\t2. exhausted \t3. shocked \t\t4. worried; 5. frightening \t6.  confused\t\t7. bored \t\t8. delighted; 9. moving \t\t10. interested \t11. astonishing",
+      "metadata": {
+        "exerciseNumber": 4,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt5",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 5. Complete the sentences with your own words.",
+      "text": "Bài tập 5. Complete the sentences with your own words.\n1. I feel confused when………………………………………………………\n2. I feel bored when ………………………………………………………….\n3. I feel proud when………………………………………………………….\n4. I feel excited when…………………………………………………………\n5. I feel disappointed when……………………………………………………\nĐáp án: Suggested answers:; 1. I feel confused when I try to follow instructions that are not clear, especially when there are too many steps to remember.; I also feel confused when people speak too fast in English, because I can’t catch all the words they are saying.; 2. I feel bored when I have nothing to do at home, and the day feels like it will never end.; I also feel bored when the lesson is too easy, since I like to be challenged and learn new things.; 3. I feel proud when I get a good grade on my exam, because it shows that all my hard work paid off.; I also feel proud when I help my friends with their homework, as it makes me feel useful and confident in my knowledge.; 4. I feel excited when I plan a trip with my family, because I love discovering new places and spending time together.; I also feel excited when I try a new activity for the first time, even if I am a little nervous about it.; 5. I feel disappointed when my favorite team loses a game, especially if they were playing really well before.; I also feel disappointed when I don’t do well on a test I studied for, because I expected a better result after all my effort.",
+      "metadata": {
+        "exerciseNumber": 5,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt6",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 6. Complete the sentences using the past simple form of the verbs in brackets.",
+      "text": "Bài tập 6. Complete the sentences using the past simple form of the verbs in brackets.\n1. Emma tried on a green dress and a blue dress in the clothes shop, and ________(choose) the blue one.\n2. It was a long film, but I________(not feel) bored.\n3. I________(make) my own breakfast this morning.\n4. It________(take) six hours to drive from London to Edinburgh.\n5. Jenny ________(talk) on the phone with her friend for over two hours!\n6. Tom and Matt ________(be) upset that George didn’t invite them to his party.\n7. We live in Oxford. We________(move) here five years ago.\n8. Our team________(not win) the last match of the season.\n9. I enjoyed the film, but I ________(not understand) all of the dialogue.\n10. In the end, we________(decide) to go on holiday to Italy, not to France.\nĐáp án: 1. chose \t2. didn’t feel\t\t  3. made\t\t4.took\t \t5. talked; 6. were        7. moved       8. didn’t win      9. didn’t understand    10. decided",
+      "metadata": {
+        "exerciseNumber": 6,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt7",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 7. Complete the story by filling in the blanks with the past simple form of the verbs in brackets.",
+      "text": "Bài tập 7. Complete the story by filling in the blanks with the past simple form of the verbs in brackets.\nCallie Rogers (1) ________ (be) just sixteen when she (2) ________(win) the lottery in 2003. She (3) ________(give) up her job as a shop assistant and (4)_______ (start) to spend her money. She (5) ________ (take) her family on expensive holidays, (6) ________ (invite) all her friends to big parties every weekend and (7) ________ (have) cosmetic surgery. Ten years later, she (8) ________ (have) just $2,000 left. But she’s happy now. ‘I(9) ________ (be) too young to win the lottery’, she (10) ________(say).\nTom Crist (11) ________ (get) a big surprise when he (12) ________ (answer) his phone on 16 December 2013. He (13) ________ (be) a lottery winner, and the prize (14) ________ (be) enormous - $40 million! He (15) ________ (decide) not to tell anyone about the win. He immediately (16) ________ (give) all the money to charities. ‘I don’t really need that money’, he (17) ________ (say). ‘My wife (18) ________ (die) earlier in the year so I (19) ________ (choose) cancer charities that (20) ________ (help) her.’\nĐáp án: 1. was\t\t     2. won\t\t3. gave\t    4. started\t          5. took; 6. invited\t     7. had\t\t8. had\t\t    9. was\t         10. said; 11. got\t     12. answered\t13. was\t    14. was \t         15. decided; 16. gave\t     17. said\t\t18. died\t    19. chose\t         20. helped",
+      "metadata": {
+        "exerciseNumber": 7,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt8",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 8. Put the words in the correct order to make sentences.",
+      "text": "Bài tập 8. Put the words in the correct order to make sentences.\n1. we/ café/ were/ holiday/, /we/ went/ When/ to/ the/ almost/ every/ on/ day.\n2. Did/ collect/ were/ stamps/ when/ you/ you/ younger?\n3. it/ famous/ lived/ in/ our/ A/ house/ before/ we/ actor/ bought.\n4. my/ I/ threw/ a/ party/ for/ brother/ last/ surprise/ Sunday.\n5. My/ every/ and/ I/ swimming/ almost/ day/ last/ sister/ summer/ went.\n6. she/ a/ live/ girl/, /my/ mom/ When/ used/ to/ in/ was/ a/ village.\n7. the/ Elvis/ Blue/ famous/ for/ song/ Suede/ Shoes/ became.\nĐáp án: 1. When we were on holiday, we went to the café almost every day.; 2. Did you collect stamps when you were younger?; 3. A famous actor lived in our house before we bought it.; 4. I threw a surprise party for my brother last Sunday.; 5. My sister and I went swimming almost every day last summer.; 6. When she was a girl, my mom used to live in a village.; 7. Elvis became famous for the song Blue Suede Shoes.",
+      "metadata": {
+        "exerciseNumber": 8,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt9",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 9. Read the sentences. Then, write questions for the given answers.",
+      "text": "Bài tập 9. Read the sentences. Then, write questions for the given answers.\n1. Grace listened to three Lady Gaga CDs.\nQ: _________________________\nA: Three.\n2. She visited her cousin last weekend.\nQ: _________________________\nA: Her cousin.\n3. Sam had dinner early because he was hungry.\nQ: _________________________\nA: He was hungry.\n4. They watched a movie last night.\nQ: _________________________\nA: A movie.\n5. Mason and Tyler went to London together.\nQ: _________________________\nA: He went with Tyler.\n6. He worked at the library yesterday.\nQ: _________________________\nA: At the library.\n7. We had dinner at 7 p.m.\nQ: _________________________\nA: At 7 p.m.\n8. She studied for the test last week.\nQ: _________________________\nA: She studied for the test.\nĐáp án: 1. How many Lady Gaga CDs did Grace listen to?; 2. Who did she visit last weekend?; 3. Why did Sam have dinner early?; 4. What did they watch last night?; 5. Who did Mason go to London with?; 6. Where did he work yesterday?; 7. What did you have dinner?; 8. What did she do last week?",
+      "metadata": {
+        "exerciseNumber": 9,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt10",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 10. Complete the sentences with the correct form of the verb in brackets (present simple or past simple).",
+      "text": "Bài tập 10. Complete the sentences with the correct form of the verb in brackets (present simple or past simple).\n1. She usually________ (walk) to school, but yesterday she ________ (take) the bus because it was raining.\n2. My brother ________ (not like) spicy food, so he ________ (refuse) to eat the curry I cooked last night.\n3. I ________ (study) every evening, but last week I ________ (skip) my study time because I wasn’t feeling well.\n4. The shop ________ (open) at 9 AM every day, but last Monday it ________ (not open) until 10 AM due to a power cut.\n5. We ________ (play) tennis every weekend, but last Sunday we ________ (stay) home and watched TV instead.\n6. She ________ (not usually drink) coffee, but she ________ (order) a latte yesterday at the café.\n7. He ________ (work) as an engineer now, but he ________ (be) a teacher before.\n8. I always ________ (listen) to music while studying, but yesterday I ________ (study) in complete silence.\nĐáp án: 1. walks/ took; 2. doesn’t like/ refused; 3. study/ skipped; 4. opens/ didn’t open; 5. play/ stayed; 6. doesn’t drink/ ordered; 7. works/ was; 8. listen/ studied",
+      "metadata": {
+        "exerciseNumber": 10,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt11",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 11. Read the following sentences carefully. Some sentences contain errors in their tense usage. Correct the errors where necessary and explain your choice. If the sentence is correct, write \"Correct.\"",
+      "text": "Bài tập 11. Read the following sentences carefully. Some sentences contain errors in their tense usage. Correct the errors where necessary and explain your choice. If the sentence is correct, write \"Correct.\"\n1. She always has breakfast before she went to work.\n2. I visit my grandparents every Sunday, but last weekend I didn’t go because I was busy.\n3. He studies at university last year, but now he works full-time.\n4. Do you usually get up early?\n5. We didn’t understand the question, so we ask the teacher for clarification.\n6. Emma loves reading mystery novels, but she finishes a romance book last night.\n7. The train arrives on time every day, but yesterday it was 15 minutes late.\n8. They play football in the park on Saturdays, and they won a match last weekend.\n9. I don’t often cook dinner, but I prepare a big meal for my friends last Friday.\n10. He speaks French fluently because he learned it when he was a child.\nĐáp án: 1. went → goes; 2. Correct; 3. studies → studied; 4. Correct; 5. ask → asked; 6. finishes → finished; 7. Correct; 8. Correct; 9. prepare → prepared; 10. Correct.",
+      "metadata": {
+        "exerciseNumber": 11,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u2_bt12",
+      "unit": 2,
+      "type": "exercise",
+      "title": "Bài tập 12. Speaking Practice.",
+      "text": "Bài tập 12. Speaking Practice.\nWrite short answers to the following prompts. Use at least 2-3 sentences in the past simple tense.\n1. What did you do last weekend?\n2. Describe a trip you went on.\n3. What was the last movie you watched?\n4. Did you have fun last summer? What did you do?\n5. Talk about a time you helped someone.\nĐáp án: Write short answers to the following prompts. Use at least 2-3 sentences in the past simple tense.; Suggested answers:; 1. What did you do last weekend?; Last weekend, I went to the park with my friends. We played football and had a picnic. Later, we watched the sunset before heading home.; 2. Describe a trip you went on.; I went on a trip to Da Nang last year. I visited the Marble Mountains and walked along the beach. The weather was perfect, and I loved trying the local seafood.; 3. What was the last movie you watched?; The last movie I watched was Avatar: The Way of Water. I really enjoyed the special effects and the beautiful underwater scenes. The story was exciting, and it kept me interested until the end.; 4. Did you have fun last summer? What did you do?; Yes, I had a lot of fun last summer! I spent most of my time with my cousins at our grandparents’ house. We went swimming in the river, played games, and helped with the garden.; 5. Talk about a time you helped someone.; A few months ago, I helped my neighbor fix his bicycle. He couldn’t figure out what was wrong, so I looked at it and fixed the chain. He was very thankful, and it made me feel good to help him.",
+      "metadata": {
+        "exerciseNumber": 12,
+        "hasAnswers": true,
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "exercise_u3_bt1",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.",
+      "text": "Bài tập 1. Match the words with their definitions by writing the correct letter next to each number.\nWord — Definition\ncliff — a. A dry, barren area of land with little or no rain.\ndesert — b. A place where water flows over a vertical drop.\nshore — c. A low area between hills or mountains, often with a river.\nstream — d. A high, steep face of rock or earth.\nvalley — e. The land along the edge of a sea, lake, or river.\nwaterfall — f. A small, narrow river.\nĐáp án: 1 - d\t\t\t\t2. - a\t\t\t3. - e; 4 - f\t\t\t\t5. - c\t\t\t6. - b",
+      "metadata": {
+        "exerciseNumber": 1,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt2",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 2. Fill in the blanks with the correct word from the box below.",
+      "text": "Bài tập 2. Fill in the blanks with the correct word from the box below.\n1. Be careful! The road is very ____ and covered with snow, so it’s slippery.\n2. The lake is very ____, so it’s dangerous to swim far from the shore.\n3. He struggled to walk on the ____ path full of big stones.\n4. The river is very ____, so boats can easily pass through.\n5. The child was happy to play in the ____ water near the beach.\n6. We had to climb a very ____ hill to reach the top of the mountain.\n7. The street was too ____ for two cars to pass at the same time.\n8. The skyscraper in the city center is the most ____ building I’ve ever seen.\nĐáp án: 1. icy \t\t\t2. deep\t\t3. rocky\t\t4. wide; 5. shallow\t\t6. steep\t\t7. narrow\t\t8. tall",
+      "metadata": {
+        "exerciseNumber": 2,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt3",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 3. Put the words in the box into two groups: simple adjectives or extreme adjectives.",
+      "text": "Bài tập 3. Put the words in the box into two groups: simple adjectives or extreme adjectives.\ndisgusting, big, unpleasant, bad, fantastic, filthy, good, sad, starving, frightening, dirty, brilliant, beautiful, stunning, huge, small, tired, astonishing, tragic, tasty, hungry — disgusting, big, unpleasant, bad, fantastic, filthy, good, sad, starving, frightening, dirty, brilliant, beautiful, stunning, huge, small, tired, astonishing, tragic, tasty, hungry\nSimple adjectives — Extreme adjectives\n______________________________ ______________________________ ______________________________ ______________________________ — _____________________________ ______________________________ ______________________________ ______________________________\nĐáp án: disgusting, big, unpleasant, bad, fantastic, filthy, good, sad, starving, frightening, dirty, brilliant, beautiful, stunning, huge, small, tired, astonishing, tragic, tasty, hungry | disgusting, big, unpleasant, bad, fantastic, filthy, good, sad, starving, frightening, dirty, brilliant, beautiful, stunning, huge, small, tired, astonishing, tragic, tasty, hungry; Simple adjectives | Extreme adjectives; big, unpleasant, bad, good, sad, frightening, dirty, beuautiful, small, tired, tasty, hungry | disgusting, fantastic, filthy, starving, brilliant, stunning, huge, astonishing, tragic",
+      "metadata": {
+        "exerciseNumber": 3,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt4",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 4. Choose the correct word to complete each sentence.",
+      "text": "Bài tập 4. Choose the correct word to complete each sentence.\n1. The food was ____. I couldn’t eat it at all! (disgusting / stunning)\n2. Wow! Your dress looks ____. You look like a movie star! (tragic / stunning)\n3. He hasn’t eaten all day. He is absolutely ____. (starving / filthy)\n4. Their house is ____. It has five bedrooms and a huge garden. (huge / tragic)\n5. The weather was ____, and we had a great time at the beach. (brilliant / filthy)\n6. After playing in the mud, the children’s clothes were ____. (filthy / fantastic)\n7. The magician’s trick was ____. Nobody could believe what they saw! (astonishing / starving)\n8. It was a ____ accident, and everyone felt very sad. (tragic / fantastic)\nĐáp án: 1. disgusting \t2. stunning \t\t3. starving \t\t4. huge; 5. brilliant \t\t6. filthy \t\t7. astonishing\t8. tragic",
+      "metadata": {
+        "exerciseNumber": 4,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt5",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 5. Look at the pictures. Write the correct name of the sports equipment or sport in each box.",
+      "text": "Bài tập 5. Look at the pictures. Write the correct name of the sports equipment or sport in each box.\n\nhoop — helmet — puck\n\nracket — harness — goggles\n\nbat — snorkling — paddleboarding\n\nbungee jumping — hang gliding — karting\n\nStick — wetsuit — kayaking\n\nquad biking — paintballing — kite surfing\n\nabseiling — jet-skiing — orienteering",
+      "metadata": {
+        "exerciseNumber": 5,
+        "hasAnswers": false,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt6",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 6. Complete the sentences using the past continuous of the verbs in brackets.",
+      "text": "Bài tập 6. Complete the sentences using the past continuous of the verbs in brackets.\n1. Yesterday at 5 p.m, John (go) __________ to the store.\n2. Our teacher (tell) __________ us about his visit to England in 1970 when the bell rang.\n3. What ________ you (do) __________ at 6 p.m yesterday?\n4. When the phone rang, I (have) __________ dinner.\n5. He fell asleep while he (do) __________ his homework.\n6. It (rain) __________ when we arrived.\n7. They (work) __________ in the field all morning.\n8. Why didn’t you listen while I (speak) __________ to you?\n9. Someone (cut) __________ down all the trees in the garden when I passed by.\n10. John (watch) __________ TV at 8 last evening.\nĐáp án: 1. was going \t\t2. was telling \t\t3. were you doing; 4. was having \t\t5. was doing\t\t\t6. was raining; 7. were working \t\t8. was speaking \t\t9. was cutting; 10. was watching",
+      "metadata": {
+        "exerciseNumber": 6,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt7",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 7. Put the verbs in the Past Simple or Past Continuous.",
+      "text": "Bài tập 7. Put the verbs in the Past Simple or Past Continuous.\nIn my last holiday, I went to Hawaii. When I (1) __________(go) to the beach for the first time, something wonderful happened. I (2)__________(swim) in the sea while my mother was sleeping in the sun. My brother was building a sand castle and my father (3) __________ (drink) some water. Suddenly, I (4) __________(see) a boy on the beach. His eyes were blue like the water in the sea and his hair (5)  __________ (be) beautiful black. He was very tall and thin and his face was brown. My heart (6)  __________ (beat)fast. I (7) __________(ask) him for his name with a shy voice. He (8)  __________ (tell) me that his name was John. He (9) __________ (stay) with me the whole afternoon. In the evening, we met again. We ate pizza in a restaurant. The following days we (10)   __________ (have) a lot of fun together. At the end of my holiday when I (11)  __________ (leave) Hawaii I (12) __________ (say) goodbye to John. We (13) __________ (have) tears in our eyes. He (14) __________ (write) me a letter very soon and I (15) __________(answer) him.\nĐáp án: 1. was going \t\t2. was swimming \t\t3. was drinking; 4. saw \t\t\t5. was \t\t\t6. was beating; 7. asked \t\t\t8. told\t\t\t\t9. stayed; 10. had \t\t\t11. left \t\t\t12. said; 13. had \t\t\t14. wrote \t\t\t15. answered",
+      "metadata": {
+        "exerciseNumber": 7,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u3_bt8",
+      "unit": 3,
+      "type": "exercise",
+      "title": "Bài tập 8. Complete the sentences using the Past Simple or Past Continuous.",
+      "text": "Bài tập 8. Complete the sentences using the Past Simple or Past Continuous.\n1. While I was abseiling down the rocky cliff, ...\n2. We were orienteering in the dark forest when ...\n3. I put on my wetsuit and ...\n4. The instructor was adjusting my harness while ...\n5. There was a stunning view from the top of the high hill, so ...\n6. The water in the shallow river was cold, but ...\n7. As I was snorkeling near the rocky stream, ...\n8. The basketball bounced off the hoop, and then ...\n9. While we were hiking through the deep valley, ...\n10. There were some disgusting insects on my backpack when ...\nĐáp án: Suggested answers; 1. While I was abseiling down the rocky cliff, my foot slipped, and I almost fell.; 2. We were orienteering in the dark forest when we realized we were completely lost.; 3. I put on my wetsuit and jumped into the cold water.; 4. The instructor was adjusting my harness while I was getting ready to climb.; 5. There was a stunning view from the top of the high hill, so we took a lot of photos.; 6. The water in the shallow river was cold, but we still decided to swim.; 7. As I was snorkeling near the rocky stream, I saw a colorful fish swimming past me.; 8. The basketball bounced off the hoop, and then my teammate caught it and scored.; 9. While we were hiking through the deep valley, it suddenly started to rain heavily.; 10. There were some disgusting insects on my backpack when I picked it up and screamed.",
+      "metadata": {
+        "exerciseNumber": 8,
+        "hasAnswers": true,
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "exercise_u4_bt1",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 1. Complete the sentences using the most appropriate adjective from the box. Each adjective can only be used once.",
+      "text": "Bài tập 1. Complete the sentences using the most appropriate adjective from the box. Each adjective can only be used once.\n1. The plot of the thriller was so __________ that I couldn’t stop watching until the very end.\n2. Many animated films are highly __________, creating entire fantasy worlds that feel magical.\n3. The war film was deeply __________; it portrayed the struggles of soldiers in a very emotional way.\n4. That new sitcom is incredibly __________-I laughed out loud in almost every scene!\n5. The documentary about climate change was __________ because it presented strong evidence and expert opinions.\n6. I found the science fiction film a bit __________; I couldn’t understand what was happening in some scenes.\n7. The period drama had __________ costumes and breathtaking scenery, making it visually stunning.\n8. Some reality shows can be quite __________ to watch, especially when contestants make awkward mistakes.\n9. The horror film was too __________ for me. I kept covering my eyes during the scariest parts.\n10. Unfortunately, the game show was rather __________, as it repeated the same challenges every episode.\nĐáp án: 1. gripping\t\t2. imaginative\t3. moving\t4. funny\t5.convincing; 6. confusing\t    7. spectacular\t8. embarrassing\t9. scary\t10. boring",
+      "metadata": {
+        "exerciseNumber": 1,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt2",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 2. Identify the kinds of TV programmes and films. Choose from the words below.",
+      "text": "Bài tập 2. Identify the kinds of TV programmes and films. Choose from the words below.\nThis kind of film or TV programme:\n1. usually has stories which take place in the future. ________\n2. often has characters with magical or supernatural powers. ________\n3. often has cowboys and Native Americans. ________\n4. often has frightening characters like vampires or ghosts. ________\n5. includes singing and dancing. ________\n6. tells you about important events in the world. ________\n7. includes cartoon characters, usually made with computers. ________\n8. makes you laugh. ________\nĐáp án: 1. fantasy film\t2. science fiction fim\t3. western\t\t4. horror film; 5. musical\t\t6. news bulletin\t\t7. animation\t\t8. comedy",
+      "metadata": {
+        "exerciseNumber": 2,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt3",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 3. Complete the sentences with the adjectives below, with or without a negative prefix.",
+      "text": "Bài tập 3. Complete the sentences with the adjectives below, with or without a negative prefix.\n1. Police are investigating an ________ file-sharing site in the Philippines.\n2. It was very ________ of him to arrive an hour late for dinner.\n3. I get very ________ if I have to wait more than a few minutes for a download.\n4. You don’t have to pay before the excursion; it’s ________ to pay at the end.\n5. You mustn’t climb on that wall, it’s ________.\n6. You can believe everything she tells you; she’s always completely________.\nĐáp án: 1. illgal \t\t2. impolite\t\t3. impatient; 4. possible\t\t5. unsafe  \t\t6. honest",
+      "metadata": {
+        "exerciseNumber": 3,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt4",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 4. Complete the text about illegal downloads. Use the adjectives in brackets with or without a negative prefix.",
+      "text": "Bài tập 4. Complete the text about illegal downloads. Use the adjectives in brackets with or without a negative prefix.\nIn the USA, around 200 million (1) ________(legal) music downloads take place every year, in spite of laws to stop them. In the UK, the figure is about 100 million- the second highest in the world. The music industry complains that these downloads are (2) ________(fair) to artists because they stop them earning money from their work. It is (3) ________(possible) to know exactly how much money artists and record companies are losing because many people who download illegally do not have any money to spend. However, one thing is (4) ________(certain); overall, the industry is earning a lot less than it earned a few years ago.\nRecord companies pay for adverts telling people that downloading music without paying is as (5) ________(acceptable) and (6) ________(honest) as stealing from a shop. If you’re a (7) _______ (loyal) fan, they suggest you buy a (8) ________(legal) version of a song or album from iTunes or another website. But the adverts are (9)________(likely) to work because people see the music industry as rich and powerful compared to them. Most do not see sharing music online as (10)________(responsible).\nIn fact, the number of illegal downloads is now going down, but that’s not because of the warnings. For people who are (11)________(patient) to hear the latest tracks, streaming services like Spotify now offer a simple and (12)________(safe) way to enjoy them without the need for downloads at all.\nĐáp án: 1. illegal\t\t2. unfair\t\t3. impossible\t\t4. uncertain; 5. unacceptable\t6. dishonest\t\t7. loyal\t\t\t8. legal; 9. unlikely\t\t10. irresponsible\t11. impatient \t\t12. safe",
+      "metadata": {
+        "exerciseNumber": 4,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt5",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 5. Write a short paragraph about a film or TV programme you like. Use at least three adjectives from the list.",
+      "text": "Bài tập 5. Write a short paragraph about a film or TV programme you like. Use at least three adjectives from the list.\nboring\t \tconfusing\t convincing\t embarrassing\t exciting\nfunny\t \tgripping\t imaginative\t\t interesting\t\t moving scary\t\tspectacular\t\t unrealistic\t\t violent.\nSuggested Answer:\n\"I love watching science fiction films because they are very imaginative and spectacular. My favorite one is 'Interstellar' because it has a gripping story and amazing special effects.\"\nĐáp án: Suggested answer 1. Action Film – \"Mission: Impossible\"; \"I really enjoy watching action films, and my favorite one is Mission: Impossible. It is incredibly exciting because of its intense action sequences and fast-paced story. The stunts are truly spectacular, making the film visually impressive. Although some scenes seem a bit unrealistic, they are still fun to watch.\"; Suggested answer 2. Comedy – \"Friends\" (Sitcom); \"One of the funniest TV shows I’ve ever watched is Friends. The jokes are really funny, and the characters have great chemistry. The show is also quite convincing, as the friendships and situations feel real. Even after many years, it remains an interesting and enjoyable sitcom.\"; Suggested answer 3.; \"I really enjoy watching fantasy films because they are always so imaginative and spectacular. The visual effects are incredible, and the worlds created in these films seem almost real. The most recent one I watched was exciting because it had thrilling action sequences and unexpected twists in the plot.\"; Suggested answer 4.; \"One of my favorite genres is romantic comedy because I find them funny and moving at the same time. The characters are usually charming, and their love stories are sweet. I especially like how they can be convincing in portraying real-life emotions, even though the situations are often exaggerated.\"",
+      "metadata": {
+        "exerciseNumber": 5,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt6",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 6. Choose one appropriate word of quantity to fill in the blank.",
+      "text": "Bài tập 6. Choose one appropriate word of quantity to fill in the blank.\nWord bank:  many \tenough\ta few\t\tsome\nlittle\t\ta large number of\n1. There are …………………. students in the classroom.\n2. She has …………………. money to buy a new car.\n3. He ate …………………. cookies for dessert.\n4. I have …………………. friends who can help me.\n5. There is …………………. sugar in the bowl.\n6. How …………………. books have you read this year?\n7. She doesn’t have …………………. patience to wait.\n8. I have …………………. oranges left.\n9. They have …………………. time to finish the project.\n10. …………………. people attended the conference.\nĐáp án: 1. many; 2. enough; 3. a few; 4. some; 5. little | 6. many; 7. enough ; 8. a few; 9. enough; 10. a large number of",
+      "metadata": {
+        "exerciseNumber": 6,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt7",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 7. Fill in the blank with one of the following words of quantity:",
+      "text": "Bài tập 7. Fill in the blank with one of the following words of quantity:\nmuch/ many/ little/ a little/ few/ a few\n1. She isn't very popular. She has ……….. friends.\n2. Ann is very busy these days. She has …………….. free time.\n3. Did you take ………………. pictures when you were on holiday?\n4. I'm not very busy today. I don't have ……………… to do.\n5. This is a very modern city. There are ………………. old buildings.\n6. The weather has been very dry recently. We've had …………….. rain.\n7. 'Do you know Rome?' 'No, I haven't been there for ……………….. years.\n8. Gary is very busy with his job. He has ……………… time for other things.\n9. Listen carefully. I'm going to give you ………………… advice.\n10. Do you mind if I ask you ………………… questions?\nĐáp án: 1. few; 2. little; 3. many; 4. much; 5. few | 6. little;       7. many;       8. little;       9. a little;      10. a few",
+      "metadata": {
+        "exerciseNumber": 7,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt8",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 8. Fill in the blanks with the correct quantifier: some, any, a few, few, a little, little, much, many, not much, not many, a lot of",
+      "text": "Bài tập 8. Fill in the blanks with the correct quantifier: some, any, a few, few, a little, little, much, many, not much, not many, a lot of\n1. There are only ___ apples left in the basket. We should buy more.\n2. I have ___ friends in this city, so I sometimes feel lonely.\n3. Would you like ___ sugar in your coffee?\n4. We don’t have ___ milk in the fridge. Can you buy some?\n5. There aren’t ___ people at the party. It’s quite empty.\n6. I always carry ___ pens with me in case I lose one.\n7. There isn’t ___ water in the glass. Please refill it.\n8. I have ___ free time today. Let’s go for a walk!\n9. She spends ___ money on clothes every month.\n10. I don’t know ___ about science, but I’d love to learn.\nĐáp án: 1. a few\t      2. few\t\t3. a little\t   \t 4. much\t\t5. many; 6. a few\t      7. much\t\t8. a little\t\t 9. a lot of \t\t10. much",
+      "metadata": {
+        "exerciseNumber": 8,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt9",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 9. Complete the paragraph with the words below: some, any, a few, few, a little, little, much, many, not much, not many, a lot of",
+      "text": "Bài tập 9. Complete the paragraph with the words below: some, any, a few, few, a little, little, much, many, not much, not many, a lot of\nLast weekend, I went to the supermarket to buy (1) ________ groceries because my fridge was almost empty. There weren’t (2) ________ people there, so shopping was quick and easy. I needed (3) ________ vegetables for dinner, but unfortunately, there was (4) ________ fresh produce left, and most of it didn’t look very good. I also wanted to buy milk, but there wasn’t (5) ________ available, so I had to settle for a smaller bottle than usual. Luckily, I found (6) ________cheese and (7) ________ bread, so I bought those instead.\nWhen I got home, I realized I had (8) ________ snacks left, so I wished I had bought (9) ________chips or biscuits. As I unpacked my groceries, I also noticed I had forgotten to buy eggs, which I needed for breakfast the next day. Next time, I will make a shopping list to avoid forgetting (10) ________important items. Hopefully, the supermarket will have a better selection when I go back!\nĐáp án: 1. a few \t       2. many \t3. some\t\t4. little \t\t5. much; 6. a little \t       7. a lot of\t8. few \t\t9. some \t\t10. any",
+      "metadata": {
+        "exerciseNumber": 9,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt10",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 10. Choose the correct verbs to complete the dialogue.",
+      "text": "Bài tập 10. Choose the correct verbs to complete the dialogue.\nAlice: I this your new video game?\nRyan: Yes, it is. You 1must/ needn’t try it. It’s great!\nAlice: How do I play?\nRyan: First, you 2have to/ mustn’t escape from the castle.\nAlice: How? Down the stair?\nRyan: Stop! You 3don’t have to/ mustn’t open that door!\nAlice: Oh! Too late! Am I dead?\nRyan: Yes. But you 4don’t have to/ must start again. Just press ‘B’ to continue.\nAlice: OK, thanks. What now?\nRyan: You 5have to/ needn’t climb out of the window. But slowly! You 6don’t have to/ must be careful.\nAlice: Oh no. I’m dead again. I’m not very good at this.\nRyan: Well, we 7have to/ needn’t play this game. I’ve got lots of others…\nAlice: No, no. I 8mustn’t/needn’t give up. Do I press ‘B’ again?\nĐáp án: 1. must\t\t2. have to\t\t3. mustn’t \t\t4. don’t have to; 5. have to\t\t6. must \t\t7. needn’t \t\t8. mustn’t",
+      "metadata": {
+        "exerciseNumber": 10,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt11",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 11. Circle the correct form. Tick (√) if both are possible.",
+      "text": "Bài tập 11. Circle the correct form. Tick (√) if both are possible.\n1. You don’t have to/ mustn’t cross the road when the traffic lights are red.\n2. What do I have to/ must I do when I finish this exercise?\n3. The concert is free. You don’t have to/ mustn’t pay.\n4. We’re late for the meeting. We have to/ must go now.\n5. You don’t have to/ mustn’t leave the door open- the dog will get out.\n6. I have to/ must pay Jane back the money she lent me.\n7. In Britain you have to/ must drive on the left.\n8. You don’t have to/ mustn’t be tall to be good at football.\n9. We don’t have to/ mustn’t go to school next week. It’s the holiday.\nĐáp án: 1. mustn’t \t\t\t2. √ \t\t\t3. don’t have to; 4. √\t\t\t\t5. mustn’t \t\t6. √; 7. have to\t\t\t8. mustn’t\t\t9. don’t have to",
+      "metadata": {
+        "exerciseNumber": 11,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt12",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 12. Complete the sentences with must, have to, mustn’t or needn’t and the verbs below.",
+      "text": "Bài tập 12. Complete the sentences with must, have to, mustn’t or needn’t and the verbs below.\n1. You ________ your shoes if they are clean.\n2. At school, we ________ a white shirt and a blue sweater.\n3. In Britain, we ________ on the left.\n4. Students ________ their mobiles during lessons or the teacher will take them away.\n5. Sue really ________ eating so many sweets – it’s bad for her teeth!\n6. When you’re driving, you ________ if someone steps onto the pedestrian crossing.\n7. You ________ your grandparents more often. You know how much they enjoy talking to you.\n8. We________ any more time.\n9. We ________ exams at the end of our final year at school.\n10. Your ________ your mobile with you so that I can call you.\n11. Jason ________ early because he’s got a doctor’s appointment at eight in the morning.\nĐáp án: 1. needn’t take off \t\t\t6. must stop; 2. have to wear \t\t\t7. must phone; 3. have to drive \t\t\t8. mustn’t waste; 4. mustn’t use \t\t\t9. have to take; 5. must stop \t\t\t\t10. must take; 11. has to get up",
+      "metadata": {
+        "exerciseNumber": 12,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt13",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 13. Rewrite the following sentences using must, mustn’t, have to, needn’t, or don’t have to while keeping the same meaning.",
+      "text": "Bài tập 13. Rewrite the following sentences using must, mustn’t, have to, needn’t, or don’t have to while keeping the same meaning.\ne.g. It is essential that all applicants submit their documents before the deadline.\n→ All applicants must submit their documents before the deadline.\n1. It is prohibited to smoke in public buildings.\n2. It is necessary for scientists to validate their hypotheses before publishing their findings.\n3. Students are not required to bring their own laboratory equipment.\n4. It is crucial that medical professionals wash their hands before performing surgery.\n5. Attendance at the seminar is optional, but highly recommended.\n6. It is against company policy to disclose confidential client information.\n7. Employees are obliged to wear identification badges at all times.\nĐáp án: 1. You mustn’t smoke in public buildings.; 2. Scientists have to validate their hypotheses before publishing their findings.; 3. Students don’t have to bring their own laboratory equipment.; 4. Medical professionals must wash their hands before performing surgery.; 5. You needn’t attend the seminar, but it is highly recommended.; 6. Employees mustn’t disclose confidential client information.; 7. Employees have to wear identification badges at all times.",
+      "metadata": {
+        "exerciseNumber": 13,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u4_bt14",
+      "unit": 4,
+      "type": "exercise",
+      "title": "Bài tập 14. Each sentence contains an error in the use of must, mustn’t, have to, needn’t, or don’t have to. Identify and correct the errors.",
+      "text": "Bài tập 14. Each sentence contains an error in the use of must, mustn’t, have to, needn’t, or don’t have to. Identify and correct the errors.\n1. Students mustn’t to submit their essays late, or they will receive a penalty.\n2. In a professional environment, one don’t have to use informal language.\n3. You have to not eat in the library as it may damage the books.\n4. Researchers needn’t to follow strict ethical guidelines when conducting human trials.\n5. Attendees of the conference mustn’t to dress casually for the opening ceremony.\n6. Employees mustn’t take a break during working hours unless necessary\n7. To qualify for the scholarship, applicants mustn’t provide proof of financial need.\nĐáp án: 1. mustn’t to submit → mustn’t submit; 2. don’t have to → needn’t; 3. have to not eat → mustn’t eat; 4. needn’t to follow → needn’t follown; 5. mustn’t to dress → mustn’t dress; 6. mustn’t take → needn’t take; 7. mustn’t provide → must provide",
+      "metadata": {
+        "exerciseNumber": 14,
+        "hasAnswers": true,
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "exercise_u5_bt1",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 1. Vocabulary quiz.",
+      "text": "Bài tập 1. Vocabulary quiz.\n1. A long period with no rain is called a ________.\n2. A large wave caused by an underwater earthquake is a ________.\n3. A sudden shaking of the ground is an ________.\n4. A strong wind that moves in a circle and destroys everything in its path is a ________.\n5. A sudden flow of rocks, soil, and water down a hill is called a ________.\n6. When there is too much rain and water cover the land, it is a ________.\n7. When a mountain erupts and releases lava, it is called a ________.\n8. A large amount of snow falling quickly down a mountain is an ________.\n9. When a disease spreads to many people very quickly, it is called an ________.\nĐáp án: 1. drought\t\t2. tsunami\t\t3. earthquake\t\t4. tornado; 5. mudslide\t\t6. flood\t\t7. colcanic eruption\t8. avalanche; 9. epidemic",
+      "metadata": {
+        "exerciseNumber": 1,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt2",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 2. Fill in the blanks with the correct word. Each word can only be used once.",
+      "text": "Bài tập 2. Fill in the blanks with the correct word. Each word can only be used once.\n1. There was a bright flash of …… in the sky before it started to rain.\n2. The road was very …… this morning, so we had to drive slowly to avoid accidents.\n3. A soft …… moved the leaves move a little.\n4. The sky is …… today so we will not see the sun.\n5. A short …… made the ground wet for a few minutes.\n6. The grass was covered in …… after a very cold night.\n7. The …… was so thick, so I could not see the road.\n8. It is very …… outside. The wind is strong, and it is raining.\n9. Small pieces of ice, called ……, fell from the sky.\n10. A big …… is coming! Stay inside because there will be rain and lightning.\n11. A …… is a small drop of water that falls from the clouds.\n12. The loud noise after lightning is called ……\n13. In winter, you can see soft white …… falling from the sky.\n14. It started to …… heavily, so we ran inside.\nĐáp án: 1. lightning \t\t2. icy\t\t\t3. breeze\t\t\t4. overcast; 5. shower\t\t6. frost\t\t7. fog\t\t\t\t8. stormy; 9. hail\t\t\t10. thunderstorm\t11. raindrop\t\t\t12. thunder; 13. snowflakes\t14. rain",
+      "metadata": {
+        "exerciseNumber": 2,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt3",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 3. Complete the paragraph using the words below. Each word can only be used once.",
+      "text": "Bài tập 3. Complete the paragraph using the words below. Each word can only be used once.\nMany environmental problems are affecting our planet. One major issue is (1) ________, which is causing the Earth’s temperature to rise and making ice melt. This is mainly due to (2) ________, which leads to more extreme weather and rising sea levels. Factories and cars release a lot of (3) ________, which pollutes the air and makes the situation worse.\nTo help the environment, we should reduce our (4) ________ by choosing a (5) ________, such as using public transport and saving energy. Instead of relying on (6) ________ like coal and oil, we should switch to (7) ________, such as wind and solar power.\nAnother serious problem is (8) ________, which pollutes the ocean and harms sea animals. We should always throw plastic bottles into a (9) ________ to reduce waste. If we don’t take action, many animals will become (10) ________ due to habitat destruction and pollution.\nĐáp án: 1. global warming \t\t2. climate change \t\t3. carbon emissions; 4. carbon footprint \t5. green lifestyle \t\t6. fossil fuels; 7. renewable energy \t8. plastic waste \t\t9. recycling bin; 10. endangered species",
+      "metadata": {
+        "exerciseNumber": 3,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt4",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 4. Complete the comparative & superlative forms of adjectives.",
+      "text": "Bài tập 4. Complete the comparative & superlative forms of adjectives.\nAdjective — Comparative — Superlative\nsmall\ngood\ncold\nbad\neasy\nfar\nfunny\nhigh\nlittle\nnarrow\nmuch/many\nyoung\nhot\nbig\nfast\nĐáp án: Adjective | Comparative | Superlative; small | smaller | smallest; good | better | best; cold | colder | coldest; bad | worse | worst; easy | easier | easiest; far | farther/further | farthest/furthest; funny | funnier | funniest; high | higher | highest; little | less | least; narrow | narrower | narrowest; much/many | more | most; young | younger | youngest; hot | hotter | hottest; big | bigger | biggest; fast | faster | fastest",
+      "metadata": {
+        "exerciseNumber": 4,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt5",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 5. Fill in the blanks with “as ... as”. Tick (✓) the sentences where \"so ... as\" can also be used.",
+      "text": "Bài tập 5. Fill in the blanks with “as ... as”. Tick (✓) the sentences where \"so ... as\" can also be used.\n1. This hotel is ______ the one we stayed in last time. (comfortable) ☐\n2. This bag is not ______ mine. (heavy) ☐\n3. My sister is ______ me. (tall) ☐\n4. The film was not ______ I expected. (interesting) ☐\n5. The weather today is ______ yesterday. (cold) ☐\n6. He didn’t run ______ his friend. (fast) ☐\n7. This book is ______ that one. (exciting) ☐\n8. The cake was not ______ the one my mom makes. (sweet) ☐\n9. My house is ______ yours. (big) ☐\n10. His joke was not ______ I thought. (funny) ☐\nĐáp án: 1. This hotel is as comfortable as the one we stayed in last time.; 2. This bag is not as heavy as mine. ✓; 3. My sister is as tall as me.; 4. The film was not as interesting as I expected. ✓; 5. The weather today is as cold as yesterday.; 6. He didn’t run as fast as his friend. ✓; 7. This book is as exciting as that one.; 8. The cake was not as sweet as the one my mom makes. ✓; 9. My house is as big as yours.; 10. His joke was not as funny as I thought. ✓",
+      "metadata": {
+        "exerciseNumber": 5,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt6",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 6. Complete the sentences using the correct form of the adjective in brackets.",
+      "text": "Bài tập 6. Complete the sentences using the correct form of the adjective in brackets.\n(Comparative or superlative form required)\n1. This test was __________ than the one we did last week. (easy)\n2. Today is the __________ day of the year! (cold)\n3. My new phone is __________ than my old one. (expensive)\n4.That was the __________ movie I’ve ever seen. (exciting)\n5. John is __________ than his brother. (tall)\n6. This is the __________ hotel in the city. (comfortable)\n7. The blue car is __________ than the red one. (fast)\n8. This problem is __________ than I expected. (difficult)\n9. That was the __________ holiday we’ve ever had. (bad)\n10. This book is __________ than the one I read last week. (interesting)\nĐáp án: (Comparative or superlative form required); 1. This test was easier than the one we did last week.; 2. Today is the coldest day of the year!; 3. My new phone is more expensive than my old one.; 4. That was the most exciting movie I’ve ever seen.; 5. John is taller than his brother.; 6. This is the most comfortable hotel in the city.; 7. The blue car is faster than the red one.; 8. This problem is more difficult than I expected.; 9. That was the worst holiday we’ve ever had.; 10. This book is more interesting than the one I read last week.",
+      "metadata": {
+        "exerciseNumber": 6,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt7",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 7. Rewrite the sentences without changing the meaning.(Use “as...as”, comparative, or superlative structures. Some sentences may have more than one possible answer).",
+      "text": "Bài tập 7. Rewrite the sentences without changing the meaning.(Use “as...as”, comparative, or superlative structures. Some sentences may have more than one possible answer).\n1. This city is noisier than my hometown.\n→ __________________________________________\n2. No other meal was more delicious than that one.\n→ __________________________________________\n3. This test is easier than the previous one.\n→ __________________________________________\n4. John is taller than his brother.\n→ __________________________________________\n5. This is the fastest train in the country.\n→ __________________________________________\n6. The weather today is as warm as yesterday.\n→ __________________________________________\n7. Sarah is more hardworking than Tom.\n→ __________________________________________\n8. This hotel is the most expensive in town.\n→ __________________________________________\n9. The red dress is more beautiful than the blue one.\n→ __________________________________________\n10. This park is larger than any other park in the city.\n→ __________________________________________\nĐáp án: (Use \"as...as\", comparative, or superlative structures. Some sentences may have more than one possible answer).; 1. My hometown is not as noisy as this city.; 2. That was the most delicious meal. (No other meal was as delicious as that one.); 3. The previous test was more difficult than this one. (The previous test was not as easy as this one.); 4. John’s brother is not as tall as John.; 5. No other train in the country is as fast as this one. (This train is faster than any other train in the country.); 6. Yesterday was as warm as today.; 7. Tom is not as hardworking as Sarah. (Sarah works harder than Tom.); 8. No other hotel in town is as expensive as this one. (This hotel is more expensive than any other hotel in town.); 9. The blue dress is not as beautiful as the red one.; 10. This is the largest park in the city. (No other park in the city is as large as this one.)",
+      "metadata": {
+        "exerciseNumber": 7,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt8",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 8. Fill in the blanks with “too” or “enough”.",
+      "text": "Bài tập 8. Fill in the blanks with “too” or “enough”.\n1. This bag is ______ heavy for me to carry.\n2. The coffee is not hot ______ to drink.\n3. It’s ______ late to change our plans now.\n4. He isn’t tall ______ to reach the top shelf.\n5. The room is ______ small for all of us to fit in.\n6. There isn’t ______ time to finish this project today.\n7. The music is ______ loud! Please turn it down.\n8. Are you strong ______ to lift this box?\nĐáp án: 1. too \t\t\t\t2. enough \t\t\t3. too \t\t\t4. enough; 5. too \t\t\t\t\t6. enough \t\t\t7. too \t\t\t8. enough",
+      "metadata": {
+        "exerciseNumber": 8,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt9",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 9. Each sentence contains one mistake. Find and correct it.",
+      "text": "Bài tập 9. Each sentence contains one mistake. Find and correct it.\n1. This coffee is too hot enough to drink.\n2. She isn’t enough old to vote.\n3. The bag was too enough heavy for her to carry.\n4. He is too strong to lift the box.\n5. There isn’t too sugar in my tea.\n6. The dress isn’t enough long for her.\n7. The food was too enough spicy for me to eat.\n8. He speaks too fast enough for me to understand.\n9. I wasn’t enough lucky to win the prize.\n10. The problem is too difficult enough to solve.\nĐáp án: 1. This coffee is too hot to drink.; 2. She isn’t old enough to vote.; 3. The bag was too heavy for her to carry.; 4. He is strong enough to lift the box.; 5. There isn’t enough sugar in my tea.; 6. The dress isn’t long enough for her.; 7. The food was too spicy for me to eat.; 8.  He speaks too fast for me to understand.; 9.  I wasn’t lucky enough to win the prize.; 10.  The problem is too difficult to solve.",
+      "metadata": {
+        "exerciseNumber": 9,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "exercise_u5_bt10",
+      "unit": 5,
+      "type": "exercise",
+      "title": "Bài tập 10. Rewrite the sentences using Zero conditional.",
+      "text": "Bài tập 10. Rewrite the sentences using Zero conditional.\n1. Water boils at 100°C.\n→ _______________________________\n2. Plants die without water.\n→ _______________________________\n3. Ice melts in the sun.\n→ _______________________________\n4. Touching fire causes burns.\n→ _______________________________\n5. Metal expands when heated.\n→ _______________________________\n6. People get wet in the rain without an umbrella.\n→ _______________________________\n7. Sugar dissolves in hot water.\n→ _______________________________\n8. Eating too much makes you full.\n→ _______________________________\n9. You get tired if you don’t sleep enough.\n→ _______________________________\n10. Turning off the light makes the room dark.\n→ _______________________________\nĐáp án: 1. If you heat water to 100°C, it boils.; 2. If plants don’t get water, they die.; 3. If ice is in the sun, it melts.; 4. If you touch fire, it burns you.; 5. If you heat metal, it expands.; 6. If people go out in the rain without an umbrella, they get wet.; 7. If you put sugar in hot water, it dissolves.; 8. If you eat too much, you feel full.; 9. If you don’t sleep enough, you get tired.; 10. If you turn off the light, the room becomes dark.",
+      "metadata": {
+        "exerciseNumber": 10,
+        "hasAnswers": true,
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "objective_u1_knowledge",
+      "unit": 1,
+      "type": "objective",
+      "title": "Mục tiêu (knowledge)",
+      "text": "- Sử dụng thành thạo những từ vựng liên quan đến chủ đề môn học, thể thao và sở thích, phù hợp với ngữ cảnh trong các bài tập ngôn ngữ và trong các tình huống giao tiếp hàng ngày.\n- Hiểu và phân tích được sự khác biệt trong cách sử dụng hai thì hiện tại đơn và hiện tại tiếp diễn từ đó sử dụng chính xác trong từng ngữ cảnh;\n- Hiểu và áp dụng đúng mạo từ xác định the và không xác định a, an đồng thời ghi nhớ các trường hợp không dùng mạo từ để áp dụng hiệu quả trong thực hành tiếng Anh.",
+      "metadata": {
+        "category": "knowledge",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "objective_u1_skills",
+      "unit": 1,
+      "type": "objective",
+      "title": "Mục tiêu (skills)",
+      "text": "- Nhận diện từ vựng và xác định nhóm từ.\n- Sử dụng từ trong ngữ cảnh để điền từ còn thiếu vào chỗ trống sao cho câu có nghĩa.\n- Đọc hiểu, phân tích cấu trúc câu để chọn từ phù hợp nhất.\n- Ghi nhớ và ứng dụng từ vựng để trả lời các câu hỏi từ vựng không có phương án lựa chọn hoặc viết các câu trả lời ngắn.\n- Viết câu và cá nhân hóa từ vựng thông qua bài tập viết câu có liên hệ với cuộc sống của mình để hiểu sâu và ghi nhớ lâu hơn đồng thời phát triển kĩ năng tạo câu.\n- Nhận biết các dấu hiệu thời gian để xác định chính xác thì của câu, biết khi nào sử dụng thì hiện tại đơn và khi nào sử dụng thì hiện tại tiếp diễn;\n- Xác định và phân biệt được một số động từ trạng thái và động từ hành động;\n- Nhận diện các lỗi sai thường gặp như vị trí của trạng từ chỉ tần suất trong câu, sự hòa hợp giữa chủ ngữ và động từ, các lỗi sai ngữ pháp phổ biến khác và tránh lặp lại sai sót;\n- Củng cố vốn từ vựng về các động từ, danh từ và cụm từ thông dụng trong cuộc sống hàng ngày và áp dụng trôi chảy và chính xác trong viết và giao tiếp tiếng Anh trong đời sống hằng ngày.",
+      "metadata": {
+        "category": "skills",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "objective_u1_attitude",
+      "unit": 1,
+      "type": "objective",
+      "title": "Mục tiêu (attitude)",
+      "text": "- Có khả năng tự học, chủ động tìm hiểu và tích cực sử dụng từ vựng và cấu trúc ngữ pháp được học trong bài.\n- Chủ động lựa chọn phương pháp học tập phù hợp với bản thân dựa trên gợi ý, hướng dẫn của giảng viên, có ý thức tự kiểm tra, đánh giá quá trình học.\n- Tự chịu trách nhiệm cá nhân và chịu trách nhiệm với nhóm, giám sát, nhận xét các học viên khác trong nhóm khi thực hiện các nhiệm vụ do giảng viên giao.\n- Chủ động, tích cực tìm hiểu các quy tắc ngữ pháp nếu chưa hiểu rõ;\n- Chăm chỉ và kiên trì luyện đọc từ vựng, đặt câu với từ mới để có thể ghi nhớ hiệu quả hơn.",
+      "metadata": {
+        "category": "attitude",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "objective_u1_action",
+      "unit": 1,
+      "type": "objective",
+      "title": "Mục tiêu (action)",
+      "text": "Có khả năng sử dụng thành thạo thì hiện tại đơn và thì hiện tiếp diễn kết hợp với những từ vựng liên quan đến chủ đề môn học, thể thao và sở thích trong các tình huống giao tiếp phù hợp.",
+      "metadata": {
+        "category": "action",
+        "source": "Bài 1 - INTRODUCTION"
+      }
+    },
+    {
+      "id": "objective_u2_knowledge",
+      "unit": 2,
+      "type": "objective",
+      "title": "Mục tiêu (knowledge)",
+      "text": "- Sử dụng thành thạo những từ vựng liên quan đến chủ đề cảm xúc, phân biệt và sử dụng đúng tính từ đuôi -ed và -ing. Sử dụng từ vựng phù hợp với ngữ cảnh trong các bài tập ngôn ngữ và trong các tình huống giao tiếp hàng ngày.\n- Sử dụng thành thạo thì quá khứ đơn trong các tình huống thực hành ngôn ngữ và trong giao tiếp hàng ngày. Phân biệt được thì quá khứ đơn với thì hiện tại đơn trong các tình huống khác nhau.",
+      "metadata": {
+        "category": "knowledge",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "objective_u2_skills",
+      "unit": 2,
+      "type": "objective",
+      "title": "Mục tiêu (skills)",
+      "text": "- Nhận diện, sử dụng chính xác từ vựng liên quan đến cảm xúc, phân biệt và sử dụng đúng tính từ đuôi -ed và đuôi -ing.\n- Sử dụng từ trong ngữ cảnh, áp dụng từ vựng vào các tình huống thích hợp qua bài tập điền từ vào chỗ trống.\n- Viết và diễn đạt thông qua hoạt động viết đoạn văn ngắn.\n- Phân tích, xác định lỗi trong văn bản.\n- Giao tiếp thông qua hoạt động hỏi, đáp, trả lời các câu hỏi về trải nghiệm các nhân, thể hiện cảm xúc một các rõ ràng bằng các từ vựng đã học.",
+      "metadata": {
+        "category": "skills",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "objective_u2_attitude",
+      "unit": 2,
+      "type": "objective",
+      "title": "Mục tiêu (attitude)",
+      "text": "- Có khả năng tự học, chủ động tìm hiểu và tích cực sử dụng từ vựng và cấu trúc ngữ pháp được học trong bài.\n- Chủ động lựa chọn phương pháp học tập phù hợp với bản thân dựa trên gợi ý, hướng dẫn của giảng viên, có ý thức tự kiểm tra, đánh giá quá trình học.\n- Có khả năng tự chịu trách nhiệm cá nhân và chịu trách nhiệm với nhóm, giám sát, nhận xét các học viên khác trong nhóm khi thực hiện các nhiệm vụ do giảng viên giao.",
+      "metadata": {
+        "category": "attitude",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "objective_u2_action",
+      "unit": 2,
+      "type": "objective",
+      "title": "Mục tiêu (action)",
+      "text": "Có khả năng sử dụng thành thạo thì quá khứ đơn trong các tình huống giao tiếp hàng ngày. Vận dụng được các tính từ đuôi -ed, -ing, tính từ chỉ cảm xúc đúng ngữ cảnh giao tiếp.",
+      "metadata": {
+        "category": "action",
+        "source": "Bài 2 - FEELINGS"
+      }
+    },
+    {
+      "id": "objective_u3_knowledge",
+      "unit": 3,
+      "type": "objective",
+      "title": "Mục tiêu (knowledge)",
+      "text": "- Hiểu và vận dụng các từ vựng liên quan đến thiên nhiên, phong cảnh; các tính từ miêu tả cảnh quan, tính từ cấp độ cao nhất và các hoạt động ngoài trời vào đúng từng ngữ cảnh.\n- Hiểu cách sử dụng thì quá khứ tiếp diễn và ứng dụng vào xây dựng câu đúng ngữ pháp.\n- Phân tích, phân biệt được sự khác nhau giữa hai thì quá khứ đơn và quá khứ tiếp diễn, hiểu rõ cách dùng của từng thì trong từng ngữ cảnh và sử dụng chính xác vào các bài tập ngữ pháp cũng như giao tiếp.",
+      "metadata": {
+        "category": "knowledge",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "objective_u3_skills",
+      "unit": 3,
+      "type": "objective",
+      "title": "Mục tiêu (skills)",
+      "text": "- Nhận diện và sử dụng chính xác các từ vựng liên quan đến thiên nhiên, phong cảnh và các đặc điểm địa lý, địa hình.\n- Phân loại và sử dụng đúng các tính từ đơn giản và tính từ cấp độ cao nhất để mô tả và diễn đạt hiệu quả.\n- Phân biệt cách sử dụng thì quá khứ đơn và quá khứ tiếp diễn để mô tả các sự kiện trong quá khứ một cách logic và chính xác.\n- Nhận diện manh mối, dấu hiệu thời gian của từng thì, vận dụng chính xác vào các bài tập so sánh, phân biệt quá khứ đơn và quá khứ tiếp diễn.\n- Kết hợp từ vựng và ngữ pháp vào tính huống thực tế, sử dụng chúng một cách tự nhiên trong xây dựng câu cũng như giao tiếp hàng ngày.",
+      "metadata": {
+        "category": "skills",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "objective_u3_attitude",
+      "unit": 3,
+      "type": "objective",
+      "title": "Mục tiêu (attitude)",
+      "text": "- Chủ động tự học, tìm hiểu, lĩnh hội kiến thức; tích cực mở rộng vốn từ bằng cách tra cứu, đặt câu với từ mới để ghi nhớ lâu hơn;\n- Tích cực thực hành ngữ pháp, vận dụng vào bài viết và giao tiếp;\n- Chủ động hợp tác và học hỏi từ bạn bè thông qua thảo luận, chia sẻ và sửa lỗi cùng nhau để nâng cao khả năng sử dụng ngôn ngữ.",
+      "metadata": {
+        "category": "attitude",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "objective_u3_action",
+      "unit": 3,
+      "type": "objective",
+      "title": "Mục tiêu (action)",
+      "text": "Có khả năng sử dụng thành thạo thì quá khứ tiếp diễn trong giao tiếp hàng ngày. Vận dụng thành công các từ vựng miêu tả cảnh quan, thiên nhiên trong quá trình sử dụng ngôn ngữ.",
+      "metadata": {
+        "category": "action",
+        "source": "Bài 3 - ADVENTURE"
+      }
+    },
+    {
+      "id": "objective_u4_knowledge",
+      "unit": 4,
+      "type": "objective",
+      "title": "Mục tiêu (knowledge)",
+      "text": "- Sử dụng thành thạo những từ vựng liên quan đến chủ đề phim, các chương trình truyền hình, và một số tính từ thường dùng để miêu tả phim và các chương trình truyền hình. Sử dụng từ vựng phù hợp với ngữ cảnh trong các bài tập ngôn ngữ và trong các tình huống giao tiếp hàng ngày.\n- Sử dụng thành thạo các từ chỉ đại lượng trong các tình huống thực hành ngôn ngữ và trong giao tiếp hàng ngày. Phân biệt được các động từ must, mustn’t, have to, need trong quá trình sử dụng ngôn ngữ.",
+      "metadata": {
+        "category": "knowledge",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "objective_u4_skills",
+      "unit": 4,
+      "type": "objective",
+      "title": "Mục tiêu (skills)",
+      "text": "- Nhận diện, sử dụng chính xác từ vựng trong ngữ cảnh, áp dụng từ vựng vào các tình huống thích hợp qua bài tập điền từ vào chỗ trống.\n- Phân tích, hiểu ngữ cảnh để chọn tính từ, lượng từ phù hợp, xác định lỗi và sửa lỗi trong cấu trúc ngữ pháp.\n- Viết lại câu bằng động từ tình thái phù hợp mà vẫn giữ nguyên nghĩa.\n- Phát triển tư duy phản biện thông qua bài tập chọn từ phù hợp nhất cho câu dựa trên ý nghĩa và cấu trúc ngữ pháp.",
+      "metadata": {
+        "category": "skills",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "objective_u4_attitude",
+      "unit": 4,
+      "type": "objective",
+      "title": "Mục tiêu (attitude)",
+      "text": "- Có khả năng tự học, chủ động tìm hiểu và tích cực sử dụng từ vựng và cấu trúc ngữ pháp được học trong bài.\n- Chủ động lựa chọn phương pháp học tập phù hợp với bản thân dựa trên gợi ý, hướng dẫn của giảng viên, có ý thức tự kiểm tra, đánh giá quá trình học.\n- Có khả năng tự chịu trách nhiệm cá nhân và chịu trách nhiệm với nhóm, giám sát, nhận xét các học viên khác trong nhóm khi thực hiện các nhiệm vụ do giảng viên giao.",
+      "metadata": {
+        "category": "attitude",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "objective_u4_action",
+      "unit": 4,
+      "type": "objective",
+      "title": "Mục tiêu (action)",
+      "text": "Có khả năng vận dụng các cấu trúc câu must, mustn’t, have to, don’t have to, need trong giao tiếp thông thường. Sử dụng thành thạo các từ vựng liên quan đến chủ đề phim, chương trình truyền hình.",
+      "metadata": {
+        "category": "action",
+        "source": "Bài 4 - ON SCREEN"
+      }
+    },
+    {
+      "id": "objective_u5_knowledge",
+      "unit": 5,
+      "type": "objective",
+      "title": "Mục tiêu (knowledge)",
+      "text": "- Hiểu và vận dụng được các từ vựng liên quan đến thời tiết, nhiệt độ, thảm họa thiên nhiên, biến đổi khí hậu và các tính từ mức độ cao nhất trong ngữ cảnh phù hợp;\n- Hiểu và sử dụng chính xác cấu trúc so sánh bằng (as…as/so…as); các dạng so sánh hơn, so sánh nhất của tính từ;\n- Sử dụng chính xác cấu trúc với too và enough; câu điều kiện loại 0.",
+      "metadata": {
+        "category": "knowledge",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "objective_u5_skills",
+      "unit": 5,
+      "type": "objective",
+      "title": "Mục tiêu (skills)",
+      "text": "- Nhận diện và sử dụng thành thạo các từ vựng phức tạp liên quan đến thiên tai, thời tiết và các vấn đề môi trường;\n- Phân tích, nhận diện lỗi sai trong cách sử dụng “too” và “enough”.\n- Sử dụng manh mối ngữ cảnh để làm dạng bài tập điền từ;\n- Kết nối từ và ngữ pháp vào các tình huống thực tế, giúp sử dụng chúng một cách tự nhiên trong giao tiếp và viết;\n- Ghi nhớ và áp dụng đúng quy tắc biến đổi của các tính từ ngắn, dài, và bất quy tắc như good → better → best, far → farther/further → farthest/furthest, etc;\n- Chuyển đổi linh hoạt giữa các dạng câu có nghĩa tương đương, giúp tăng khả năng diễn đạt;\n- Tăng cường kỹ năng giao tiếp bằng tiếng Anh qua việc thực hành các cấu trúc ngữ pháp quan trọng.",
+      "metadata": {
+        "category": "skills",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "objective_u5_attitude",
+      "unit": 5,
+      "type": "objective",
+      "title": "Mục tiêu (attitude)",
+      "text": "- Có khả năng tự học; chủ động tìm hiểu, lĩnh hội kiến thức, tích cực mở rộng vốn từ bằng cách tra cứu nghĩa của từ mới, đặt câu với từ mới để ghi nhớ lâu hơn; đồng thời chủ động thực hành ngữ pháp, đặc biệt là các cấu trúc so sánh với tính từ và cấu trúc too/enough trong các tình huống thực tế;\n- Chủ động tìm hiểu và kết nối bài học với thực tế, tra cứu thêm về các hiện tượng thời tiết, biến đổi khí hậu để nâng cao kiến thức\n- Chủ động lựa chọn phương pháp học tập phù hợp dựa trên hướng dẫn của giảng viên, đồng thời có ý thức tự đánh giá và điều chỉnh cho phù hợp trong quá trình học tập;\n- Có nhiệm cá nhân và trách nhiệm nhóm, biết cách giám sát, nhận xét, hỗ trợ các thành viên khác trong nhóm khi thực hiện nhiệm vụ được giao.",
+      "metadata": {
+        "category": "attitude",
+        "source": "Bài 5 - WEATHER"
+      }
+    },
+    {
+      "id": "objective_u5_action",
+      "unit": 5,
+      "type": "objective",
+      "title": "Mục tiêu (action)",
+      "text": "- Có khả năng vận dụng cấu trúc too, enough và từ vựng liên quan đến chủ đề thời tiết trong các tình huống giao tiếp.",
+      "metadata": {
+        "category": "action",
+        "source": "Bài 5 - WEATHER"
+      }
+    }
+  ]
+}

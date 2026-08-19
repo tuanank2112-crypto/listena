@@ -1,0 +1,53 @@
+{
+  "source": "https://www.educaplay.com/learning-resources/30215767-da_nang_family_getaway.html",
+  "title": "Da Nang Family Getaway",
+  "type": "Dictation",
+  "author": "Huyen Nguyen",
+  "authorUrl": "https://www.educaplay.com/user/15049268-huyen/",
+  "description": "Sunny Da Nang hotel by the beach",
+  "language": "en",
+  "dateCreated": "2026-08-14",
+  "settings": {
+    "timeLimitSeconds": 300,
+    "caseAccentSensitive": true,
+    "lineBreakSensitive": false,
+    "changeSpeed": true,
+    "penaltyEnabled": true,
+    "penaltyPoints": 5,
+    "hideRanking": "0",
+    "audioResourcesBase": "https://cloud.educaplay.com/recursos/944/30215767/"
+  },
+  "segments": [
+    {
+      "position": 1,
+      "text": "Last summer, I traveled with my family to Da Nang",
+      "audio": "audio6a7e9bb88ef1c.mp3"
+    },
+    {
+      "position": 2,
+      "text": "We stayed in a beautiful hotel near the beach",
+      "audio": "audio6a7e9bb99d4e1.mp3"
+    },
+    {
+      "position": 3,
+      "text": "The hotel was quite luxurious with amazing facilities",
+      "audio": "audio6a7e9bba98dfb.mp3"
+    },
+    {
+      "position": 4,
+      "text": "It had a swimming pool and a great restaurant",
+      "audio": "audio6a7e9bbbafcab.mp3"
+    },
+    {
+      "position": 5,
+      "text": "We enjoyed long walks along the sunny shoreline daily",
+      "audio": "audio6a7e9bbcb87d4.mp3"
+    },
+    {
+      "position": 6,
+      "text": "The trip created wonderful memories that we will treasure",
+      "audio": "audio6a7e9bbdda2f9.mp3"
+    }
+  ],
+  "notes": "Mẫu tham khảo cách một bài dictation được cấu trúc: 6 câu, mỗi câu 1 audio riêng, độ dài câu tăng dần. Có thể nhập thẳng vào ListenAI dưới dạng Lesson FULL_DICTATION với 6 LessonSegment."
+}

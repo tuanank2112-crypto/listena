@@ -2,6 +2,7 @@ import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { LessonDetailClient } from "./lesson-client";
+import { getDatasetUnit, getUnitLearningContext } from "@/server/dataset/catalog";
 
 export default async function LessonDetailPage({
   params,
@@ -16,19 +17,14 @@ export default async function LessonDetailPage({
     where: { id: lessonId },
     include: {
       segments: { orderBy: { position: "asc" } },
-      vocabulary: {
-        include: { vocabularyItem: true },
-      },
+      vocabulary: { include: { vocabularyItem: true } },
       exercises: { orderBy: { position: "asc" } },
       course: { select: { title: true } },
     },
   });
 
-  if (!lesson || lesson.status !== "PUBLISHED") {
-    notFound();
-  }
+  if (!lesson || lesson.status !== "PUBLISHED") notFound();
 
-  // Get last attempt for each exercise
   const lastAttempts = userId
     ? await prisma.attempt.findMany({
         where: { userId, lessonId },
@@ -36,15 +32,13 @@ export default async function LessonDetailPage({
         distinct: ["exerciseId"],
       })
     : [];
-
-  const lastAttemptMap = new Map(
-    lastAttempts.map((a) => [a.exerciseId, a])
-  );
+  const learningContext = getUnitLearningContext(getDatasetUnit(lesson.title));
 
   return (
     <LessonDetailClient
       lesson={JSON.parse(JSON.stringify(lesson))}
-      lastAttemptMap={Object.fromEntries(lastAttemptMap)}
+      lastAttemptMap={Object.fromEntries(lastAttempts.map((attempt) => [attempt.exerciseId, attempt]))}
+      learningContext={learningContext}
     />
   );
 }

@@ -49,6 +49,33 @@ export interface AssessmentResult {
   normalizedActual: string;
 }
 
+export function assessOpenResponse(answer: string): AssessmentResult {
+  const base = assessDictation(answer, answer);
+  const trimmedAnswer = answer.trim();
+  const words = trimmedAnswer.split(/\s+/).filter(Boolean);
+  const sentenceCount = trimmedAnswer
+    .split(/[.!?]+/)
+    .filter((sentence) => sentence.trim().length > 0).length;
+  const lengthScore = Math.min(70, words.length * 4);
+  const structureScore = Math.min(20, sentenceCount * 10);
+  const capitalizationScore = /^[A-Z]/.test(trimmedAnswer) ? 5 : 0;
+  const punctuationScore = /[.!?]$/.test(trimmedAnswer) ? 5 : 0;
+  const overallScore = Math.max(
+    40,
+    Math.min(100, lengthScore + structureScore + capitalizationScore + punctuationScore)
+  );
+  const accuracy = overallScore / 100;
+
+  return {
+    ...base,
+    overallScore,
+    exactAccuracy: accuracy,
+    wordAccuracy: accuracy,
+    spellingAccuracy: accuracy,
+    contentWordAccuracy: accuracy,
+    functionWordAccuracy: accuracy,
+  };
+}
 // ── Function words list (common English) ─────────────
 
 const FUNCTION_WORDS = new Set([

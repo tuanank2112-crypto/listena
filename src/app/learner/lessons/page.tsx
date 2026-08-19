@@ -1,97 +1,54 @@
+import Link from "next/link";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ArrowRight, BookOpen, Gamepad2 } from "lucide-react";
+
+const COURSE_TITLE = "TATQHP1 - SOLUTIONS Pre-Intermediate";
+const COLORS = ["#176b55", "#ef765d", "#d89a2b", "#5c6fb3", "#9a5f7a"];
 
 export default async function LessonsPage() {
   const session = await auth();
   const userId = session?.user?.id;
-
-  const courses = await prisma.course.findMany({
+  const course = await prisma.course.findFirst({
+    where: { title: COURSE_TITLE },
     include: {
       lessons: {
-        where: { status: "PUBLISHED" },
+        where: { status: "PUBLISHED", title: { startsWith: "Bài " } },
+        orderBy: { title: "asc" },
         include: {
-          _count: { select: { exercises: true } },
-          attempts: userId
-            ? { where: { userId }, take: 1, orderBy: { createdAt: "desc" } }
-            : false,
+          _count: { select: { exercises: true, vocabulary: true } },
+          attempts: userId ? { where: { userId }, select: { score: true } } : false,
         },
       },
     },
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-8">
-      <h1 className="text-3xl font-bold text-white">Bài học</h1>
-      <p className="mt-2 text-slate-400">Chọn bài học để bắt đầu luyện tập</p>
+    <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
+      <header className="mb-7 flex items-end justify-between gap-4">
+        <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">A2 · Course map</p><h1 className="mt-1 text-3xl font-black tracking-[-.05em] sm:text-4xl">5 chặng học</h1></div>
+        <Link href="/learner/games" className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white sm:flex"><Gamepad2 className="h-4 w-4" /> Chơi nhanh</Link>
+      </header>
 
-      {courses.length === 0 ? (
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-16 text-center">
-          <p className="text-slate-400">Chưa có bài học nào. Vui lòng quay lại sau.</p>
-        </div>
-      ) : (
-        <div className="mt-8 space-y-12">
-          {courses.map((course) => (
-            <div key={course.id}>
-              <div className="mb-5 flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold text-white">{course.title}</h2>
-                  <p className="text-sm text-slate-500">
-                    {course.cefrLevel} • {course.lessons.length} bài học
-                  </p>
-                </div>
+      <div className="relative space-y-4 before:absolute before:bottom-12 before:left-7 before:top-12 before:w-px before:bg-[#cfc8bc] sm:before:left-10">
+        {course?.lessons.map((lesson, index) => {
+          const attempts = Array.isArray(lesson.attempts) ? lesson.attempts : [];
+          const best = attempts.length ? Math.max(...attempts.map((attempt) => attempt.score ?? 0)) : null;
+          const title = lesson.title.replace(/^Bài \d+ - /, "");
+          return (
+            <Link key={lesson.id} href={`/learner/lessons/${lesson.id}`} className="paper-card group relative flex min-h-[128px] items-center gap-4 rounded-[28px] p-4 transition hover:-translate-y-0.5 sm:min-h-[150px] sm:gap-6 sm:p-6">
+              <div className="relative z-10 flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-xl font-black text-white sm:h-20 sm:w-20 sm:text-2xl" style={{ backgroundColor: COLORS[index] }}>{index + 1}</div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2"><h2 className="truncate text-xl font-black tracking-[-.04em] sm:text-2xl">{title}</h2>{best !== null && <span className="rounded-full bg-[#dff2e8] px-2 py-1 text-[10px] font-black text-[#176b55]">{best}</span>}</div>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-bold text-[#758078]"><span>{lesson._count.exercises} bài</span><span>·</span><span>{lesson._count.vocabulary} từ</span><span>·</span><span>{lesson.estimatedMinutes} phút</span></div>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {course.lessons.map((lesson, i) => {
-                  const lastAttempt = Array.isArray(lesson.attempts)
-                    ? lesson.attempts[0]
-                    : null;
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#eee7da] transition group-hover:bg-[#176b55] group-hover:text-white"><ArrowRight className="h-4 w-4" /></div>
+            </Link>
+          );
+        })}
+      </div>
 
-                  return (
-                    <Link
-                      key={lesson.id}
-                      href={`/learner/lessons/${lesson.id}`}
-                      className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:bg-white/[0.07] hover:border-white/20"
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-                      <div className="relative z-10">
-                        <div className="mb-4 flex items-center justify-between">
-                          <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-300">
-                            {lesson.cefrLevel}
-                          </span>
-                          {lastAttempt && (
-                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                              (lastAttempt.score ?? 0) >= 70
-                                ? "bg-green-500/20 text-green-400"
-                                : "bg-amber-500/20 text-amber-400"
-                            }`}>
-                              {lastAttempt.score}
-                            </span>
-                          )}
-                          {!lastAttempt && (
-                            <span className="rounded-full bg-slate-500/20 px-2.5 py-0.5 text-xs text-slate-400">
-                              Mới
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors">
-                          {lesson.title}
-                        </h3>
-                        <p className="mt-1 text-xs text-slate-500">{lesson.topic}</p>
-                        <div className="mt-4 flex items-center gap-3 text-xs text-slate-500">
-                          <span>⏱ {lesson.estimatedMinutes} phút</span>
-                          <span>📝 {lesson._count.exercises} bài tập</span>
-                        </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {!course && <div className="paper-card rounded-3xl p-10 text-center"><BookOpen className="mx-auto h-8 w-8" /><p className="mt-3 font-black">Chưa có bài học.</p></div>}
     </div>
   );
 }

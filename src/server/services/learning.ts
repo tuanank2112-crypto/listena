@@ -2,7 +2,7 @@
  * Core learning service: submit attempt, analyze, update profile, create flashcards.
  */
 
-import { assessDictation } from "@/core/assessment/engine";
+import { assessDictation, assessOpenResponse } from "@/core/assessment/engine";
 import { updateMastery } from "@/core/learner-model/mastery";
 import { processReview } from "@/core/srs/sm2";
 import { createAIProvider } from "@/server/ai/provider";
@@ -38,8 +38,17 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     throw new Error("Exercise not found");
   }
 
-  // 2. Run assessment engine
-  const assessment = assessDictation(exercise.correctAnswer, params.submittedAnswer);
+  // 2. Run the appropriate assessment mode.
+  let metadata: { answerMode?: string } = {};
+  try {
+    metadata = JSON.parse(exercise.metadata || "{}") as { answerMode?: string };
+  } catch {
+    metadata = {};
+  }
+  const isOpenResponse = metadata.answerMode === "open";
+  const assessment = isOpenResponse
+    ? assessOpenResponse(params.submittedAnswer)
+    : assessDictation(exercise.correctAnswer, params.submittedAnswer);
 
   // 3. Save attempt
   const attempt = await attemptRepo.create({
@@ -195,6 +204,17 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     };
   }
 
+  if (isOpenResponse) {
+    aiFeedback = {
+      summaryVi: `Bài tự luận đã được ghi nhận với ${assessment.overallScore} điểm hoàn thành.`,
+      errors: [],
+      recommendedActions: [
+        "Đọc lại câu trả lời và kiểm tra thì",
+        "Bổ sung từ vựng đúng chủ đề",
+        "Hỏi Gia sư AI để nhận góp ý chi tiết",
+      ],
+    };
+  }
   // 7. Create flashcards from errors
   const flashcards = [];
   for (const error of assessment.errors) {

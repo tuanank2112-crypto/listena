@@ -1,0 +1,30 @@
+{
+  "datasetName": "TATQHP1 - SOLUTIONS Pre-Intermediate (Sách HDH)",
+  "sourceFile": "Sách HDH TATQHP1 SOLUTIONS đã chỉnh sửa theo ý kiến hội đồng lần 2.docx",
+  "generatedAt": "2026-08-19",
+  "generatedBy": "DeepSeek (Codex CLI)",
+  "units": 5,
+  "totals": {
+    "vocabulary": 116,
+    "grammarTopics": 10,
+    "exerciseSets": 54,
+    "objectiveSections": 5,
+    "lessons": 5,
+    "vectorChunks": 200
+  },
+  "files": {
+    "vocabulary": "vocabulary.json",
+    "grammar": "grammar-reference.json",
+    "exercises": "exercises.json",
+    "objectives": "objectives.json",
+    "lessons": "lessons.json",
+    "chunks": "chunks.json",
+    "educaplaySample": "educaplay-danang.json"
+  },
+  "notes": [
+    "Toàn bộ dữ liệu trích từ file docx chính thức (đã chỉnh sửa theo ý kiến hội đồng).",
+    "VocabularyItem trùng lemma giữa các bài đã được dedupe.",
+    "chunks.json sẵn sàng cho pipeline embedding (RAG) — mỗi chunk có id, unit, type, text, metadata.",
+    "educaplay-danang.json là mẫu tham khảo dictation từ Educaplay để đối chiếu cấu trúc bài nghe."
+  ]
+}

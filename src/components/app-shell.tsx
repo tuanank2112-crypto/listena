@@ -2,167 +2,105 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { signOut, useSession } from "next-auth/react";
 import {
-  LayoutDashboard,
-  BookOpen,
-  Sparkles,
-  GraduationCap,
-  LogOut,
-  ChevronLeft,
-  ChevronRight,
-  Menu,
-  X,
-  User,
   BarChart3,
+  BookOpen,
+  Gamepad2,
+  GraduationCap,
+  LayoutDashboard,
   Library,
+  LogOut,
   PlusCircle,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const learnerNav = [
-  { href: "/learner/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/learner/dashboard", label: "Hôm nay", icon: LayoutDashboard },
   { href: "/learner/lessons", label: "Bài học", icon: BookOpen },
-  { href: "/learner/flashcards", label: "Flashcard", icon: Sparkles },
+  { href: "/learner/games", label: "Trò chơi", icon: Gamepad2 },
+  { href: "/learner/flashcards", label: "Ôn từ", icon: Sparkles },
   { href: "/learner/progress", label: "Tiến bộ", icon: BarChart3 },
 ];
 
 const teacherNav = [
-  { href: "/teacher/dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { href: "/teacher/dashboard", label: "Tổng quan", icon: LayoutDashboard },
   { href: "/teacher/lessons", label: "Bài học", icon: Library },
-  { href: "/teacher/lessons/new", label: "Tạo bài học", icon: PlusCircle },
+  { href: "/teacher/lessons/new", label: "Tạo bài", icon: PlusCircle },
   { href: "/teacher/courses", label: "Khóa học", icon: GraduationCap },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-
   const isTeacher = session?.user?.role === "TEACHER" || session?.user?.role === "ADMIN";
   const navItems = isTeacher ? teacherNav : learnerNav;
-  const userName = session?.user?.name || "User";
+  const userName = session?.user?.name || "Learner";
 
   return (
-    <div className="flex min-h-screen bg-[#030014]">
-      {/* Mobile overlay */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm lg:hidden"
-            onClick={() => setSidebarOpen(false)}
-          />
-        )}
-      </AnimatePresence>
+    <div className="min-h-screen text-[#18332d]">
+      <aside className="fixed inset-y-0 left-0 z-40 hidden w-[232px] flex-col border-r border-[#ded8cc] bg-[#fffdf8]/95 px-4 py-5 backdrop-blur-xl lg:flex">
+        <Link href={isTeacher ? "/teacher/dashboard" : "/learner/dashboard"} className="mb-9 flex items-center gap-3 px-2">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#176b55] text-white shadow-[0_8px_20px_rgba(23,107,85,.22)]">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-black tracking-[-.04em] text-[#18332d]">ListenAI</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#879088]">English studio</p>
+          </div>
+        </Link>
 
-      {/* Sidebar */}
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-white/10 bg-black/40 backdrop-blur-xl transition-all duration-300 lg:static",
-          collapsed ? "w-16" : "w-64",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        )}
-      >
-        {/* Logo */}
-        <div className={cn("flex h-16 items-center border-b border-white/10 px-4", collapsed && "justify-center")}>
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-[0_0_15px_rgba(99,102,241,0.3)]">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            {!collapsed && (
-              <span className="text-lg font-bold text-white">
-                Listen<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-cyan-400">AI</span>
-              </span>
-            )}
-          </Link>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 space-y-1 p-3">
+        <nav className="space-y-1.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
                 className={cn(
-                  "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-                  collapsed && "justify-center px-2",
-                  isActive
-                    ? "bg-gradient-to-r from-indigo-500/20 to-cyan-500/10 text-white border border-indigo-500/20"
-                    : "text-slate-400 hover:bg-white/5 hover:text-white"
+                  "flex min-h-11 items-center gap-3 rounded-2xl px-3.5 text-sm font-bold transition",
+                  active ? "bg-[#176b55] text-white shadow-[0_7px_18px_rgba(23,107,85,.18)]" : "text-[#68766f] hover:bg-[#eee7da] hover:text-[#18332d]"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 shrink-0", isActive ? "text-indigo-400" : "")} />
-                {!collapsed && <span>{item.label}</span>}
+                <item.icon className="h-[18px] w-[18px]" />
+                {item.label}
               </Link>
             );
           })}
         </nav>
 
-        {/* User section */}
-        <div className={cn("border-t border-white/10 p-3", collapsed && "flex flex-col items-center")}>
-          <div className={cn("flex items-center gap-3 rounded-xl px-3 py-2.5", collapsed && "px-0 justify-center")}>
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 text-xs font-bold text-white">
+        <div className="mt-auto rounded-3xl bg-[#eee7da] p-3.5">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#ef765d] text-sm font-black text-white">
               {userName.charAt(0).toUpperCase()}
             </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="truncate text-sm font-medium text-white">{userName}</p>
-                <p className="truncate text-xs text-slate-500">{session?.user?.email}</p>
-              </div>
-            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold">{userName}</p>
+              <p className="truncate text-[11px] text-[#7b857f]">{session?.user?.email}</p>
+            </div>
           </div>
-          <button
-            onClick={() => signOut({ callbackUrl: "/" })}
-            className={cn(
-              "mt-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition-colors hover:bg-white/5 hover:text-white",
-              collapsed && "justify-center px-0"
-            )}
-          >
-            <LogOut className="h-5 w-5 shrink-0" />
-            {!collapsed && <span>Đăng xuất</span>}
+          <button onClick={() => signOut({ callbackUrl: "/" })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]">
+            <LogOut className="h-4 w-4" /> Đăng xuất
           </button>
         </div>
-
-        {/* Collapse toggle - desktop only */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="hidden lg:flex absolute -right-3 top-20 h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-[#030014] text-slate-400 hover:text-white"
-        >
-          {collapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
-        </button>
       </aside>
 
-      {/* Main content */}
-      <div className="flex flex-1 flex-col min-w-0">
-        {/* Mobile header */}
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b border-white/10 bg-black/30 backdrop-blur-xl px-4 lg:hidden">
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/10 hover:text-white"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-          <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-cyan-500 text-xs font-bold text-white">
-              L
-            </div>
-            <span className="text-sm font-bold text-white">ListenAI</span>
-          </div>
-        </header>
+      <main className={cn("min-h-screen pb-24 lg:ml-[232px] lg:pb-0", isTeacher && "bg-[#030014] text-white")}>{children}</main>
 
-        <main className="flex-1">
-          {children}
-        </main>
-      </div>
+      {!isTeacher && (
+        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
+          {learnerNav.map((item) => {
+            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+            return (
+              <Link key={item.href} href={item.href} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] text-[10px] font-bold", active ? "bg-[#176b55] text-white" : "text-[#758078]")}>
+                <item.icon className="h-[18px] w-[18px]" />
+                <span className="max-w-full truncate">{item.label}</span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </div>
   );
 }

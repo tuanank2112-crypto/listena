@@ -1,174 +1,58 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { RotateCw, Sparkles, CheckCircle, XCircle, HelpCircle, Zap } from "lucide-react";
+import { Check, RotateCw, Sparkles, Volume2, X } from "lucide-react";
+import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
 
 interface Flashcard {
   id: string;
   front: string;
-  back: string;
-  cardType: string;
-  vocabularyItem: {
-    id: string;
-    displayText: string;
-    meaningVi: string;
-    ipa: string | null;
-  };
-  reviewLogs: Array<{ rating: string; reviewedAt: string }>;
+  vocabularyItem: { id: string; displayText: string; meaningVi: string; ipa: string | null };
 }
 
-export function FlashcardsClient({
-  flashcards,
-  dueCount,
-  totalCount,
-}: {
-  flashcards: Flashcard[];
-  dueCount: number;
-  totalCount: number;
-}) {
-  const router = useRouter();
-  const [currentIndex, setCurrentIndex] = useState(0);
+export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashcards: Flashcard[]; dueCount: number; totalCount: number }) {
+  const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState(false);
+  const card = flashcards[index];
 
-  const currentCard = flashcards[currentIndex];
-  const hasCards = flashcards.length > 0;
+  function speak() {
+    if (!card) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(card.front);
+    utterance.lang = "en-GB";
+    window.speechSynthesis.speak(utterance);
+  }
 
-  const handleRating = async (rating: "AGAIN" | "HARD" | "GOOD" | "EASY") => {
-    if (!currentCard) return;
-    setSubmitting(true);
-
+  async function rate(rating: "AGAIN" | "HARD" | "GOOD" | "EASY") {
+    if (!card) return;
+    setSaving(true);
     try {
-      const res = await fetch("/api/flashcard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ flashcardId: currentCard.id, rating, responseTimeMs: 1000 }),
-      });
-      if (!res.ok) throw new Error("Failed to submit review");
-
-      setMessage(
-        rating === "AGAIN" ? "Sẽ ôn lại sau 10 phút" :
-        rating === "HARD" ? "Sẽ ôn lại sau 1 giờ" :
-        rating === "GOOD" ? "Sẽ ôn lại sau 1 ngày" : "Sẽ ôn lại sau 3 ngày"
-      );
+      const response = await fetch("/api/flashcard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flashcardId: card.id, rating, responseTimeMs: 1000 }) });
+      if (!response.ok) throw new Error("review failed");
       setFlipped(false);
-      setTimeout(() => {
-        setMessage("");
-        if (currentIndex < flashcards.length - 1) {
-          setCurrentIndex(i => i + 1);
-        }
-      }, 1500);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setSubmitting(false);
-    }
-  };
+      setIndex((value) => (value + 1) % flashcards.length);
+    } finally { setSaving(false); }
+  }
 
-  if (!hasCards) {
-    return (
-      <div className="mx-auto max-w-2xl px-6 py-8">
-        <h1 className="text-2xl font-bold text-white">Flashcard</h1>
-        <p className="mt-2 text-sm text-slate-400">Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng</p>
-        <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-16 text-center">
-          <Sparkles className="mx-auto mb-4 h-16 w-16 text-slate-600" />
-          <p className="text-slate-300 text-lg">🎉 Không có flashcard nào cần ôn hôm nay!</p>
-          <p className="mt-2 text-sm text-slate-500">Hãy làm bài tập để tạo flashcard mới.</p>
-        </div>
-      </div>
-    );
+  if (!flashcards.length) {
+    return <div className="mx-auto flex min-h-[75vh] max-w-md items-center px-4"><div className="paper-card w-full rounded-[30px] p-8 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#dff2e8]"><Check className="h-8 w-8 text-[#176b55]" /></div><h1 className="mt-5 text-2xl font-black">Xong hôm nay!</h1><p className="mt-2 text-sm font-bold text-[#7b857f]">Học thêm để mở thẻ mới.</p></div></div>;
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-6 py-8">
-      <h1 className="text-2xl font-bold text-white">Flashcard</h1>
-      <p className="mt-2 text-sm text-slate-400">Ôn tập từ vựng bằng phương pháp lặp lại ngắt quãng</p>
-      <p className="mt-1 text-sm text-slate-500">{dueCount} thẻ cần ôn • {totalCount} tổng số thẻ</p>
+    <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-10">
+      <header className="mb-6 flex items-end justify-between"><div><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Quick review</p><h1 className="mt-1 text-3xl font-black tracking-[-.05em]">Ôn từ</h1></div><p className="text-xs font-black text-[#7b857f]">{dueCount}/{totalCount}</p></header>
+      <div className="mb-4 h-2 overflow-hidden rounded-full bg-[#ded8cc]"><motion.div className="h-full rounded-full bg-[#176b55]" animate={{ width: `${((index + 1) / flashcards.length) * 100}%` }} /></div>
 
-      {/* Progress */}
-      <div className="mt-8 mb-6">
-        <div className="flex items-center justify-between text-sm text-slate-500">
-          <span>Thẻ {currentIndex + 1} / {flashcards.length}</span>
-        </div>
-        <div className="mt-2 h-2 rounded-full bg-white/5">
-          <motion.div
-            className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-cyan-500"
-            initial={{ width: 0 }}
-            animate={{ width: `${((currentIndex + 1) / flashcards.length) * 100}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-      </div>
+      <motion.button key={`${card.id}-${flipped}`} initial={{ opacity: 0, rotateY: -6 }} animate={{ opacity: 1, rotateY: 0 }} onClick={() => setFlipped((value) => !value)} className="paper-card relative flex min-h-[390px] w-full flex-col items-center justify-center rounded-[32px] p-8 text-center">
+        <span className="absolute right-5 top-5 flex items-center gap-1 text-[11px] font-black text-[#9aa19d]"><RotateCw className="h-3.5 w-3.5" /> Lật thẻ</span>
+        {!flipped ? <><p className="text-4xl font-black tracking-[-.05em] sm:text-5xl">{card.front}</p><p className="mt-3 text-sm font-bold text-[#879088]">{card.vocabularyItem.ipa}</p><button type="button" onClick={(event) => { event.stopPropagation(); speak(); }} className="mt-8 flex h-12 w-12 items-center justify-center rounded-full bg-[#f7d779]"><Volume2 className="h-5 w-5" /></button></> : <><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Nghĩa</p><p className="mt-4 text-3xl font-black leading-tight">{cleanVocabularyMeaning(card.vocabularyItem.meaningVi)}</p><p className="mt-5 text-sm font-bold text-[#879088]">{card.front}</p></>}
+      </motion.button>
 
-      {/* Flashcard */}
-      <motion.div
-        key={currentCard?.id}
-        initial={{ opacity: 0, rotateY: flipped ? 180 : 0 }}
-        animate={{ opacity: 1, rotateY: 0 }}
-        className="mb-6"
-      >
-        <div
-          className="relative cursor-pointer"
-          onClick={() => !submitting && setFlipped(!flipped)}
-        >
-          <div className="relative min-h-[280px] rounded-2xl border border-white/10 bg-white/5 p-8 backdrop-blur-sm transition-all hover:bg-white/[0.07]">
-            {/* Card type indicator */}
-            <div className="absolute top-4 right-4 text-xs text-slate-600">
-              <RotateCw className="inline h-3.5 w-3.5 mr-1" /> Nhấn để lật
-            </div>
-
-            {!flipped ? (
-              <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
-                <p className="text-3xl font-bold text-white">{currentCard.front}</p>
-                {currentCard.vocabularyItem.ipa && (
-                  <p className="mt-3 text-sm text-slate-500">/{currentCard.vocabularyItem.ipa}/</p>
-                )}
-                <p className="mt-6 text-xs text-slate-600">Nhấn để xem nghĩa</p>
-              </div>
-            ) : (
-              <div className="flex h-full min-h-[200px] flex-col items-center justify-center text-center">
-                <p className="text-2xl font-medium text-white">{currentCard.vocabularyItem.meaningVi}</p>
-                {currentCard.vocabularyItem.ipa && (
-                  <p className="mt-2 text-sm text-slate-500">/{currentCard.vocabularyItem.ipa}/</p>
-                )}
-                <p className="mt-1 text-sm text-slate-400">{currentCard.front}</p>
-                <p className="mt-6 text-xs text-slate-600">Nhấn để xem lại mặt trước</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </motion.div>
-
-      {message && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="mb-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 px-4 py-3 text-center text-sm text-indigo-300">
-          {message}
-        </motion.div>
-      )}
-
-      {/* Rating buttons - only show when flipped */}
-      {flipped && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="grid grid-cols-4 gap-3">
-          {[
-            { rating: "AGAIN" as const, label: "Lại", icon: XCircle, color: "from-red-500 to-red-600", shadow: "shadow-red-500/20" },
-            { rating: "HARD" as const, label: "Khó", icon: HelpCircle, color: "from-amber-500 to-orange-500", shadow: "shadow-amber-500/20" },
-            { rating: "GOOD" as const, label: "Tốt", icon: CheckCircle, color: "from-green-500 to-emerald-500", shadow: "shadow-green-500/20" },
-            { rating: "EASY" as const, label: "Dễ", icon: Zap, color: "from-blue-500 to-indigo-500", shadow: "shadow-blue-500/20" },
-          ].map(({ rating, label, icon: Icon, color, shadow }) => (
-            <button
-              key={rating}
-              onClick={() => handleRating(rating)}
-              disabled={submitting}
-              className={`group flex flex-col items-center gap-2 rounded-xl bg-gradient-to-br ${color} ${shadow} px-3 py-4 text-xs font-semibold text-white shadow-lg transition-all hover:scale-105 disabled:opacity-50`}
-            >
-              <Icon className="h-5 w-5" />
-              {label}
-            </button>
-          ))}
-        </motion.div>
-      )}
+      {flipped && <div className="mt-4 grid grid-cols-4 gap-2">{[
+        ["AGAIN", "Lại", "#d6534d", X], ["HARD", "Khó", "#d89a2b", Sparkles], ["GOOD", "Tốt", "#176b55", Check], ["EASY", "Dễ", "#5c6fb3", Check],
+      ].map(([rating, label, color, Icon]) => <button key={rating as string} onClick={() => rate(rating as "AGAIN"|"HARD"|"GOOD"|"EASY")} disabled={saving} className="min-h-16 rounded-2xl text-xs font-black text-white disabled:opacity-40" style={{ backgroundColor: color as string }}><Icon className="mx-auto mb-1 h-4 w-4" />{label as string}</button>)}</div>}
     </div>
   );
 }
