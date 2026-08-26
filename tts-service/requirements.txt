@@ -1,0 +1,6 @@
+fastapi
+uvicorn[standard]
+soundfile
+numpy
+# ── VieNeu TTS: PINNED EXACTLY ────────────────────────
+vieneu==3.3.0

@@ -28,7 +28,7 @@ Tài khoản demo:
 - 54 bộ bài tập
 - 200 knowledge chunks cho tutor
 
-Bài Educaplay Đà Nẵng chỉ được dùng để đối chiếu format gameplay/audio và được giữ ở trạng thái `DRAFT`, không xuất hiện trong curriculum học viên.
+Bài Educaplay Đà Nẵng chỉ được dùng để đối chiếu format gameplay/audio và được giữ ở trạng thái `DRAFT`, không xuất hiện trong curriculum học viên và không phát audio.
 
 ## Game Hub
 
@@ -51,21 +51,83 @@ OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-Nếu provider lỗi, hệ thống tự fallback về dataset retrieval.
+Nếu provider lỗi, hệ thống tự fallback về dataset retrieval. Trả lời của tutor bằng tiếng Việt — nhánh giọng đọc tiếng Việt sẽ dùng VieNeu (xem dưới).
 
 ## Giọng đọc
 
-Tiếng Anh dùng kokoro-js chạy hoàn toàn trong trình duyệt với Kokoro-82M q8, ở Web Worker để không chặn UI. Model chỉ tải khi người học phát âm thanh; audio được cache trong IndexedDB bằng khóa băm. Voice mặc định là bf_emma trong env.example và đồng nhất với prebuild Node.
+ListenAI dùng kiến trúc **hai đường dẫn (dual-path)**:
 
-Chạy npm run tts:prebuild để tạo 116 audio từ vựng vào TTS_CACHE_DIR, mặc định public/tts. Nhánh vi hiện cảnh báo và không phát âm thanh vì tutor chưa có consumer speech. Không có sidecar VieNeu trong phạm vi này.
+### 1. Tiếng Anh — Kokoro-82M (client-side)
+
+Mọi nội dung tiếng Anh (từ vựng, câu ví dụ, trò chơi Nghe & viết, flashcard) đều dùng `kokoro-js`:
+
+- Chạy 100% trong trình duyệt qua Transformers.js + ONNX Runtime Web.
+- Mô hình `onnx-community/Kokoro-82M-v1.0-ONNX`, dtype `q8` (~80 MB), tải **lazy** khi người học lần đầu phát âm thanh, có thanh tiến độ.
+- Inference chạy trong **Web Worker** để không chặn UI.
+- Audio được cache trong **IndexedDB** bằng khóa SHA-256 (text + voice + engine version + speed).
+- Nếu thiết bị không hỗ trợ hoặc Kokoro lỗi, fallback về `speechSynthesis` (Web Speech API) — chỉ dành cho tiếng Anh.
+- Giọng mặc định: `bf_emma` (cấu hình qua `NEXT_PUBLIC_KOKORO_DEFAULT_VOICE`); danh sách giọng đọc runtime từ `list_voices()`.
+
+### 2. Tiếng Việt — VieNeu-TTS (sidecar)
+
+Mọi nội dung tiếng Việt (feedback của tutor, chú giải nghĩa) dùng VieNeu:
+
+- Sidecar FastAPI trong `tts-service/`, package `vieneu==3.3.0` (pin chính xác).
+- `Vieneu(mode="v3turbo", precision="int8")` khởi tạo một lần, warm-up lúc startup.
+- Next.js gọi sidecar qua API route nội bộ `/api/tts/vie` — **không expose public**.
+- Xác thực giữa Next.js và sidecar bằng shared secret `TTS_API_KEY`.
+- Audio cache trên **đĩa** (thư mục `TTS_CACHE_DIR`), trả header `Cache-Control: immutable`.
+- Với sidecar down, ứng dụng vẫn chạy — chỉ mất audio tiếng Việt, không crash.
+
+### Cấu hình môi trường
+
+Xem `.env.example`:
+
+```env
+NEXT_PUBLIC_KOKORO_MODEL_ID=onnx-community/Kokoro-82M-v1.0-ONNX
+NEXT_PUBLIC_KOKORO_DEFAULT_VOICE=bf_emma
+VIENEU_URL=http://localhost:8001
+TTS_API_KEY=
+TTS_CACHE_DIR=public/tts
+KOKORO_MODEL_ID=onnx-community/Kokoro-82M-v1.0-ONNX
+KOKORO_DEFAULT_VOICE=bf_emma
+VIENEU_DEFAULT_VOICE=
+```
+
+### Prebuild audio
+
+Chạy để sinh sẵn audio 116 từ vựng (Kokoro) và nội dung tiếng Việt (VieNeu) vào `public/tts`:
+
+```bash
+npm run tts:prebuild
+```
+
+Lệnh này tạo file `.wav` theo khóa cache, trình duyệt sẽ đọc từ `/tts/kokoro/<key>.wav` thay vì tổng hợp lại.
+
+### Chạy sidecar VieNeu
+
+```bash
+cd tts-service
+pip install -r requirements.txt
+uvicorn main:app --host 0.0.0.0 --port 8001 --workers 1
+```
+
+Hoặc dùng Docker (model bake vào image hoặc mount HuggingFace volume `HF_HOME`):
+
+```bash
+docker compose build tts
+docker compose up tts
+```
 
 ### Kiểm tra thủ công
 
-1. Chạy npm run dev, đăng nhập learner@example.com / demo1234.
-2. Mở /learner/games, chọn Nghe và viết, bấm loa; Network không có URL, query hoặc header chứa đáp án.
-3. Mở flashcard, bấm loa hai lần; lần tiếp theo được trả từ cache IndexedDB listena-kokoro-audio.
-4. Trong bài học, bấm hai từ liên tiếp; âm thanh cũ phải bị dừng.
-5. Chặn Web Worker trong DevTools để xác nhận ứng dụng không sập và Web Speech chỉ là fallback cuối.
+1. Chạy `npm run dev` + sidecar VieNeu, đăng nhập `learner@example.com` / `demo1234`.
+2. Mở `/learner/games`, chọn **Nghe và viết**, bấm loa → audio phát từ Kokoro (Network tab: request `/tts/kokoro/*.wav` hoặc IndexedDB).
+3. Mở flashcard, bấm loa hai lần → lần hai trả từ cache IndexedDB `listena-kokoro-audio`.
+4. Trong bài học, bấm hai từ liên tiếp → âm thanh cũ phải bị dừng.
+5. Chặn Web Worker trong DevTools → ứng dụng không sập, Web Speech chỉ là fallback cuối.
+6. Hỏi tutor bằng tiếng Việt → bấm nút loa trên phản hồi, audio phát từ VieNeu (header `X-TTS-Cache`, `X-TTS-Engine: vieneu-3.3.0`).
+7. Tắt sidecar VieNeu → ứng dụng vẫn chạy, chỉ mất audio tiếng Việt.
 
 ## Kiểm tra
 

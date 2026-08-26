@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Clock3, Gamepad2, Headphones, Heart, RotateCcw, Sparkles, Trophy, Volume2, X } from "lucide-react";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
-import { prepareSpeech, speak } from "@/core/tts/speech";
+import { speak } from "@/core/tts/speech";
 import { useSpeechState } from "@/core/tts/use-speech";
 
 type Word = { id: string; displayText: string; meaningVi: string; ipa: string | null; exampleSentence: string | null };
@@ -124,10 +124,6 @@ export function GamesClient({ units }: { units: Unit[] }) {
               <p className="text-[11px] font-bold text-[#77817b]">từ trong unit</p>
             </div>
           </header>
-
-          <button onClick={() => void prepareSpeech()} disabled={speechState.phase === "downloading-model"} className="mb-5 min-h-10 rounded-xl border border-[#ded8cc] bg-[#fffdf8] px-3 text-xs font-black text-[#176b55] disabled:opacity-50">
-            {speechState.phase === "downloading-model" ? "Đang tải giọng đọc " + (speechState.downloadProgress ?? 0) + "%" : "Tải giọng đọc"}
-          </button>
 
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
             {units.map((item) => (

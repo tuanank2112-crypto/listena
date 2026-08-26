@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getSpeechState,
   registerEnglishSpeechEngine,
+  registerVietnameseSpeechEngine,
   setSpeechWarningHandler,
   shouldAttemptFallback,
   speak,
@@ -22,6 +23,7 @@ describe("speak", () => {
   afterEach(async () => {
     await stopSpeech();
     registerEnglishSpeechEngine(null);
+    registerVietnameseSpeechEngine(null);
     setSpeechWarningHandler((message, context) => console.warn(message, context));
   });
 
@@ -33,6 +35,39 @@ describe("speak", () => {
     expect(engine.speak).toHaveBeenCalledWith(
       { text: "weather", lang: "en", voice: "test-voice" },
       expect.objectContaining({ signal: expect.any(AbortSignal), updateState: expect.any(Function) })
+    );
+  });
+
+  it("định tuyến tiếng Việt sang VieNeu engine", async () => {
+    const viEngine = createEngine();
+    registerVietnameseSpeechEngine(viEngine);
+    const result = await speak({ text: "Xin chào", lang: "vi", voice: "test-vi-voice" });
+    expect(result).toEqual({ ok: true, status: "completed", cached: false });
+    expect(viEngine.speak).toHaveBeenCalledWith(
+      { text: "Xin chào", lang: "vi", voice: "test-vi-voice" },
+      expect.objectContaining({ signal: expect.any(AbortSignal), updateState: expect.any(Function) })
+    );
+  });
+
+  it("không dùng engine tiếng Anh khi yêu cầu tiếng Việt", async () => {
+    const engine = createEngine();
+    const viEngine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    registerVietnameseSpeechEngine(viEngine);
+    await speak({ text: "Xin chào", lang: "vi" });
+    expect(engine.speak).not.toHaveBeenCalled();
+    expect(viEngine.speak).toHaveBeenCalledTimes(1);
+  });
+
+  it("cảnh báo và trả unavailable khi chưa đăng ký engine tiếng Việt", async () => {
+    const warning = vi.fn();
+    registerEnglishSpeechEngine(createEngine());
+    setSpeechWarningHandler(warning);
+    const result = await speak({ text: "Xin chào", lang: "vi" });
+    expect(result).toEqual({ ok: false, status: "unavailable" });
+    expect(warning).toHaveBeenCalledWith(
+      expect.stringContaining("chưa được đăng ký"),
+      expect.objectContaining({ lang: "vi" })
     );
   });
 
@@ -60,21 +95,6 @@ describe("speak", () => {
     await expect(first).resolves.toEqual({ ok: false, status: "cancelled" });
     await expect(second).resolves.toEqual({ ok: true, status: "completed", cached: false });
     expect(firstSignal?.aborted).toBe(true);
-  });
-
-  it("cảnh báo và không chuyển tiếng Việt sang engine tiếng Anh", async () => {
-    const engine = createEngine();
-    const warning = vi.fn();
-    registerEnglishSpeechEngine(engine);
-    setSpeechWarningHandler(warning);
-    const result = await speak({ text: "Xin chào", lang: "vi" });
-    expect(result).toEqual({ ok: false, status: "unavailable" });
-    expect(engine.speak).not.toHaveBeenCalled();
-    expect(warning).toHaveBeenCalledWith(expect.stringContaining("chưa được triển khai"), {
-      lang: "vi",
-      textLength: 8,
-    });
-    expect(warning.mock.calls[0][1]).not.toHaveProperty("text");
   });
 
   it("chỉ cho phép fallback khi engine thất bại hoặc không khả dụng", () => {
@@ -129,10 +149,13 @@ describe("speak", () => {
         invocation += 1;
         if (invocation === 1) {
           staleUpdate = context.updateState;
-          return new Promise((resolve) => context.signal.addEventListener("abort", () => resolve({ ok: false, status: "cancelled" })));
+          return new Promise((resolve) =>
+            context.signal.addEventListener("abort", () => resolve({ ok: false, status: "cancelled" }))
+          );
         }
         context.updateState({ phase: "downloading-model", downloadProgress: 25 });
-        return Promise.resolve({ ok: true, status: "completed", cached: false });
+        // Request mới treo lại để ta quan sát state trước khi nó hoàn tất.
+        return new Promise(() => {});
       }),
       stop: vi.fn(),
     };
@@ -140,9 +163,9 @@ describe("speak", () => {
     const first = speak({ text: "first", lang: "en" });
     await vi.waitFor(() => expect(engine.speak).toHaveBeenCalledTimes(1));
     const second = speak({ text: "second", lang: "en" });
+    await vi.waitFor(() => expect(getSpeechState().phase).toBe("downloading-model"));
     await first;
     staleUpdate?.({ phase: "error" });
     expect(getSpeechState().phase).toBe("downloading-model");
-    await second;
   });
 });

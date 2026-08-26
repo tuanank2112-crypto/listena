@@ -41,6 +41,7 @@ export type SpeechStateListener = () => void;
 
 const initialState: SpeechState = { phase: "idle", downloadProgress: null, error: null };
 let englishEngine: SpeechEngine | null = null;
+let vietnameseEngine: SpeechEngine | null = null;
 let activeController: AbortController | null = null;
 let latestRequestId = 0;
 let speechState = initialState;
@@ -95,6 +96,10 @@ export function registerEnglishSpeechEngine(engine: SpeechEngine | null) {
   englishEngine = engine;
 }
 
+export function registerVietnameseSpeechEngine(engine: SpeechEngine | null) {
+  vietnameseEngine = engine;
+}
+
 export function setSpeechWarningHandler(handler: SpeechWarningHandler) {
   warningHandler = handler;
 }
@@ -104,6 +109,7 @@ export async function stopSpeech() {
   activeController?.abort();
   activeController = null;
   await englishEngine?.stop();
+  await vietnameseEngine?.stop();
   updateSpeechState(initialState);
 }
 
@@ -137,14 +143,42 @@ export async function speak(options: SpeakOptions): Promise<SpeakResult> {
   activeController?.abort();
   activeController = null;
   await englishEngine?.stop();
+  await vietnameseEngine?.stop();
   if (requestId !== latestRequestId) return { ok: false, status: "cancelled" };
   updateSpeechState(initialState);
 
+  // ── ĐỊNH TUYẾN DỰA TRÊN NGÔN NGỮ ──────────────────
+  // tiếng Anh → Kokoro (client-side)
+  // tiếng Việt → VieNeu qua sidecar
   if (options.lang === "vi") {
-    warningHandler("TTS tiếng Việt chưa được triển khai; yêu cầu đã bị bỏ qua.", createWarningContext(options));
-    return { ok: false, status: "unavailable" };
+    if (!vietnameseEngine) {
+      warningHandler("Engine TTS tiếng Việt (VieNeu) chưa được đăng ký; yêu cầu đã bị bỏ qua.", createWarningContext(options));
+      return { ok: false, status: "unavailable" };
+    }
+    const controller = new AbortController();
+    activeController = controller;
+    try {
+      const result = await vietnameseEngine.speak(options, {
+        signal: controller.signal,
+        updateState: shouldUpdateRequestState(requestId),
+      });
+      if (activeController === controller) {
+        activeController = null;
+        updateSpeechState(result.ok ? initialState : { phase: "error", error: result.error ?? null });
+      }
+      return result;
+    } catch (cause) {
+      const error = cause instanceof Error ? cause : new Error(String(cause));
+      if (activeController === controller) {
+        activeController = null;
+        updateSpeechState({ phase: "error", error });
+      }
+      if (controller.signal.aborted) return { ok: false, status: "cancelled" };
+      return { ok: false, status: "failed", error };
+    }
   }
 
+  // ── Tiếng Anh ───────────────────────────────────────
   if (!englishEngine) {
     warningHandler("Engine TTS tiếng Anh chưa được đăng ký; yêu cầu đã bị bỏ qua.", createWarningContext(options));
     return { ok: false, status: "unavailable" };
