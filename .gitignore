@@ -42,3 +42,8 @@ prisma/dev.db
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# TTS runtime cache
+tts-service/__pycache__/
+tts-service/cache/
+public/tts/
