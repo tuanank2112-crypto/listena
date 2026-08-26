@@ -4,6 +4,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Check, RotateCw, Sparkles, Volume2, X } from "lucide-react";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
+import { speak } from "@/core/tts/speech";
+import { useSpeechState } from "@/core/tts/use-speech";
 
 interface Flashcard {
   id: string;
@@ -15,14 +17,12 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [saving, setSaving] = useState(false);
+  const speechState = useSpeechState();
   const card = flashcards[index];
 
-  function speak() {
+  function playSpeech() {
     if (!card) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(card.front);
-    utterance.lang = "en-GB";
-    window.speechSynthesis.speak(utterance);
+    void speak({ text: card.front, lang: "en" });
   }
 
   async function rate(rating: "AGAIN" | "HARD" | "GOOD" | "EASY") {
@@ -47,8 +47,10 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
 
       <motion.button key={`${card.id}-${flipped}`} initial={{ opacity: 0, rotateY: -6 }} animate={{ opacity: 1, rotateY: 0 }} onClick={() => setFlipped((value) => !value)} className="paper-card relative flex min-h-[390px] w-full flex-col items-center justify-center rounded-[32px] p-8 text-center">
         <span className="absolute right-5 top-5 flex items-center gap-1 text-[11px] font-black text-[#9aa19d]"><RotateCw className="h-3.5 w-3.5" /> Lật thẻ</span>
-        {!flipped ? <><p className="text-4xl font-black tracking-[-.05em] sm:text-5xl">{card.front}</p><p className="mt-3 text-sm font-bold text-[#879088]">{card.vocabularyItem.ipa}</p><button type="button" onClick={(event) => { event.stopPropagation(); speak(); }} className="mt-8 flex h-12 w-12 items-center justify-center rounded-full bg-[#f7d779]"><Volume2 className="h-5 w-5" /></button></> : <><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Nghĩa</p><p className="mt-4 text-3xl font-black leading-tight">{cleanVocabularyMeaning(card.vocabularyItem.meaningVi)}</p><p className="mt-5 text-sm font-bold text-[#879088]">{card.front}</p></>}
+        {!flipped ? <><p className="text-4xl font-black tracking-[-.05em] sm:text-5xl">{card.front}</p><p className="mt-3 text-sm font-bold text-[#879088]">{card.vocabularyItem.ipa}</p><button type="button" onClick={(event) => { event.stopPropagation(); playSpeech(); }} className="mt-8 flex h-12 w-12 items-center justify-center rounded-full bg-[#f7d779]"><Volume2 className="h-5 w-5" /></button></> : <><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Nghĩa</p><p className="mt-4 text-3xl font-black leading-tight">{cleanVocabularyMeaning(card.vocabularyItem.meaningVi)}</p><p className="mt-5 text-sm font-bold text-[#879088]">{card.front}</p></>}
       </motion.button>
+
+      {speechState.phase === "downloading-model" && <p className="mt-3 text-center text-xs font-bold text-[#7b857f]">Đang tải giọng đọc {speechState.downloadProgress ?? 0}%</p>}
 
       {flipped && <div className="mt-4 grid grid-cols-4 gap-2">{[
         ["AGAIN", "Lại", "#d6534d", X], ["HARD", "Khó", "#d89a2b", Sparkles], ["GOOD", "Tốt", "#176b55", Check], ["EASY", "Dễ", "#5c6fb3", Check],

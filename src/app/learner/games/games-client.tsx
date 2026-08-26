@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ArrowLeft, Check, Clock3, Gamepad2, Headphones, Heart, RotateCcw, Sparkles, Trophy, Volume2, X } from "lucide-react";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
+import { prepareSpeech, speak } from "@/core/tts/speech";
+import { useSpeechState } from "@/core/tts/use-speech";
 
 type Word = { id: string; displayText: string; meaningVi: string; ipa: string | null; exampleSentence: string | null };
 type Unit = { id: string; name: string; title: string; words: Word[] };
@@ -21,14 +23,6 @@ function shuffle<T>(items: T[]) {
   return [...items].sort(() => Math.random() - 0.5);
 }
 
-function speak(text: string) {
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text);
-  utterance.lang = "en-GB";
-  utterance.rate = 0.88;
-  window.speechSynthesis.speak(utterance);
-}
-
 export function GamesClient({ units }: { units: Unit[] }) {
   const [unitId, setUnitId] = useState(units[0]?.id ?? "");
   const [mode, setMode] = useState<Mode | null>(null);
@@ -41,6 +35,7 @@ export function GamesClient({ units }: { units: Unit[] }) {
   const [selectedCards, setSelectedCards] = useState<Array<{ id: string; kind: "word" | "meaning" }>>([]);
   const [matchedIds, setMatchedIds] = useState<string[]>([]);
   const [sessionKey, setSessionKey] = useState(0);
+  const speechState = useSpeechState();
 
   const unit = units.find((item) => item.id === unitId) ?? units[0];
   const words = unit?.words ?? [];
@@ -129,6 +124,10 @@ export function GamesClient({ units }: { units: Unit[] }) {
               <p className="text-[11px] font-bold text-[#77817b]">từ trong unit</p>
             </div>
           </header>
+
+          <button onClick={() => void prepareSpeech()} disabled={speechState.phase === "downloading-model"} className="mb-5 min-h-10 rounded-xl border border-[#ded8cc] bg-[#fffdf8] px-3 text-xs font-black text-[#176b55] disabled:opacity-50">
+            {speechState.phase === "downloading-model" ? "Đang tải giọng đọc " + (speechState.downloadProgress ?? 0) + "%" : "Tải giọng đọc"}
+          </button>
 
           <div className="mb-6 flex gap-2 overflow-x-auto pb-2">
             {units.map((item) => (
@@ -221,7 +220,8 @@ export function GamesClient({ units }: { units: Unit[] }) {
               {mode === "spell" && sessionWords[round] && (
                 <div className="mx-auto max-w-lg text-center">
                   <p className="text-xs font-black uppercase tracking-[.18em] text-[#d89a2b]">Nghe và viết</p>
-                  <button onClick={() => speak(sessionWords[round].displayText)} className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f7d779] shadow-[0_12px_30px_rgba(216,154,43,.25)]"><Volume2 className="h-9 w-9" /></button>
+                  <button onClick={() => void speak({ text: sessionWords[round].displayText, lang: "en", speed: 0.88 })} className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f7d779] shadow-[0_12px_30px_rgba(216,154,43,.25)]"><Volume2 className="h-9 w-9" /></button>
+                  {speechState.phase === "downloading-model" && <p className="mt-3 text-xs font-bold text-[#758078]">Đang tải giọng đọc {speechState.downloadProgress ?? 0}%</p>}
                   <p className="mt-5 text-sm font-bold text-[#758078]">{cleanVocabularyMeaning(sessionWords[round].meaningVi)}</p>
                   <input value={answer} onChange={(event) => setAnswer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && answer.trim()) resolve(answer.trim().toLowerCase() === sessionWords[round].displayText.toLowerCase()); }} autoFocus className="mt-8 min-h-16 w-full rounded-2xl border-2 border-[#ded8cc] bg-white px-5 text-center text-xl font-black outline-none focus:border-[#176b55]" placeholder="Gõ từ bạn nghe" />
                   <button onClick={() => resolve(answer.trim().toLowerCase() === sessionWords[round].displayText.toLowerCase())} disabled={!answer.trim() || Boolean(feedback)} className="mt-3 min-h-12 w-full rounded-2xl bg-[#176b55] font-black text-white disabled:opacity-40">Kiểm tra</button>

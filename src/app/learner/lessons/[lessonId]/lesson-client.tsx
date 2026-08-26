@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
+import { speak } from "@/core/tts/speech";
 import {
   ArrowLeft,
   ArrowRight,
@@ -103,29 +104,22 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
   const progress = ((index + 1) / Math.max(lesson.exercises.length, 1)) * 100;
   const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || exercise?.type === "FULL_DICTATION");
 
-  const speak = useCallback((text: string) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = lesson.accent === "uk" ? "en-GB" : "en-US";
-    utterance.rate = rate;
-    utterance.onstart = () => setPlaying(true);
-    utterance.onend = () => setPlaying(false);
-    utterance.onerror = () => setPlaying(false);
-    window.speechSynthesis.speak(utterance);
-  }, [lesson.accent, rate]);
+  const speakEnglish = useCallback(async (text: string) => {
+    await speak({ text, lang: "en", speed: rate });
+  }, [rate]);
 
   const play = useCallback(async (target = segment) => {
     const url = target?.audioUrl || lesson.audioUrl;
-    if (!url) return speak(target?.text ?? exercise?.correctAnswer ?? "");
+    if (!url) return speakEnglish(target?.text ?? exercise?.correctAnswer ?? "");
     audioRef.current?.pause();
     const audio = new Audio(url);
     audio.playbackRate = rate;
     audio.onplay = () => setPlaying(true);
     audio.onended = () => setPlaying(false);
-    audio.onerror = () => { setPlaying(false); speak(target?.text ?? ""); };
+    audio.onerror = () => { setPlaying(false); void speakEnglish(target?.text ?? ""); };
     audioRef.current = audio;
-    try { await audio.play(); } catch { speak(target?.text ?? ""); }
-  }, [exercise?.correctAnswer, lesson.audioUrl, rate, segment, speak]);
+    try { await audio.play(); } catch { void speakEnglish(target?.text ?? ""); }
+  }, [exercise?.correctAnswer, lesson.audioUrl, rate, segment, speakEnglish]);
 
   function move(next: number) {
     setIndex(next);
@@ -243,7 +237,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
           <details className="paper-card group mt-4 rounded-[24px] px-5 py-4">
             <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-black"><span>{lesson.vocabulary.length} từ trong bài</span><ChevronDown className="h-4 w-4 transition group-open:rotate-180" /></summary>
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
-              {lesson.vocabulary.map(({ vocabularyItem }) => <button key={vocabularyItem.id} onClick={() => speak(vocabularyItem.displayText)} className="flex min-h-14 items-center gap-3 rounded-2xl bg-[#f4efe5] px-3 text-left"><Volume2 className="h-4 w-4 shrink-0 text-[#176b55]" /><div className="min-w-0"><p className="truncate text-sm font-black">{vocabularyItem.displayText}</p><p className="truncate text-xs font-bold text-[#7b857f]">{cleanVocabularyMeaning(vocabularyItem.meaningVi)}</p></div></button>)}
+              {lesson.vocabulary.map(({ vocabularyItem }) => <button key={vocabularyItem.id} onClick={() => void speakEnglish(vocabularyItem.displayText)} className="flex min-h-14 items-center gap-3 rounded-2xl bg-[#f4efe5] px-3 text-left"><Volume2 className="h-4 w-4 shrink-0 text-[#176b55]" /><div className="min-w-0"><p className="truncate text-sm font-black">{vocabularyItem.displayText}</p><p className="truncate text-xs font-bold text-[#7b857f]">{cleanVocabularyMeaning(vocabularyItem.meaningVi)}</p></div></button>)}
             </div>
           </details>
         </main>

@@ -1,5 +1,6 @@
 /**
  * TTS (Text-to-Speech) Provider interface.
+ * @deprecated Giữ lại tương thích lịch sử; Kokoro là nguồn giọng tiếng Anh duy nhất của ứng dụng.
  * MockTTS returns metadata for client-side speech synthesis.
  * OpenAI TTS provides real audio.
  */
