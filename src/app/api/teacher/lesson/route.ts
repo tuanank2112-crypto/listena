@@ -3,6 +3,7 @@ import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import { CreateLessonSchema } from "@/server/validation/schemas";
 import logger from "@/lib/logger";
+import type { CefrLevel, ExerciseType } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
         courseId: parsed.data.courseId,
         title: parsed.data.title,
         topic: parsed.data.topic,
-        cefrLevel: parsed.data.cefrLevel as any,
+        cefrLevel: parsed.data.cefrLevel as CefrLevel,
         learningObjectives: parsed.data.learningObjectives.join("\n"),
         transcript: parsed.data.transcript,
         audioUrl: parsed.data.audioUrl,
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
         },
         exercises: {
           create: parsed.data.exercises.map((e) => ({
-            type: e.type as any,
+            type: e.type as ExerciseType,
             prompt: e.prompt,
             correctAnswer: e.correctAnswer,
             difficulty: e.difficulty,
@@ -57,7 +58,7 @@ export async function POST(req: Request) {
     // Create vocabulary items
     for (const v of parsed.data.vocabulary) {
       const item = await prisma.vocabularyItem.upsert({
-        where: { id: v.lemma },
+        where: { lemma: v.lemma },
         create: {
           lemma: v.lemma,
           displayText: v.displayText,
@@ -65,7 +66,7 @@ export async function POST(req: Request) {
           meaningVi: v.meaningVi,
           meaningEn: v.meaningEn,
           partOfSpeech: v.partOfSpeech,
-          cefrLevel: v.cefrLevel as any,
+          cefrLevel: v.cefrLevel as CefrLevel,
           exampleSentence: v.exampleSentence,
         },
         update: {},
@@ -86,8 +87,9 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ lesson }, { status: 201 });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Lesson creation failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: message }, "Lesson creation failed");
     return NextResponse.json(
       { error: "Tạo bài học thất bại" },
       { status: 500 }
@@ -139,8 +141,9 @@ export async function PUT(req: Request) {
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Lesson update failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: message }, "Lesson update failed");
     return NextResponse.json({ error: "Cập nhật thất bại" }, { status: 500 });
   }
 }

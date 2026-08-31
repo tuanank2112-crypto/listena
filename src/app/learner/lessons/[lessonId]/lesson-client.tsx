@@ -105,7 +105,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
   const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || exercise?.type === "FULL_DICTATION");
 
   const speakEnglish = useCallback(async (text: string) => {
-    await speak({ text, lang: "en", speed: rate });
+    await speak({ text, lang: "en", quality: "high", speed: rate });
   }, [rate]);
 
   const play = useCallback(async (target = segment) => {

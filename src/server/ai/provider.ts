@@ -17,6 +17,8 @@ export interface AIProviderConfig {
   baseUrl?: string;
 }
 
+export type AIFeedbackErrorType = AIFeedbackResponse["errors"][number]["errorType"];
+
 export interface AIErrorAnalysisParams {
   transcript: string;
   submittedAnswer: string;

@@ -4,6 +4,7 @@ import { createAIProvider } from "@/server/ai/provider";
 import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/schemas";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
+import type { CefrLevel, ExerciseType } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
         data: {
           title: `Course - ${parsed.data.cefrLevel}`,
           description: `Auto-generated course for ${parsed.data.cefrLevel}`,
-          cefrLevel: parsed.data.cefrLevel as any,
+          cefrLevel: parsed.data.cefrLevel as CefrLevel,
           status: "DRAFT",
           createdById: session.user.id,
         },
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
         courseId: course.id,
         title: validated.data.title,
         topic: parsed.data.topic,
-        cefrLevel: parsed.data.cefrLevel as any,
+        cefrLevel: parsed.data.cefrLevel as CefrLevel,
         learningObjectives: parsed.data.learningObjectives.join("\n"),
         transcript: validated.data.transcript,
         status: "DRAFT",
@@ -79,7 +80,7 @@ export async function POST(req: Request) {
         },
         exercises: {
           create: validated.data.exercises.map((e) => ({
-            type: e.type as any,
+            type: e.type as ExerciseType,
             prompt: e.prompt,
             correctAnswer: e.correctAnswer,
             difficulty: e.difficulty,
@@ -92,7 +93,7 @@ export async function POST(req: Request) {
     // Create vocabulary items
     for (const v of validated.data.vocabulary) {
       const item = await prisma.vocabularyItem.upsert({
-        where: { id: v.lemma },
+        where: { lemma: v.lemma },
         create: {
           lemma: v.lemma,
           displayText: v.displayText,
@@ -100,7 +101,7 @@ export async function POST(req: Request) {
           meaningVi: v.meaningVi,
           meaningEn: v.meaningEn,
           partOfSpeech: v.partOfSpeech,
-          cefrLevel: v.cefrLevel as any,
+          cefrLevel: v.cefrLevel as CefrLevel,
           exampleSentence: v.exampleSentence,
         },
         update: {},
@@ -121,8 +122,9 @@ export async function POST(req: Request) {
     );
 
     return NextResponse.json({ lesson }, { status: 201 });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "AI lesson generation failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: message }, "AI lesson generation failed");
     return NextResponse.json(
       { error: "Tạo bài học thất bại. Vui lòng thử lại." },
       { status: 500 }

@@ -11,6 +11,9 @@ export default async function TeacherLayout({
   if (!session) {
     redirect("/login");
   }
+  if (session.user.role !== "TEACHER" && session.user.role !== "ADMIN") {
+    redirect("/learner");
+  }
 
   return <AppShell>{children}</AppShell>;
 }

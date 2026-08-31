@@ -27,10 +27,11 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result);
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Flashcard review failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
+    logger.error({ error: message }, "Flashcard review failed");
     return NextResponse.json(
-      { error: error.message || "Có lỗi xảy ra" },
+      { error: message },
       { status: 500 }
     );
   }

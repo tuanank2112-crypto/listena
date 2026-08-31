@@ -8,14 +8,26 @@ const publicPaths = [
   "/api/auth",
   "/_next",
   "/favicon.ico",
-  "/",
 ];
+
+function isPublicPath(pathname: string): boolean {
+  if (pathname === "/") {
+    return true;
+  }
+
+  return publicPaths.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  );
+}
+
+function hasSegment(pathname: string, segment: string): boolean {
+  return pathname === `/${segment}` || pathname.startsWith(`/${segment}/`);
+}
 
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Allow public paths
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -30,17 +42,17 @@ export async function proxy(req: NextRequest) {
   const role = token.role as string;
 
   // Teacher routes protection
-  if (pathname.startsWith("/teacher") && role !== "TEACHER" && role !== "ADMIN") {
+  if (hasSegment(pathname, "teacher") && role !== "TEACHER" && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/learner", req.url));
   }
 
   // Learner routes protection
-  if (pathname.startsWith("/learner") && role !== "LEARNER" && role !== "ADMIN") {
+  if (hasSegment(pathname, "learner") && role !== "LEARNER" && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/teacher", req.url));
   }
 
   // Admin routes protection
-  if (pathname.startsWith("/admin") && role !== "ADMIN") {
+  if (hasSegment(pathname, "admin") && role !== "ADMIN") {
     return NextResponse.redirect(new URL("/", req.url));
   }
 

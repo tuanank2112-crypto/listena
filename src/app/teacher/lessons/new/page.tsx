@@ -43,8 +43,8 @@ export default function NewLessonPage() {
       }
       const data = await res.json();
       router.push(`/teacher/lessons/${data.lesson.id}`);
-    } catch (err: any) {
-      setError(err.message || "Có lỗi xảy ra");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Có lỗi xảy ra");
     } finally {
       setGenerating(false);
     }
@@ -71,8 +71,8 @@ export default function NewLessonPage() {
       const data = await res.json();
       setSuccess("Bài học đã được tạo thành công!");
       setTimeout(() => router.push(`/teacher/lessons/${data.lesson.id}`), 1500);
-    } catch (err: any) {
-      setError(err.message || "Có lỗi xảy ra");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Có lỗi xảy ra");
     } finally {
       setPublishing(false);
     }

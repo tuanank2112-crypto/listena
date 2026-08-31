@@ -38,29 +38,31 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create learner profile
-    await prisma.learnerProfile.create({
-      data: {
-        userId: user.id,
-        estimatedCefrLevel: "A2",
-        listeningMastery: 0.5,
-        vocabularyMastery: 0.5,
-        spellingMastery: 0.5,
-        lastActivityAt: new Date(),
-      },
-    });
-
-    // Initialize skill masteries
-    const skills = ["listening", "vocabulary", "spelling", "function_words", "segmentation", "final_sounds"];
-    for (const skill of skills) {
-      await prisma.skillMastery.create({
+    // Create learner profile + skill masteries only for LEARNER role
+    if (role === "LEARNER") {
+      await prisma.learnerProfile.create({
         data: {
           userId: user.id,
-          skillKey: skill,
-          masteryScore: 0.5,
-          evidenceCount: 0,
+          estimatedCefrLevel: "A2",
+          listeningMastery: 0.5,
+          vocabularyMastery: 0.5,
+          spellingMastery: 0.5,
+          lastActivityAt: new Date(),
         },
       });
+
+      // Initialize skill masteries
+      const skills = ["listening", "vocabulary", "spelling", "function_words", "segmentation", "final_sounds"];
+      for (const skill of skills) {
+        await prisma.skillMastery.create({
+          data: {
+            userId: user.id,
+            skillKey: skill,
+            masteryScore: 0.5,
+            evidenceCount: 0,
+          },
+        });
+      }
     }
 
     logger.info({ userId: user.id, role }, "User registered");

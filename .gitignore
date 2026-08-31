@@ -12,6 +12,8 @@
 
 # testing
 /coverage
+/playwright-report/
+/test-results/
 
 # next.js
 /.next/
@@ -35,6 +37,10 @@ yarn-error.log*
 
 # local database
 prisma/dev.db
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
 
 # vercel
 .vercel

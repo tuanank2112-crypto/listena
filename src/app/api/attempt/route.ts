@@ -31,10 +31,14 @@ export async function POST(req: Request) {
     });
 
     return NextResponse.json(result, { status: 201 });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Attempt submission failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
+    if (message === "Exercise not found" || message === "Exercise does not belong to the lesson") {
+      return NextResponse.json({ error: "Dữ liệu không hợp lệ" }, { status: 400 });
+    }
+    logger.error({ error: message }, "Attempt submission failed");
     return NextResponse.json(
-      { error: error.message || "Có lỗi xảy ra" },
+      { error: message },
       { status: 500 }
     );
   }

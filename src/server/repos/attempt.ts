@@ -3,7 +3,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { Attempt, AttemptError } from "@prisma/client";
+import type { Attempt, AttemptError, ErrorType } from "@prisma/client";
 
 export interface CreateAttemptInput {
   userId: string;
@@ -51,7 +51,7 @@ export const attemptRepo = {
     return prisma.attemptError.create({
       data: {
         attemptId: input.attemptId,
-        errorType: input.errorType as any,
+        errorType: input.errorType as ErrorType,
         expectedText: input.expectedText,
         actualText: input.actualText,
         position: input.position,

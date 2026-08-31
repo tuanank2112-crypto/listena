@@ -5,7 +5,7 @@
 import { assessDictation, assessOpenResponse } from "@/core/assessment/engine";
 import { updateMastery } from "@/core/learner-model/mastery";
 import { processReview } from "@/core/srs/sm2";
-import { createAIProvider } from "@/server/ai/provider";
+import { createAIProvider, type AIFeedbackErrorType } from "@/server/ai/provider";
 import { attemptRepo } from "@/server/repos/attempt";
 import { learnerRepo } from "@/server/repos/learner";
 import { flashcardRepo } from "@/server/repos/flashcard";
@@ -36,6 +36,9 @@ export async function submitAttempt(params: SubmitAttemptParams) {
 
   if (!exercise) {
     throw new Error("Exercise not found");
+  }
+  if (exercise.lessonId !== params.lessonId) {
+    throw new Error("Exercise does not belong to the lesson");
   }
 
   // 2. Run the appropriate assessment mode.
@@ -156,7 +159,7 @@ export async function submitAttempt(params: SubmitAttemptParams) {
         purpose: "error_analysis",
         model: process.env.OPENAI_MODEL ?? "mock",
         promptVersion: "1.0",
-        validatedOutput: aiFeedback as any,
+        validatedOutput: JSON.stringify(aiFeedback),
         latencyMs: Date.now() - startTime,
         success: true,
       },
@@ -188,7 +191,7 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     aiFeedback = {
       summaryVi: `Bạn đạt ${assessment.overallScore} điểm. ${assessment.errors.length} lỗi được phát hiện.`,
       errors: assessment.errors.map((e) => ({
-        errorType: e.type as any,
+        errorType: e.type as AIFeedbackErrorType,
         expected: e.expected,
         actual: e.actual,
         probableCauseVi: "Lỗi trong quá trình nghe chép chính tả.",
@@ -328,3 +331,8 @@ export async function reviewFlashcard(params: {
 
   return result;
 }
+
+
+
+
+

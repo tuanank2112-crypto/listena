@@ -3,6 +3,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import type { CardRating } from "@prisma/client";
 
 export const flashcardRepo = {
   async create(data: {
@@ -76,7 +77,7 @@ export const flashcardRepo = {
       data: {
         flashcardId: data.flashcardId,
         userId: data.userId,
-        rating: data.rating as any,
+        rating: data.rating as CardRating,
         responseTimeMs: data.responseTimeMs,
         previousInterval: data.previousInterval,
         nextInterval: data.nextInterval,

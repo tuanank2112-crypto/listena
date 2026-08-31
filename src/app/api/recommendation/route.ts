@@ -96,8 +96,9 @@ export async function GET() {
     logger.info({ userId, recommendations: recommendations.length }, "Recommendations generated");
 
     return NextResponse.json({ recommendations });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Recommendation generation failed");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
+    logger.error({ error: message }, "Recommendation generation failed");
     return NextResponse.json(
       { error: "Có lỗi xảy ra" },
       { status: 500 }

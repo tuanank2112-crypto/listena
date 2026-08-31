@@ -15,6 +15,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { VoiceQualityToggle } from "@/components/voice-quality-toggle";
 
 const learnerNav = [
   { href: "/learner/dashboard", label: "Hôm nay", icon: LayoutDashboard },
@@ -50,6 +51,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#879088]">English studio</p>
           </div>
         </Link>
+
+        <div className="mb-4">
+          <VoiceQualityToggle />
+        </div>
 
         <nav className="space-y-1.5">
           {navItems.map((item) => {

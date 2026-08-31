@@ -22,7 +22,7 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
 
   function playSpeech() {
     if (!card) return;
-    void speak({ text: card.front, lang: "en" });
+    void speak({ text: card.front, lang: "en", quality: "high" });
   }
 
   async function rate(rating: "AGAIN" | "HARD" | "GOOD" | "EASY") {
@@ -50,7 +50,7 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
         {!flipped ? <><p className="text-4xl font-black tracking-[-.05em] sm:text-5xl">{card.front}</p><p className="mt-3 text-sm font-bold text-[#879088]">{card.vocabularyItem.ipa}</p><button type="button" onClick={(event) => { event.stopPropagation(); playSpeech(); }} className="mt-8 flex h-12 w-12 items-center justify-center rounded-full bg-[#f7d779]"><Volume2 className="h-5 w-5" /></button></> : <><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Nghĩa</p><p className="mt-4 text-3xl font-black leading-tight">{cleanVocabularyMeaning(card.vocabularyItem.meaningVi)}</p><p className="mt-5 text-sm font-bold text-[#879088]">{card.front}</p></>}
       </motion.button>
 
-      {speechState.phase === "downloading-model" && <p className="mt-3 text-center text-xs font-bold text-[#7b857f]">Đang tải giọng đọc {speechState.downloadProgress ?? 0}%</p>}
+      {speechState.phase === "error" && <p className="mt-3 text-center text-xs font-bold text-[#d6534d]">Không phát được giọng đọc trên thiết bị này.</p>}
 
       {flipped && <div className="mt-4 grid grid-cols-4 gap-2">{[
         ["AGAIN", "Lại", "#d6534d", X], ["HARD", "Khó", "#d89a2b", Sparkles], ["GOOD", "Tốt", "#176b55", Check], ["EASY", "Dễ", "#5c6fb3", Check],

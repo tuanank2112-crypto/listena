@@ -4,7 +4,7 @@
 
 import type { AssessmentResult } from "@/core/assessment/engine";
 
-export interface DictationAssessmentResult extends AssessmentResult {}
+export type DictationAssessmentResult = AssessmentResult;
 
 export interface AIFeedbackError {
   errorType: "PHONOLOGICAL" | "SEGMENTATION" | "GRAMMAR" | "VOCABULARY" | "SPELLING" | "UNKNOWN";

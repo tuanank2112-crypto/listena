@@ -57,16 +57,13 @@ Nếu provider lỗi, hệ thống tự fallback về dataset retrieval. Trả l
 
 ListenAI dùng kiến trúc **hai đường dẫn (dual-path)**:
 
-### 1. Tiếng Anh — Kokoro-82M (client-side)
+### 1. Tiếng Anh — Voice hệ thống miễn phí
 
-Mọi nội dung tiếng Anh (từ vựng, câu ví dụ, trò chơi Nghe & viết, flashcard) đều dùng `kokoro-js`:
+Mọi nội dung tiếng Anh (từ vựng, câu ví dụ, trò chơi Nghe & viết, flashcard) dùng Web Speech API với giọng hệ thống miễn phí:
 
-- Chạy 100% trong trình duyệt qua Transformers.js + ONNX Runtime Web.
-- Mô hình `onnx-community/Kokoro-82M-v1.0-ONNX`, dtype `q8` (~80 MB), tải **lazy** khi người học lần đầu phát âm thanh, có thanh tiến độ.
-- Inference chạy trong **Web Worker** để không chặn UI.
-- Audio được cache trong **IndexedDB** bằng khóa SHA-256 (text + voice + engine version + speed).
-- Nếu thiết bị không hỗ trợ hoặc Kokoro lỗi, fallback về `speechSynthesis` (Web Speech API) — chỉ dành cho tiếng Anh.
-- Giọng mặc định: `bf_emma` (cấu hình qua `NEXT_PUBLIC_KOKORO_DEFAULT_VOICE`); danh sách giọng đọc runtime từ `list_voices()`.
+- Bấm là phát ngay, không tải voice/model trên web.
+- Không dùng Google voice vì thiếu cảm xúc/nhấn nhá.
+- Ưu tiên Natural → Premium/Enhanced → Microsoft/Apple → voice hệ thống khác.
 
 ### 2. Tiếng Việt — VieNeu-TTS (sidecar)
 
@@ -130,6 +127,13 @@ docker compose up tts
 7. Tắt sidecar VieNeu → ứng dụng vẫn chạy, chỉ mất audio tiếng Việt.
 
 ## Kiểm tra
+
+- **Trạng thái cập nhật 2026-09-01:**
+  - [x] Type-check: `npm run type-check` PASS.
+  - [ ] Unit test: đã có test Vitest trong `src/**`, chưa chạy trong lần xác thực này.
+  - [ ] Lint: artifact hiện có 0 lỗi và 40 cảnh báo; chưa chạy trong lần xác thực này.
+  - [ ] Build: chưa chạy trong lần xác thực này.
+  - [ ] Production: cần xác minh Prisma migrations, biến môi trường, PostgreSQL và VieNeu sidecar trước khi deploy.
 
 ```bash
 npm run type-check

@@ -30,8 +30,9 @@ export async function GET(
     }
 
     return NextResponse.json(lesson);
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Failed to fetch lesson");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+    logger.error({ error: message }, "Failed to fetch lesson");
     return NextResponse.json({ error: "Có lỗi xảy ra" }, { status: 500 });
   }
 }

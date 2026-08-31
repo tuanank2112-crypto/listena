@@ -54,8 +54,9 @@ export async function GET() {
         masteryScore: s.masteryScore,
       })),
     });
-  } catch (error: any) {
-    logger.error({ error: error.message }, "Failed to fetch progress");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
+    logger.error({ error: message }, "Failed to fetch progress");
     return NextResponse.json({ error: "Có lỗi xảy ra" }, { status: 500 });
   }
 }

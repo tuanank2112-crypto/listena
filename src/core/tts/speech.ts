@@ -6,11 +6,12 @@ export interface SpeakOptions {
   lang: SpeechLanguage;
   voice?: string;
   speed?: number;
+  quality?: "fast" | "high";
 }
 
 export type SpeakResult =
-  | { ok: true; status: "completed"; cached: boolean }
-  | { ok: false; status: "cancelled" | "unavailable" | "failed"; error?: Error };
+  | { ok: true; status: "completed"; cached: boolean; engine?: string }
+  | { ok: false; status: "cancelled" | "unavailable" | "failed"; error?: Error; engine?: string };
 
 export interface SpeechState {
   phase: SpeechPhase;
@@ -41,7 +42,9 @@ export type SpeechStateListener = () => void;
 
 const initialState: SpeechState = { phase: "idle", downloadProgress: null, error: null };
 let englishEngine: SpeechEngine | null = null;
+let englishFallbackEngine: SpeechEngine | null = null;
 let vietnameseEngine: SpeechEngine | null = null;
+let vietnameseFallbackEngine: SpeechEngine | null = null;
 let activeController: AbortController | null = null;
 let latestRequestId = 0;
 let speechState = initialState;
@@ -65,19 +68,6 @@ function shouldUpdateRequestState(requestId: number) {
   };
 }
 
-function fallbackToWebSpeech(options: SpeakOptions) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return Promise.resolve(false);
-  return new Promise<boolean>((resolve) => {
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(options.text);
-    utterance.lang = "en-GB";
-    utterance.rate = options.speed ?? 1;
-    utterance.onend = () => resolve(true);
-    utterance.onerror = () => resolve(false);
-    window.speechSynthesis.speak(utterance);
-  });
-}
-
 /** "cancelled" là kết quả chủ đích và không bao giờ được kích hoạt fallback tại call site. */
 export function shouldAttemptFallback(result: SpeakResult) {
   return !result.ok && (result.status === "failed" || result.status === "unavailable");
@@ -96,8 +86,16 @@ export function registerEnglishSpeechEngine(engine: SpeechEngine | null) {
   englishEngine = engine;
 }
 
+export function registerEnglishFallbackSpeechEngine(engine: SpeechEngine | null) {
+  englishFallbackEngine = engine;
+}
+
 export function registerVietnameseSpeechEngine(engine: SpeechEngine | null) {
   vietnameseEngine = engine;
+}
+
+export function registerVietnameseFallbackSpeechEngine(engine: SpeechEngine | null) {
+  vietnameseFallbackEngine = engine;
 }
 
 export function setSpeechWarningHandler(handler: SpeechWarningHandler) {
@@ -109,7 +107,9 @@ export async function stopSpeech() {
   activeController?.abort();
   activeController = null;
   await englishEngine?.stop();
+  await englishFallbackEngine?.stop();
   await vietnameseEngine?.stop();
+  await vietnameseFallbackEngine?.stop();
   updateSpeechState(initialState);
 }
 
@@ -119,6 +119,7 @@ export async function prepareSpeech(): Promise<SpeakResult> {
   activeController?.abort();
   activeController = null;
   await englishEngine?.stop();
+  await englishFallbackEngine?.stop();
   if (requestId !== latestRequestId) return { ok: false, status: "cancelled" };
   updateSpeechState(initialState);
 
@@ -135,60 +136,12 @@ export async function prepareSpeech(): Promise<SpeakResult> {
   }
 }
 
-export async function speak(options: SpeakOptions): Promise<SpeakResult> {
-  if (!options.text.trim()) return { ok: false, status: "unavailable" };
-
-  const requestId = latestRequestId + 1;
-  latestRequestId = requestId;
-  activeController?.abort();
-  activeController = null;
-  await englishEngine?.stop();
-  await vietnameseEngine?.stop();
-  if (requestId !== latestRequestId) return { ok: false, status: "cancelled" };
-  updateSpeechState(initialState);
-
-  // ── ĐỊNH TUYẾN DỰA TRÊN NGÔN NGỮ ──────────────────
-  // tiếng Anh → Kokoro (client-side)
-  // tiếng Việt → VieNeu qua sidecar
-  if (options.lang === "vi") {
-    if (!vietnameseEngine) {
-      warningHandler("Engine TTS tiếng Việt (VieNeu) chưa được đăng ký; yêu cầu đã bị bỏ qua.", createWarningContext(options));
-      return { ok: false, status: "unavailable" };
-    }
-    const controller = new AbortController();
-    activeController = controller;
-    try {
-      const result = await vietnameseEngine.speak(options, {
-        signal: controller.signal,
-        updateState: shouldUpdateRequestState(requestId),
-      });
-      if (activeController === controller) {
-        activeController = null;
-        updateSpeechState(result.ok ? initialState : { phase: "error", error: result.error ?? null });
-      }
-      return result;
-    } catch (cause) {
-      const error = cause instanceof Error ? cause : new Error(String(cause));
-      if (activeController === controller) {
-        activeController = null;
-        updateSpeechState({ phase: "error", error });
-      }
-      if (controller.signal.aborted) return { ok: false, status: "cancelled" };
-      return { ok: false, status: "failed", error };
-    }
-  }
-
-  // ── Tiếng Anh ───────────────────────────────────────
-  if (!englishEngine) {
-    warningHandler("Engine TTS tiếng Anh chưa được đăng ký; yêu cầu đã bị bỏ qua.", createWarningContext(options));
-    return { ok: false, status: "unavailable" };
-  }
-
+async function tryEngine(engine: SpeechEngine | null, options: SpeakOptions, requestId: number): Promise<SpeakResult> {
+  if (!engine) return { ok: false, status: "unavailable" };
   const controller = new AbortController();
   activeController = controller;
-
   try {
-    const result = await englishEngine.speak(options, {
+    const result = await engine.speak(options, {
       signal: controller.signal,
       updateState: shouldUpdateRequestState(requestId),
     });
@@ -203,8 +156,55 @@ export async function speak(options: SpeakOptions): Promise<SpeakResult> {
       activeController = null;
       updateSpeechState({ phase: "error", error });
     }
-    if (controller.signal.aborted) return { ok: false, status: "cancelled" };
-    if (await fallbackToWebSpeech(options)) return { ok: true, status: "completed", cached: false };
+    if (controller.signal.aborted) return { ok: false, status: "cancelled", error };
     return { ok: false, status: "failed", error };
   }
+}
+
+export async function speak(options: SpeakOptions): Promise<SpeakResult> {
+  if (!options.text.trim()) return { ok: false, status: "unavailable" };
+
+  const requestId = latestRequestId + 1;
+  latestRequestId = requestId;
+  activeController?.abort();
+  activeController = null;
+  await englishEngine?.stop();
+  await englishFallbackEngine?.stop();
+  await vietnameseEngine?.stop();
+  await vietnameseFallbackEngine?.stop();
+  if (requestId !== latestRequestId) return { ok: false, status: "cancelled" };
+  updateSpeechState(initialState);
+
+  if (options.lang === "vi") {
+    if (!vietnameseEngine && !vietnameseFallbackEngine) {
+      warningHandler("Vietnamese TTS engine chưa được đăng ký.", createWarningContext(options));
+      return { ok: false, status: "unavailable" };
+    }
+    const result = await tryEngine(vietnameseEngine, options, requestId);
+    if (result.ok) return result;
+    if (result.status === "cancelled") return result;
+    if (shouldAttemptFallback(result) && vietnameseFallbackEngine) {
+      warningHandler("VieNeu unavailable; falling back to Web Speech.", createWarningContext(options));
+      return await tryEngine(vietnameseFallbackEngine, options, requestId);
+    }
+    return result;
+  }
+
+  // English uses the instant free system-voice path. Quality only changes
+  // voice preference (Natural/Premium/Enhanced), never a model download.
+  const primary = englishEngine;
+  const secondary = englishFallbackEngine;
+
+  if (!primary && !secondary) {
+    warningHandler("No English TTS engine registered.", createWarningContext(options));
+    return { ok: false, status: "unavailable" };
+  }
+
+  const result = await tryEngine(primary, options, requestId);
+  if (result.ok) return result;
+  if (result.status === "cancelled") return result;
+  if (shouldAttemptFallback(result) && secondary) {
+    return await tryEngine(secondary, options, requestId);
+  }
+  return result;
 }

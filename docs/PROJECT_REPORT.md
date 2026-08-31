@@ -7,6 +7,19 @@
 
 ---
 
+## Cập nhật tiến độ và xác thực — 2026-09-01
+
+- **TTS:** Code hiện có hai đường dẫn: tiếng Anh ưu tiên Web Speech ở chế độ nhanh hoặc Kokoro ở chế độ chất lượng cao, có fallback; tiếng Việt dùng VieNeu sidecar. `VoiceQualityToggle` lưu lựa chọn `fast`/`high` ở local storage.
+- **Game Hub:** `/learner/games` có các chế độ chơi theo vocabulary và gửi kết quả qua `POST /api/game-session`; route xác thực session, kiểm tra payload và cập nhật mastery trong transaction.
+- **Health check:** `GET /api/health` hiện tồn tại và trả JSON `status: "ok"` cùng timestamp, phù hợp với `healthCheckPath` trong `render.yaml`.
+- **Xác thực ngày này:** `npm run type-check` **PASS** (`tsc --noEmit`). Chưa chạy test, lint hoặc build theo phạm vi cập nhật này.
+- **Trạng thái test/lint/build hiện biết:** Codebase hiện có các unit test Vitest trong `src/**`, nhưng chưa được chạy trong lần kiểm tra này. Artifact `lint_current.json` ghi nhận 0 lỗi và 40 cảnh báo; lint chưa được chạy trong lần kiểm tra này. Build chưa được chạy trong lần kiểm tra này; kết quả build PASS trong phần cũ là kết quả của ngày 2026-08-17, không phải xác nhận mới.
+- **Còn cần cho deployment:** commit và xác minh các Prisma migrations trong working tree trước khi dùng `prisma migrate deploy`; cấu hình đầy đủ biến môi trường production, database PostgreSQL, `NEXTAUTH_SECRET`, và dịch vụ VieNeu nếu cần TTS tiếng Việt. Cần chạy lại build/deployment smoke check trước khi phát hành.
+
+> Các mục trong phần này mô tả working tree hiện tại và không khẳng định đã hoàn tất migration, E2E, hardening bảo mật hoặc deployment production.
+
+---
+
 ## MỤC LỤC
 
 1. [Tóm tắt dự án](#1-tóm-tắt-dự-án)

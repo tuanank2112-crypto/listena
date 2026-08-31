@@ -216,8 +216,8 @@ export function GamesClient({ units }: { units: Unit[] }) {
               {mode === "spell" && sessionWords[round] && (
                 <div className="mx-auto max-w-lg text-center">
                   <p className="text-xs font-black uppercase tracking-[.18em] text-[#d89a2b]">Nghe và viết</p>
-                  <button onClick={() => void speak({ text: sessionWords[round].displayText, lang: "en", speed: 0.88 })} className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f7d779] shadow-[0_12px_30px_rgba(216,154,43,.25)]"><Volume2 className="h-9 w-9" /></button>
-                  {speechState.phase === "downloading-model" && <p className="mt-3 text-xs font-bold text-[#758078]">Đang tải giọng đọc {speechState.downloadProgress ?? 0}%</p>}
+                  <button onClick={() => void speak({ text: sessionWords[round].displayText, lang: "en", quality: "high", speed: 0.88 })} className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f7d779] shadow-[0_12px_30px_rgba(216,154,43,.25)]"><Volume2 className="h-9 w-9" /></button>
+                  {speechState.phase === "error" && <p className="mt-3 text-xs font-bold text-[#d6534d]">Không phát được giọng đọc trên thiết bị này.</p>}
                   <p className="mt-5 text-sm font-bold text-[#758078]">{cleanVocabularyMeaning(sessionWords[round].meaningVi)}</p>
                   <input value={answer} onChange={(event) => setAnswer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && answer.trim()) resolve(answer.trim().toLowerCase() === sessionWords[round].displayText.toLowerCase()); }} autoFocus className="mt-8 min-h-16 w-full rounded-2xl border-2 border-[#ded8cc] bg-white px-5 text-center text-xl font-black outline-none focus:border-[#176b55]" placeholder="Gõ từ bạn nghe" />
                   <button onClick={() => resolve(answer.trim().toLowerCase() === sessionWords[round].displayText.toLowerCase())} disabled={!answer.trim() || Boolean(feedback)} className="mt-3 min-h-12 w-full rounded-2xl bg-[#176b55] font-black text-white disabled:opacity-40">Kiểm tra</button>
