@@ -5,7 +5,7 @@
 import { assessDictation, assessOpenResponse } from "@/core/assessment/engine";
 import { updateMastery } from "@/core/learner-model/mastery";
 import { processReview } from "@/core/srs/sm2";
-import { createAIProvider, type AIFeedbackErrorType } from "@/server/ai/provider";
+import { createAIProviderFromEnv, type AIFeedbackErrorType } from "@/server/ai/provider";
 import { attemptRepo } from "@/server/repos/attempt";
 import { learnerRepo } from "@/server/repos/learner";
 import { flashcardRepo } from "@/server/repos/flashcard";
@@ -134,11 +134,7 @@ export async function submitAttempt(params: SubmitAttemptParams) {
   // 6. Try AI feedback (mock or real)
   let aiFeedback = null;
   try {
-    const aiProvider = createAIProvider({
-      provider: (process.env.AI_PROVIDER as "mock" | "openai") ?? "mock",
-      apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL,
-    });
+    const aiProvider = createAIProviderFromEnv();
 
     aiFeedback = await aiProvider.analyzeErrors({
       transcript: exercise.lesson.transcript,

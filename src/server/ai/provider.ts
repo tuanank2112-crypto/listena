@@ -17,6 +17,13 @@ export interface AIProviderConfig {
   baseUrl?: string;
 }
 
+type AIProviderEnvironment = {
+  AI_PROVIDER?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  OPENAI_BASE_URL?: string;
+};
+
 export type AIFeedbackErrorType = AIFeedbackResponse["errors"][number]["errorType"];
 
 export interface AIErrorAnalysisParams {
@@ -391,4 +398,20 @@ export function createAIProvider(config: AIProviderConfig): AIProvider {
   }
   logger.info({ provider: "mock" }, "Using Mock AI provider");
   return new MockAIProvider();
+}
+
+export function createAIProviderFromEnv(
+  env: AIProviderEnvironment = {
+    AI_PROVIDER: process.env.AI_PROVIDER,
+    OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+    OPENAI_MODEL: process.env.OPENAI_MODEL,
+    OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+  },
+): AIProvider {
+  return createAIProvider({
+    provider: (env.AI_PROVIDER as AIProviderConfig["provider"]) ?? "mock",
+    apiKey: env.OPENAI_API_KEY,
+    model: env.OPENAI_MODEL,
+    baseUrl: env.OPENAI_BASE_URL,
+  });
 }

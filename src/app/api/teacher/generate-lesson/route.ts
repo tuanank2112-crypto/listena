@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
-import { createAIProvider } from "@/server/ai/provider";
+import { createAIProviderFromEnv } from "@/server/ai/provider";
 import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/schemas";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
@@ -24,11 +24,7 @@ export async function POST(req: Request) {
     }
 
     // Generate lesson draft with AI
-    const aiProvider = createAIProvider({
-      provider: (process.env.AI_PROVIDER as "mock" | "openai") ?? "mock",
-      apiKey: process.env.OPENAI_API_KEY,
-      model: process.env.OPENAI_MODEL,
-    });
+    const aiProvider = createAIProviderFromEnv();
 
     const draft = await aiProvider.generateLesson(parsed.data);
 
