@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import { GameSessionSchema } from "@/server/validation/game-session";
+import { processReview } from "@/core/srs/sm2";
+import { getGameReviewRating } from "./review-rating";
 import logger from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -46,6 +48,12 @@ export async function POST(request: NextRequest) {
 
         const delta = item.correct ? 0.12 : -0.08;
         const masteryScore = Math.min(1, Math.max(0, (existing?.masteryScore ?? 0.3) + delta));
+        const review = processReview({
+          repetitionCount: existing?.repetitionCount ?? 0,
+          intervalDays: existing?.intervalDays ?? 0,
+          easeFactor: existing?.easeFactor ?? 2.5,
+          rating: getGameReviewRating(item.correct, item.responseTimeMs),
+        });
 
         if (existing) {
           await tx.vocabularyMastery.update({
@@ -55,7 +63,10 @@ export async function POST(request: NextRequest) {
               correctCount: { increment: item.correct ? 1 : 0 },
               incorrectCount: { increment: item.correct ? 0 : 1 },
               lastReviewedAt: now,
-              nextReviewAt: now,
+              nextReviewAt: review.nextReviewAt,
+              intervalDays: review.intervalDays,
+              easeFactor: review.easeFactor,
+              repetitionCount: review.repetitionCount,
             },
           });
         } else {
@@ -67,7 +78,10 @@ export async function POST(request: NextRequest) {
               correctCount: item.correct ? 1 : 0,
               incorrectCount: item.correct ? 0 : 1,
               lastReviewedAt: now,
-              nextReviewAt: now,
+              nextReviewAt: review.nextReviewAt,
+              intervalDays: review.intervalDays,
+              easeFactor: review.easeFactor,
+              repetitionCount: review.repetitionCount,
             },
           });
         }

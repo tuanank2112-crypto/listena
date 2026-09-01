@@ -2,6 +2,18 @@
 
 Sản phẩm tự học tiếng Anh A2 với bài học ngắn, trò chơi từ vựng, chấm bài, flashcard SRS và gia sư AI có truy xuất dữ liệu giáo trình.
 
+## Trải nghiệm AI-first
+
+ListenAI hiện dùng `LearningSession` nhiều lượt thay cho việc chỉ hỏi đáp một lần:
+
+- **Lesson Coach:** AI bám theo title/topic/objective/transcript/vocabulary của bài, hỏi gợi mở và chỉ sửa một điểm mỗi lượt.
+- **Mission Talk:** ba tình huống nhập vai `lost-luggage`, `cafe-order`, `mystery-clue`; câu trả lời của học viên làm state nhiệm vụ thay đổi.
+- **Comeback challenge:** lỗi quan trọng được chuyển thành `CHOICE`, `REORDER`, `RETRY`, `USE_IN_SENTENCE` hoặc `FILL_BLANK`, chấm bằng validator chỉ tồn tại phía server.
+- **Daily AI Quest:** chọn kỹ năng yếu và từ đến hạn để lập nhiệm vụ ngắn; có deterministic fallback khi AI provider không khả dụng.
+- **Resume và evidence:** session/turn/intervention được lưu, reload không mất hội thoại; evidence cập nhật `SkillMastery` và quick game cập nhật SRS.
+
+Kiến trúc và contract: `docs/AI_FIRST_ARCHITECTURE.md`.
+
 ## Chạy local
 
 ```bash
@@ -32,7 +44,7 @@ Bài Educaplay Đà Nẵng chỉ được dùng để đối chiếu format game
 
 ## Game Hub
 
-Trang `/learner/games` có ba chế độ dùng từ vựng thật theo từng unit:
+Trang `/learner/games` ưu tiên AI Mission và Daily Quest. Ba chế độ từ vựng cũ được giữ dưới nhóm **Quick comeback**:
 
 - Chọn nhanh
 - Ghép cặp

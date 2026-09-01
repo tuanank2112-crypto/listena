@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, BookOpen, Flame, Gamepad2, Sparkles, Target } from "lucide-react";
+import { ArrowRight, BookOpen, CalendarCheck2, Flame, Gamepad2, Sparkles, Target } from "lucide-react";
 import type { DashboardData } from "@/types";
+import { StartSessionButton } from "@/features/learning-session/start-session-button";
 
 export function LearnerDashboard({ data }: { data: DashboardData }) {
   const mastery = Math.round(((data.listeningMastery + data.vocabularyMastery) / 2) * 100);
@@ -39,8 +40,8 @@ export function LearnerDashboard({ data }: { data: DashboardData }) {
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-1">
           <Link href="/learner/games" className="group rounded-[28px] bg-[#18332d] p-5 text-white transition hover:-translate-y-1">
             <Gamepad2 className="h-7 w-7 text-[#f7d779]" />
-            <p className="mt-8 text-xl font-black">Chơi nhanh</p>
-            <p className="mt-1 text-xs font-bold text-white/60">3 thử thách</p>
+            <p className="mt-8 text-xl font-black">AI Missions</p>
+            <p className="mt-1 text-xs font-bold text-white/60">3 câu chuyện nhập vai</p>
           </Link>
           <Link href="/learner/flashcards" className="group rounded-[28px] bg-[#ef765d] p-5 text-white transition hover:-translate-y-1">
             <Sparkles className="h-7 w-7 text-white" />
@@ -49,6 +50,18 @@ export function LearnerDashboard({ data }: { data: DashboardData }) {
           </Link>
         </div>
       </div>
+
+      <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .1 }} className="mt-4 flex flex-col gap-5 overflow-hidden rounded-[28px] border border-[#ecd48b] bg-[#fff1bd] p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="flex items-start gap-4">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f7d779] text-[#18332d]"><CalendarCheck2 className="h-6 w-6" /></span>
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[.16em] text-[#9b6b13]">Daily AI Quest</p>
+            <h2 className="mt-1 text-xl font-black tracking-[-.03em]">AI đã chuẩn bị một tình huống cho bạn.</h2>
+            <p className="mt-1 text-sm font-bold text-[#776b48]">Dùng bài đang học, từ đến hạn và kỹ năng yếu để tạo nhiệm vụ 5-8 phút.</p>
+          </div>
+        </div>
+        <StartSessionButton lessonId={data.continueLessonId ?? undefined} mode="DAILY_QUEST" label="Bắt đầu quest" className="shrink-0 [&_button]:w-full sm:[&_button]:w-auto" />
+      </motion.section>
 
       <section className="mt-8 grid gap-4 sm:grid-cols-3">
         {[

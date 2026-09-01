@@ -61,101 +61,136 @@ enum CefrLevel {
   C2
 }
 
+enum LearningSessionMode {
+  LESSON_COACH
+  MISSION
+  DAILY_QUEST
+}
+
+enum LearningSessionStatus {
+  ACTIVE
+  COMPLETED
+  ABANDONED
+}
+
+enum LearningTurnActor {
+  LEARNER
+  AI
+  SYSTEM
+}
+
+enum LearningTurnType {
+  PROMPT
+  RESPONSE
+  COACH
+  INTERVENTION
+  RESULT
+  REFLECTION
+}
+
+enum InterventionStatus {
+  PENDING
+  COMPLETED
+  SKIPPED
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
   email     String   @unique
-  password  String   // hashed
+  password  String // hashed
   role      Role     @default(LEARNER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  learnerProfile   LearnerProfile?
-  attempts         Attempt[]
+  learnerProfile    LearnerProfile?
+  attempts          Attempt[]
   vocabularyMastery VocabularyMastery[]
-  skillMastery     SkillMastery[]
-  flashcards       Flashcard[]
-  reviewLogs       ReviewLog[]
-  recommendations  Recommendation[]
-  aiInteractions   AIInteraction[]
-  coursesCreated   Course[]    @relation("CourseCreator")
-  lessonsCreated   Lesson[]    @relation("LessonCreator")
-  lessonsReviewed  Lesson[]    @relation("LessonReviewer")
+  skillMastery      SkillMastery[]
+  flashcards        Flashcard[]
+  reviewLogs        ReviewLog[]
+  recommendations   Recommendation[]
+  aiInteractions    AIInteraction[]
+  learningSessions  LearningSession[]
+  coursesCreated    Course[]            @relation("CourseCreator")
+  lessonsCreated    Lesson[]            @relation("LessonCreator")
+  lessonsReviewed   Lesson[]            @relation("LessonReviewer")
 }
 
 model LearnerProfile {
-  id                String     @id @default(uuid())
-  userId            String     @unique
-  estimatedCefrLevel CefrLevel @default(A2)
-  listeningMastery  Float      @default(0.5)
-  vocabularyMastery  Float      @default(0.5)
-  spellingMastery   Float      @default(0.5)
-  preferredAccent   String?    @default("us")
-  preferredTopics   String     @default("")
-  recommendedPlaybackRate Float @default(1.0)
-  totalStudyMinutes Int        @default(0)
-  currentStreak     Int        @default(0)
-  lastActivityAt    DateTime?  @default(now())
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  id                      String    @id @default(uuid())
+  userId                  String    @unique
+  estimatedCefrLevel      CefrLevel @default(A2)
+  listeningMastery        Float     @default(0.5)
+  vocabularyMastery       Float     @default(0.5)
+  spellingMastery         Float     @default(0.5)
+  preferredAccent         String?   @default("us")
+  preferredTopics         String    @default("")
+  recommendedPlaybackRate Float     @default(1.0)
+  totalStudyMinutes       Int       @default(0)
+  currentStreak           Int       @default(0)
+  lastActivityAt          DateTime? @default(now())
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Course {
-  id          String   @id @default(uuid())
+  id          String       @id @default(uuid())
   title       String
   description String?
-  cefrLevel   CefrLevel @default(A2)
+  cefrLevel   CefrLevel    @default(A2)
   status      LessonStatus @default(DRAFT)
   createdById String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
 
-  createdBy User @relation("CourseCreator", fields: [createdById], references: [id])
+  createdBy User     @relation("CourseCreator", fields: [createdById], references: [id])
   lessons   Lesson[]
 }
 
 model Lesson {
-  id                String       @id @default(uuid())
-  courseId          String
-  title             String
-  topic             String
-  cefrLevel         CefrLevel    @default(A2)
-  learningObjectives String     @default("")
-  transcript        String
-  audioUrl          String?
-  accent            String       @default("us")
-  defaultPlaybackRate Float      @default(1.0)
-  estimatedMinutes  Int          @default(10)
-  status            LessonStatus @default(DRAFT)
-  createdById       String
-  reviewedById      String?
-  createdAt         DateTime     @default(now())
-  updatedAt         DateTime     @updatedAt
+  id                  String       @id @default(uuid())
+  courseId            String
+  title               String
+  topic               String
+  cefrLevel           CefrLevel    @default(A2)
+  learningObjectives  String       @default("")
+  transcript          String
+  audioUrl            String?
+  accent              String       @default("us")
+  defaultPlaybackRate Float        @default(1.0)
+  estimatedMinutes    Int          @default(10)
+  status              LessonStatus @default(DRAFT)
+  createdById         String
+  reviewedById        String?
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
-  course     Course          @relation(fields: [courseId], references: [id])
-  createdBy  User            @relation("LessonCreator", fields: [createdById], references: [id])
-  reviewedBy User?           @relation("LessonReviewer", fields: [reviewedById], references: [id])
-  segments   LessonSegment[]
-  vocabulary LessonVocabulary[]
-  exercises  Exercise[]
-  attempts   Attempt[]
+  course           Course             @relation(fields: [courseId], references: [id])
+  createdBy        User               @relation("LessonCreator", fields: [createdById], references: [id])
+  reviewedBy       User?              @relation("LessonReviewer", fields: [reviewedById], references: [id])
+  segments         LessonSegment[]
+  vocabulary       LessonVocabulary[]
+  exercises        Exercise[]
+  attempts         Attempt[]
   recommendations  Recommendation[]
+  learningSessions LearningSession[]
 
   @@index([courseId])
   @@index([status])
 }
 
 model LessonSegment {
-  id        String  @id @default(uuid())
-  lessonId  String
-  position  Int
-  text      String
-  audioUrl  String?
-  startTime Float?
-  endTime   Float?
-  difficulty Float  @default(1.0)
+  id         String  @id @default(uuid())
+  lessonId   String
+  position   Int
+  text       String
+  audioUrl   String?
+  startTime  Float?
+  endTime    Float?
+  difficulty Float   @default(1.0)
 
   lesson    Lesson     @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   exercises Exercise[]
@@ -164,16 +199,16 @@ model LessonSegment {
 }
 
 model VocabularyItem {
-  id             String  @id @default(uuid())
-  lemma          String  @unique
-  displayText    String
-  ipa            String?
-  meaningVi      String
-  meaningEn      String?
-  partOfSpeech   String?
-  cefrLevel      CefrLevel @default(A2)
+  id              String    @id @default(uuid())
+  lemma           String    @unique
+  displayText     String
+  ipa             String?
+  meaningVi       String
+  meaningEn       String?
+  partOfSpeech    String?
+  cefrLevel       CefrLevel @default(A2)
   exampleSentence String?
-  audioUrl       String?
+  audioUrl        String?
 
   lessons    LessonVocabulary[]
   mastery    VocabularyMastery[]
@@ -181,10 +216,10 @@ model VocabularyItem {
 }
 
 model LessonVocabulary {
-  lessonId        String
+  lessonId         String
   vocabularyItemId String
-  isTarget        Boolean @default(true)
-  importance      Float   @default(1.0)
+  isTarget         Boolean @default(true)
+  importance       Float   @default(1.0)
 
   lesson         Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
@@ -193,41 +228,41 @@ model LessonVocabulary {
 }
 
 model Exercise {
-  id           String       @id @default(uuid())
-  lessonId     String
-  segmentId    String?
-  type         ExerciseType
-  prompt       String
+  id            String       @id @default(uuid())
+  lessonId      String
+  segmentId     String?
+  type          ExerciseType
+  prompt        String
   correctAnswer String
-  metadata     String?   @default("{}")
-  difficulty   Float        @default(1.0)
-  position     Int
+  metadata      String?      @default("{}")
+  difficulty    Float        @default(1.0)
+  position      Int
 
-  lesson    Lesson      @relation(fields: [lessonId], references: [id], onDelete: Cascade)
-  segment   LessonSegment? @relation(fields: [segmentId], references: [id])
-  attempts  Attempt[]
+  lesson   Lesson         @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  segment  LessonSegment? @relation(fields: [segmentId], references: [id])
+  attempts Attempt[]
 
   @@index([lessonId])
 }
 
 model Attempt {
-  id              String   @id @default(uuid())
-  userId          String
-  lessonId        String
-  exerciseId      String
-  submittedAnswer String
+  id               String   @id @default(uuid())
+  userId           String
+  lessonId         String
+  exerciseId       String
+  submittedAnswer  String
   normalizedAnswer String?
-  score           Float?
+  score            Float?
   completionTimeMs Int?
-  replayCount     Int      @default(0)
-  hintCount       Int      @default(0)
-  playbackRate    Float    @default(1.0)
-  createdAt       DateTime @default(now())
+  replayCount      Int      @default(0)
+  hintCount        Int      @default(0)
+  playbackRate     Float    @default(1.0)
+  createdAt        DateTime @default(now())
 
-  user     User     @relation(fields: [userId], references: [id])
-  lesson   Lesson   @relation(fields: [lessonId], references: [id])
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
-  errors   AttemptError[]
+  user       User           @relation(fields: [userId], references: [id])
+  lesson     Lesson         @relation(fields: [lessonId], references: [id])
+  exercise   Exercise       @relation(fields: [exerciseId], references: [id])
+  errors     AttemptError[]
   flashcards Flashcard[]
 
   @@index([userId, lessonId])
@@ -235,16 +270,16 @@ model Attempt {
 }
 
 model AttemptError {
-  id              String   @id @default(uuid())
+  id              String    @id @default(uuid())
   attemptId       String
   errorType       ErrorType
   expectedText    String
   actualText      String?
   position        Int
-  confidence      Float    @default(1.0)
+  confidence      Float     @default(1.0)
   aiExplanation   String?
   remediationType String?
-  metadata        String?    @default("{}")
+  metadata        String?   @default("{}")
 
   attempt Attempt @relation(fields: [attemptId], references: [id], onDelete: Cascade)
 
@@ -252,19 +287,19 @@ model AttemptError {
 }
 
 model VocabularyMastery {
-  id              String   @id @default(uuid())
-  userId          String
+  id               String    @id @default(uuid())
+  userId           String
   vocabularyItemId String
-  masteryScore    Float    @default(0.0)
-  correctCount    Int      @default(0)
-  incorrectCount  Int      @default(0)
-  lastReviewedAt  DateTime? @default(now())
-  nextReviewAt    DateTime? @default(now())
-  intervalDays    Float    @default(0.0)
-  easeFactor      Float    @default(2.5)
-  repetitionCount Int      @default(0)
+  masteryScore     Float     @default(0.0)
+  correctCount     Int       @default(0)
+  incorrectCount   Int       @default(0)
+  lastReviewedAt   DateTime? @default(now())
+  nextReviewAt     DateTime? @default(now())
+  intervalDays     Float     @default(0.0)
+  easeFactor       Float     @default(2.5)
+  repetitionCount  Int       @default(0)
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
 
   @@unique([userId, vocabularyItemId])
@@ -272,11 +307,11 @@ model VocabularyMastery {
 }
 
 model SkillMastery {
-  id           String   @id @default(uuid())
-  userId       String
-  skillKey     String
-  masteryScore Float    @default(0.5)
-  evidenceCount Int     @default(0)
+  id            String   @id @default(uuid())
+  userId        String
+  skillKey      String
+  masteryScore  Float    @default(0.5)
+  evidenceCount Int      @default(0)
   lastUpdatedAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -286,17 +321,17 @@ model SkillMastery {
 }
 
 model Flashcard {
-  id              String   @id @default(uuid())
-  userId          String
+  id               String   @id @default(uuid())
+  userId           String
   vocabularyItemId String
-  sourceAttemptId String?
-  front           String
-  back            String
-  cardType        String   @default("TEXT_MEANING") // TEXT_MEANING, MEANING_TEXT, AUDIO_TEXT
-  active          Boolean  @default(true)
-  createdAt       DateTime @default(now())
+  sourceAttemptId  String?
+  front            String
+  back             String
+  cardType         String   @default("TEXT_MEANING") // TEXT_MEANING, MEANING_TEXT, AUDIO_TEXT
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
 
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id])
   sourceAttempt  Attempt?       @relation(fields: [sourceAttemptId], references: [id])
   reviewLogs     ReviewLog[]
@@ -306,14 +341,14 @@ model Flashcard {
 }
 
 model ReviewLog {
-  id             String    @id @default(uuid())
-  flashcardId    String
-  userId         String
-  rating         CardRating
-  responseTimeMs Int?
-  previousInterval Float   @default(0.0)
-  nextInterval   Float     @default(0.0)
-  reviewedAt     DateTime  @default(now())
+  id               String     @id @default(uuid())
+  flashcardId      String
+  userId           String
+  rating           CardRating
+  responseTimeMs   Int?
+  previousInterval Float      @default(0.0)
+  nextInterval     Float      @default(0.0)
+  reviewedAt       DateTime   @default(now())
 
   flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -323,37 +358,136 @@ model ReviewLog {
 }
 
 model Recommendation {
-  id          String              @id @default(uuid())
+  id          String               @id @default(uuid())
   userId      String
   lessonId    String
   reason      String
-  score       Float               @default(0.0)
+  score       Float                @default(0.0)
   status      RecommendationStatus @default(PENDING)
-  generatedAt DateTime            @default(now())
+  generatedAt DateTime             @default(now())
 
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
   lesson Lesson @relation(fields: [lessonId], references: [id])
 
+  @@unique([userId, lessonId])
   @@index([userId, status])
   @@index([userId, generatedAt])
-
-  @@unique([userId, lessonId])
 }
 
 model AIInteraction {
-  id             String   @id @default(uuid())
-  userId         String?
-  purpose        String
-  model          String?
-  promptVersion  String?
-  inputHash      String?
-  validatedOutput String?
-  latencyMs      Int?
-  success        Boolean  @default(true)
-  createdAt      DateTime @default(now())
+  id                 String   @id @default(uuid())
+  userId             String?
+  sessionId          String?
+  turnId             String?
+  purpose            String
+  model              String?
+  provider           String?
+  promptVersion      String?
+  inputHash          String?
+  validatedOutput    String?
+  latencyMs          Int?
+  timeToFirstTokenMs Int?
+  inputTokens        Int?
+  outputTokens       Int?
+  estimatedCost      Float?
+  fallbackReason     String?
+  schemaValid        Boolean  @default(true)
+  traceId            String?
+  success            Boolean  @default(true)
+  createdAt          DateTime @default(now())
 
-  user User? @relation(fields: [userId], references: [id])
+  user    User?            @relation(fields: [userId], references: [id])
+  session LearningSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  turn    LearningTurn?    @relation(fields: [turnId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
   @@index([purpose, success])
+  @@index([sessionId, createdAt])
+  @@index([traceId])
+}
+
+model LearningSession {
+  id            String                @id @default(uuid())
+  userId        String
+  lessonId      String?
+  mode          LearningSessionMode
+  status        LearningSessionStatus @default(ACTIVE)
+  goal          String
+  levelSnapshot CefrLevel             @default(A2)
+  stateJson     String                @default("{}")
+  summary       String?
+  startedAt     DateTime              @default(now())
+  completedAt   DateTime?
+  updatedAt     DateTime              @updatedAt
+
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson         Lesson?            @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  turns          LearningTurn[]
+  evidence       LearningEvidence[]
+  interventions  Intervention[]
+  aiInteractions AIInteraction[]
+
+  @@index([userId, status, updatedAt])
+  @@index([lessonId, status])
+}
+
+model LearningTurn {
+  id           String            @id @default(uuid())
+  sessionId    String
+  sequence     Int
+  clientTurnId String
+  actor        LearningTurnActor
+  turnType     LearningTurnType
+  contentJson  String
+  skillTags    String            @default("")
+  createdAt    DateTime          @default(now())
+
+  session        LearningSession    @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  evidence       LearningEvidence[]
+  interventions  Intervention[]
+  aiInteractions AIInteraction[]
+
+  @@unique([sessionId, sequence])
+  @@unique([sessionId, clientTurnId])
+  @@index([sessionId, createdAt])
+}
+
+model LearningEvidence {
+  id             String   @id @default(uuid())
+  sessionId      String
+  turnId         String?
+  skillKey       String
+  evidenceType   String
+  score          Float
+  confidence     Float    @default(1.0)
+  difficulty     Float    @default(1.0)
+  hintCount      Int      @default(0)
+  replayCount    Int      @default(0)
+  responseTimeMs Int?
+  createdAt      DateTime @default(now())
+
+  session LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  turn    LearningTurn?   @relation(fields: [turnId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, createdAt])
+  @@index([skillKey, createdAt])
+}
+
+model Intervention {
+  id            String             @id @default(uuid())
+  sessionId     String
+  sourceTurnId  String?
+  type          String
+  prompt        String
+  specJson      String
+  validatorJson String
+  status        InterventionStatus @default(PENDING)
+  outcomeJson   String?
+  createdAt     DateTime           @default(now())
+  completedAt   DateTime?
+
+  session    LearningSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sourceTurn LearningTurn?   @relation(fields: [sourceTurnId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, status])
 }

@@ -5,6 +5,15 @@
 > **Tài liệu này dành cho:** Con người (dev, PM) lẫn A.I (agent coding) — được viết theo chuẩn dễ phân tích
 > **Trạng thái tổng thể:** 🟢 **Build & Type-check PASS** | 🟡 **Lint có ~20 lỗi** | 🔴 **Chưa có test** | 🟡 **Bug tiềm ẩn & bảo mật cần xử lý**
 
+## Cập nhật AI-first — 2026-09-02
+
+- Đã bổ sung session nhiều lượt gồm `LearningSession`, `LearningTurn`, `LearningEvidence` và `Intervention`.
+- Đã triển khai Lesson Coach theo nội dung bài, Mission Talk, Daily AI Quest và playable comeback challenge.
+- Session có ownership, idempotency, resume, deterministic fallback và không gửi validator/đáp án xuống client.
+- Game Hub đã gửi kết quả quick game về backend; SRS dùng response time và recommendation đọc lịch sử attempt/session thật.
+- Quality gate tại thời điểm cập nhật: type-check PASS, 72 unit tests PASS, lint 0 lỗi, authenticated AI mission E2E PASS, production build PASS.
+- Tài liệu kiến trúc hiện hành: `docs/AI_FIRST_ARCHITECTURE.md`. Các mô tả cũ bên dưới về "chưa có test" hoặc tutor một lượt chỉ còn giá trị lịch sử.
+
 ---
 
 ## Cập nhật tiến độ và xác thực — 2026-09-01

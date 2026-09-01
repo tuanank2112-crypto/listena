@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
 import { speak } from "@/core/tts/speech";
+import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import {
   ArrowLeft,
   ArrowRight,
@@ -189,6 +190,17 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
         </div>
         <Link href="/learner/games" className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white sm:flex"><Gamepad2 className="h-4 w-4" /> Chơi</Link>
       </header>
+
+      <div className="paper-card mb-5 flex flex-col gap-4 rounded-[24px] p-4 sm:flex-row sm:items-center sm:p-5">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ffe5dc] text-[#ef765d]"><Bot className="h-5 w-5" /></span>
+          <div className="min-w-0">
+            <p className="text-sm font-black">Biến bài này thành hội thoại</p>
+            <p className="mt-0.5 text-xs font-bold text-[#748079]">AI phản ứng theo câu bạn nói, gợi mở và tạo comeback đúng lỗi.</p>
+          </div>
+        </div>
+        <StartSessionButton lessonId={lesson.id} mode="LESSON_COACH" goal={`Thực hành chủ động nội dung ${lesson.title}`} label="Học cùng AI" className="shrink-0 [&_button]:w-full" />
+      </div>
 
       <div className="mb-5 flex items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ded8cc]"><motion.div className="h-full rounded-full bg-[#176b55]" animate={{ width: `${progress}%` }} /></div>

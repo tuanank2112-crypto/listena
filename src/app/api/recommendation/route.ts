@@ -3,6 +3,7 @@ import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import { rankRecommendations } from "@/core/recommendation/engine";
 import type { CefrLevel } from "@/core/recommendation/engine";
+import { getLessonProgress } from "./history";
 import logger from "@/lib/logger";
 
 export async function GET() {
@@ -14,50 +15,50 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    // Get learner profile
-    const profile = await prisma.learnerProfile.findUnique({
-      where: { userId },
-    });
-
-    // Get skill masteries for weak skills
-    const skillMasteries = await prisma.skillMastery.findMany({
-      where: { userId },
-    });
-
-    // Get all available lessons
-    const lessons = await prisma.lesson.findMany({
-      where: { status: "PUBLISHED" },
-      select: {
-        id: true,
-        title: true,
-        cefrLevel: true,
-        topic: true,
-      },
-    });
-
-    // Get vocabulary due count
-    const vocabDueCount = await prisma.vocabularyMastery.count({
-      where: {
-        userId,
-        nextReviewAt: { lte: new Date() },
-      },
-    });
+    const [profile, skillMasteries, lessons, vocabDueCount, attempts, learningSessions] = await Promise.all([
+      prisma.learnerProfile.findUnique({ where: { userId } }),
+      prisma.skillMastery.findMany({ where: { userId } }),
+      prisma.lesson.findMany({
+        where: { status: "PUBLISHED" },
+        select: { id: true, title: true, cefrLevel: true, topic: true },
+      }),
+      prisma.vocabularyMastery.count({
+        where: { userId, nextReviewAt: { lte: new Date() } },
+      }),
+      prisma.attempt.findMany({
+        where: { userId },
+        select: { lessonId: true, score: true, createdAt: true },
+      }),
+      prisma.learningSession.findMany({
+        where: { userId, lessonId: { not: null } },
+        select: {
+          lessonId: true,
+          status: true,
+          updatedAt: true,
+          completedAt: true,
+          evidence: { select: { score: true } },
+        },
+      }),
+    ]);
 
     const weakSkills = skillMasteries
       .filter((s) => s.masteryScore < 0.5)
       .map((s) => s.skillKey);
 
-    const candidates = lessons.map((l) => ({
-      id: l.id,
-      title: l.title,
-      cefrLevel: l.cefrLevel as CefrLevel,
-      topic: l.topic,
-      difficulty: 1.0,
-      completed: false,
-      score: 0,
-      teacherPriority: 0,
-      isNew: true,
-    }));
+    const candidates = lessons.map((lesson) => {
+      const progress = getLessonProgress(lesson.id, attempts, learningSessions);
+      return {
+        id: lesson.id,
+        title: lesson.title,
+        cefrLevel: lesson.cefrLevel as CefrLevel,
+        topic: lesson.topic,
+        difficulty: 1.0,
+        completed: progress.completed,
+        score: progress.score,
+        teacherPriority: 0,
+        isNew: progress.isNew,
+      };
+    });
 
     const context = {
       estimatedCefrLevel: (profile?.estimatedCefrLevel ?? "A2") as CefrLevel,
