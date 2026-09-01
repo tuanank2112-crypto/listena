@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { speak } from "@/core/tts/speech";
 import { InterventionRenderer } from "@/features/learning-session/intervention-renderer";
+import { makeClientId } from "@/features/learning-session/client-id";
 import {
   createInitialPlayerState,
   learningSessionPlayerReducer,
@@ -55,10 +56,6 @@ interface TurnEnvelope {
   aiTurn?: SessionTurn;
   intervention?: PublicIntervention | null;
   error?: string;
-}
-
-function makeClientId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`;
 }
 
 function mergeTurnEnvelope(payload: TurnEnvelope) {
