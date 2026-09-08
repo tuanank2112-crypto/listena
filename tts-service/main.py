@@ -7,6 +7,7 @@ Mỗi worker uvicorn load một bản sao model vào RAM — chỉ chạy 1 work
 """
 
 import hashlib
+import hmac
 import io
 import os
 import time
@@ -14,7 +15,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 import numpy as np
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel
 
@@ -46,6 +47,13 @@ app = FastAPI(title="ListenAI VieNeu TTS")
 _vieneu = None
 _model_voices: list[VoiceInfo] = []
 
+def require_key(x_tts_key: str | None = Header(default=None)):
+    secret = os.getenv("TTS_API_KEY", "").strip()
+    if not secret:
+        raise HTTPException(status_code=503, detail="Speech service is not configured")
+    if not x_tts_key or not hmac.compare_digest(x_tts_key.encode(), secret.encode()):
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 @app.on_event("startup")
 def warmup():
     """Khởi tạo Vieneu và warm-up model để first request không bị cold-start."""
@@ -63,11 +71,11 @@ def warmup():
     elapsed = time.time() - t0
     print(f"[startup] VieNeu warmed up in {elapsed:.1f}s – {len(_model_voices)} voices")
 
-@app.get("/voices")
+@app.get("/voices", dependencies=[Depends(require_key)])
 def list_voices() -> list[VoiceInfo]:
     return _model_voices
 
-@app.post("/tts")
+@app.post("/tts", dependencies=[Depends(require_key)])
 def synthesize(req: TTSRequest) -> Response:
     if not req.text.strip():
         raise HTTPException(status_code=400, detail="Text is empty")
@@ -86,7 +94,7 @@ def synthesize(req: TTSRequest) -> Response:
             "X-TTS-Cache": "HIT",
             "X-TTS-Engine": ENGINE_VERSION,
             "X-TTS-Voice": quote(voice, safe=""),
-            "Cache-Control": "public, max-age=31536000, immutable",
+            "Cache-Control": "private, no-store",
         })
 
     if _vieneu is None:

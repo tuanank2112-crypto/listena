@@ -68,6 +68,7 @@ export interface LearningMetrics {
 
 export interface DashboardData {
   greeting: string;
+  activeSession: { id: string; goal: string } | null;
   continueLessonId: string | null;
   recommendedLesson: {
     id: string;
@@ -86,4 +87,21 @@ export interface DashboardData {
     score: number;
     createdAt: Date;
   }>;
+  timeline: LearnerTimeline;
+}
+
+export type TimelineItemKind = "SESSION" | "EVIDENCE" | "ATTEMPT" | "REVIEW";
+
+/** Public learner activity only. It intentionally excludes transcripts and answers. */
+export interface TimelineItem {
+  kind: TimelineItemKind;
+  id: string;
+  createdAt: string;
+  score?: number;
+  skillKey?: string;
+}
+
+export interface LearnerTimeline {
+  items: TimelineItem[];
+  weeklyStudyTime: number;
 }

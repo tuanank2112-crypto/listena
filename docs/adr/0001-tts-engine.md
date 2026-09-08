@@ -2,6 +2,14 @@
 
 **Trạng thái:** Đã cập nhật — kiến trúc hai đường dẫn (dual-path) cho tiếng Anh và tiếng Việt.
 
+## Cập nhật 2026-09-08 (ưu tiên hơn mô tả lịch sử bên dưới)
+
+- Next `GET/POST /api/tts/vie` yêu cầu session đăng nhập trước khi truy cập cache/sidecar. Sidecar kiểm `X-TTS-Key`; thiếu secret trả 503, key sai/thiếu trả 401.
+- Cache mới của Next dùng `TTS_PROXY_CACHE_DIR=tts-service/cache/proxy`, không ở public; response `Cache-Control: private, no-store`. Cơ chế này thay thế quyết định cache public immutable trước đây cho audio văn bản học viên. Cache sidecar vẫn riêng qua `TTS_CACHE_DIR`.
+- Docker truyền shared secret và bind cổng 8001 ở 127.0.0.1. Giọng để trống được resolve từ danh sách runtime phía server.
+- Runtime tiếng Anh là Web Speech; Kokoro chỉ còn legacy, không tải model từ client. Tiếng Việt có Web Speech fallback nếu khả dụng trên thiết bị.
+- Chi phí/latency/RAM và chất lượng giọng thực tế chưa được đo trong đợt này; các con số/phát biểu lịch sử bên dưới không phải bằng chứng nghiệm thu. Xem Plan 03 TESTING-ACCEPTANCE để biết kiểm tra nào đã chạy.
+
 ## Bối cảnh
 
 ListenAI là ứng dụng tự học tiếng Anh A2 cho người Việt. Nội dung giảng dạy chủ yếu bằng tiếng Anh, nhưng gia sư AI (tutor) và chú giải từ vựng có thể sử dụng tiếng Việt. Do đó, hệ thống giọng đọc cần hỗ trợ cả hai ngôn ngữ với chất lượng tự nhiên, độ trễ thấp và chi phí vận hành bằng không.

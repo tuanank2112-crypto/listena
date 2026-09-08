@@ -94,7 +94,16 @@ export const GeneratedInterventionSchema = z.discriminatedUnion("type", [
   ChoiceInterventionSchema,
   ReorderInterventionSchema,
   TextInterventionSchema,
-]);
+]).superRefine((intervention, context) => {
+  if (intervention.type === "CHOICE" &&
+      intervention.validator.correctIndex >= intervention.spec.options.length) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["validator", "correctIndex"],
+      message: "Correct choice must refer to an available option",
+    });
+  }
+});
 
 export const TutorTurnOutputSchema = z.object({
   npcReply: z.string().trim().min(1).max(700),

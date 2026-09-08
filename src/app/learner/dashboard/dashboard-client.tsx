@@ -5,10 +5,10 @@ import { motion } from "framer-motion";
 import { ArrowRight, BookOpen, CalendarCheck2, Flame, Gamepad2, Sparkles, Target } from "lucide-react";
 import type { DashboardData } from "@/types";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
+import { LearnerTimeline } from "@/components/learner-timeline";
 
 export function LearnerDashboard({ data }: { data: DashboardData }) {
   const mastery = Math.round(((data.listeningMastery + data.vocabularyMastery) / 2) * 100);
-  const lessonTitle = data.recommendedLesson?.title.replace(/^Bài \d+ - /, "") ?? "INTRODUCTION";
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
@@ -26,12 +26,16 @@ export function LearnerDashboard({ data }: { data: DashboardData }) {
       <div className="grid gap-4 lg:grid-cols-[1.55fr_.75fr]">
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="paper-card paper-grid relative min-h-[290px] overflow-hidden rounded-[32px] p-6 sm:p-8">
           <div className="relative z-10 max-w-lg">
-            <span className="inline-flex items-center gap-2 rounded-full bg-[#dff2e8] px-3 py-1.5 text-xs font-black text-[#176b55]"><Target className="h-3.5 w-3.5" /> Tiếp tục</span>
-            <h2 className="mt-7 text-4xl font-black tracking-[-.06em] sm:text-5xl">{lessonTitle}</h2>
-            <p className="mt-3 text-sm font-bold text-[#748079]">10 phút · A2</p>
-            <Link href={data.continueLessonId ? `/learner/lessons/${data.continueLessonId}` : "/learner/lessons"} className="mt-8 inline-flex min-h-13 items-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(23,107,85,.2)]">
-              Vào bài <ArrowRight className="h-4 w-4" />
-            </Link>
+            <span className="inline-flex items-center gap-2 rounded-full bg-[#dff2e8] px-3 py-1.5 text-xs font-black text-[#176b55]"><Target className="h-3.5 w-3.5" /> Học cùng AI</span>
+            <h2 className="mt-7 text-3xl font-black tracking-[-.06em] sm:text-4xl">{data.activeSession ? "Tiếp tục câu chuyện của bạn." : "Hôm nay, bạn sẽ nói gì?"}</h2>
+            <p className="mt-3 text-sm font-bold text-[#748079]">{data.activeSession?.goal ?? "Một nhiệm vụ ngắn dựa trên kỹ năng và từ vựng bạn cần luyện."}</p>
+            {data.activeSession ? (
+              <Link href={`/learner/session/${data.activeSession.id}`} className="mt-8 inline-flex min-h-13 items-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(23,107,85,.2)]">
+                Tiếp tục phiên AI <ArrowRight className="h-4 w-4" />
+              </Link>
+            ) : (
+              <StartSessionButton mode="DAILY_QUEST" lessonId={data.continueLessonId ?? undefined} label="Bắt đầu cùng AI" className="mt-8" />
+            )}
           </div>
           <div className="absolute -bottom-12 -right-8 hidden h-64 w-64 rounded-full bg-[#f7d779] sm:block" />
           <BookOpen className="absolute bottom-10 right-12 hidden h-28 w-28 rotate-[-8deg] text-[#18332d] sm:block" strokeWidth={1.2} />
@@ -56,7 +60,7 @@ export function LearnerDashboard({ data }: { data: DashboardData }) {
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-[#f7d779] text-[#18332d]"><CalendarCheck2 className="h-6 w-6" /></span>
           <div>
             <p className="text-[11px] font-black uppercase tracking-[.16em] text-[#9b6b13]">Daily AI Quest</p>
-            <h2 className="mt-1 text-xl font-black tracking-[-.03em]">AI đã chuẩn bị một tình huống cho bạn.</h2>
+            <h2 className="mt-1 text-xl font-black tracking-[-.03em]">Tạo tình huống tiếp theo cùng AI.</h2>
             <p className="mt-1 text-sm font-bold text-[#776b48]">Dùng bài đang học, từ đến hạn và kỹ năng yếu để tạo nhiệm vụ 5-8 phút.</p>
           </div>
         </div>
@@ -90,6 +94,11 @@ export function LearnerDashboard({ data }: { data: DashboardData }) {
           </div>
         </section>
       )}
+
+      <section className="mt-8">
+        <div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black">Nhịp học gần đây</h2><Link href="/learner/progress" className="text-xs font-black text-[#176b55]">Xem tất cả</Link></div>
+        <LearnerTimeline items={data.timeline.items} limit={3} />
+      </section>
     </div>
   );
 }

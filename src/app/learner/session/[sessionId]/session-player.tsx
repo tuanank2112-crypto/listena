@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { speak } from "@/core/tts/speech";
 import { InterventionRenderer } from "@/features/learning-session/intervention-renderer";
+import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import { makeClientId } from "@/features/learning-session/client-id";
 import {
   createInitialPlayerState,
@@ -34,6 +35,8 @@ import {
   getPendingIntervention,
   type PublicIntervention,
   type PublicLearningSession,
+  type LearningSessionEnvelope,
+  type NextAction,
   type SessionPhase,
   type SessionTurn,
   type TurnSubmission,
@@ -55,6 +58,7 @@ interface TurnEnvelope {
   learnerTurn?: SessionTurn;
   aiTurn?: SessionTurn;
   intervention?: PublicIntervention | null;
+  nextAction?: NextAction | null;
   error?: string;
 }
 
@@ -114,9 +118,9 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
     dispatch({ type: "LOAD_START" });
     try {
       const response = await fetch(`/api/learning-sessions/${sessionId}`, { cache: "no-store", signal: controller.signal });
-      const payload = (await response.json()) as { session?: PublicLearningSession; error?: string };
+      const payload = (await response.json()) as LearningSessionEnvelope;
       if (!response.ok || !payload.session) throw new Error(payload.error || "Không thể tải phiên học.");
-      dispatch({ type: "LOAD_SUCCESS", session: payload.session, now: Date.now() });
+      dispatch({ type: "LOAD_SUCCESS", session: payload.session, nextAction: payload.nextAction ?? null, now: Date.now() });
     } catch (caught) {
       if (controller.signal.aborted) return;
       dispatch({ type: "LOAD_FAILURE", error: caught instanceof Error ? caught.message : "Không thể tải phiên học." });
@@ -174,7 +178,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
       });
       const payload = (await response.json()) as TurnEnvelope;
       if (!response.ok) throw new Error(payload.error || "AI chưa phản hồi. Thử lại nhé.");
-      dispatch({ type: "SUBMIT_SUCCESS", session: mergeTurnEnvelope(payload), now: Date.now() });
+      dispatch({ type: "SUBMIT_SUCCESS", session: mergeTurnEnvelope(payload), nextAction: payload.nextAction ?? null, now: Date.now() });
     } catch (caught) {
       dispatch({ type: "SUBMIT_FAILURE", error: caught instanceof Error ? caught.message : "AI chưa phản hồi. Thử lại nhé." });
     }
@@ -185,9 +189,9 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
     dispatch({ type: "COMPLETE_START" });
     try {
       const response = await fetch(`/api/learning-sessions/${sessionId}/complete`, { method: "POST" });
-      const payload = (await response.json()) as { session?: PublicLearningSession; error?: string };
+      const payload = (await response.json()) as LearningSessionEnvelope;
       if (!response.ok || !payload.session) throw new Error(payload.error || "Chưa thể kết thúc phiên.");
-      dispatch({ type: "COMPLETE_SUCCESS", session: payload.session });
+      dispatch({ type: "COMPLETE_SUCCESS", session: payload.session, nextAction: payload.nextAction ?? null });
     } catch (caught) {
       dispatch({ type: "COMPLETE_FAILURE", error: caught instanceof Error ? caught.message : "Chưa thể kết thúc phiên." });
     }
@@ -222,7 +226,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   }
 
   if (player.phase === "completed" || session.status === "COMPLETED") {
-    return <Debrief session={session} />;
+    return <Debrief session={session} nextAction={player.nextAction} />;
   }
 
   const mission = session.state;
@@ -276,7 +280,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
             </AnimatePresence>
 
             {pendingIntervention && (
-              <InterventionRenderer intervention={pendingIntervention} disabled={busy} onReplay={replay} onSubmit={(content) => void submitTurn(content, pendingIntervention.id)} />
+              <InterventionRenderer key={pendingIntervention.id} intervention={pendingIntervention} disabled={busy} onReplay={replay} onSubmit={(content) => void submitTurn(content, pendingIntervention.id)} />
             )}
             <div ref={conversationEndRef} />
           </div>
@@ -436,7 +440,7 @@ function MissionSidebar({ session, learnerTurns, onComplete, completing }: { ses
   );
 }
 
-function Debrief({ session }: { session: PublicLearningSession }) {
+function Debrief({ session, nextAction }: { session: PublicLearningSession; nextAction: NextAction | null }) {
   const state = session.state;
   return (
     <div className="mx-auto flex min-h-[78vh] max-w-3xl items-center px-4 py-10 sm:px-6">
@@ -457,6 +461,8 @@ function Debrief({ session }: { session: PublicLearningSession }) {
             ].map((item) => <div key={item.label} className="rounded-2xl bg-[#f4efe5] p-4"><p className="text-2xl font-black text-[#176b55]">{item.value}</p><p className="mt-1 text-[10px] font-black uppercase tracking-[.1em] text-[#7b857f]">{item.label}</p></div>)}
           </div>
 
+          {nextAction && <NextActionCard action={nextAction} />}
+
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">Tiếp tục học <ArrowRight className="h-4 w-4" /></Link>
             <Link href="/learner/dashboard" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#eee7da] px-5 text-sm font-black">Về trang hôm nay</Link>
@@ -464,6 +470,45 @@ function Debrief({ session }: { session: PublicLearningSession }) {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+function NextActionCard({ action }: { action: NextAction }) {
+  const label = action.kind === "COACH"
+    ? "Học cùng Coach"
+    : action.kind === "QUEST"
+      ? "Bắt đầu Daily Quest"
+      : action.kind === "MISSION"
+        ? "Vào Mission tiếp theo"
+        : "Luyện lại phần này";
+
+  return (
+    <section className="mt-7 rounded-[26px] border border-[#ecd48b] bg-[#fff1bd] p-5">
+      <p className="text-[11px] font-black uppercase tracking-[.16em] text-[#9b6b13]">Bước tiếp theo</p>
+      <p className="mt-2 text-sm font-bold leading-6 text-[#675119]">{action.reason}</p>
+      <div className="mt-4">
+        {action.kind === "COACH" && action.targetId && (
+          <StartSessionButton mode="LESSON_COACH" lessonId={action.targetId} label={label} />
+        )}
+        {action.kind === "QUEST" && action.targetId && (
+          <StartSessionButton mode="DAILY_QUEST" lessonId={action.targetId} label={label} />
+        )}
+        {action.kind === "MISSION" && action.scenarioKey && (
+          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} label={label} />
+        )}
+        {action.kind === "PRACTICE" && action.scenarioKey && (
+          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} goal={action.goal} label={label} />
+        )}
+        {((action.kind === "PRACTICE" && !action.scenarioKey) ||
+          (action.kind === "COACH" && !action.targetId) ||
+          (action.kind === "QUEST" && !action.targetId) ||
+          (action.kind === "MISSION" && !action.scenarioKey)) && (
+          <Link href="/learner/games" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#18332d] px-5 text-sm font-black text-white">
+            {label} <ArrowRight className="h-4 w-4 text-[#f7d779]" />
+          </Link>
+        )}
+      </div>
+    </section>
   );
 }
 

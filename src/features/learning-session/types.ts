@@ -6,6 +6,21 @@ export type TurnActor = "LEARNER" | "AI" | "SYSTEM";
 export type TurnType = "PROMPT" | "RESPONSE" | "COACH" | "INTERVENTION" | "RESULT" | "REFLECTION";
 export type InterventionType = "CHOICE" | "REORDER" | "RETRY" | "USE_IN_SENTENCE" | "FILL_BLANK";
 
+export type NextActionKind = "COACH" | "MISSION" | "QUEST" | "PRACTICE";
+
+/**
+ * An additive, public recommendation contract shared by API consumers and
+ * client components. It intentionally contains only navigation-safe values.
+ */
+export interface NextAction {
+  kind: NextActionKind;
+  targetId?: string;
+  scenarioKey?: string;
+  goal?: string;
+  reason: string;
+  evidenceRefs: string[];
+}
+
 export interface MissionState {
   phase: SessionPhase;
   scenarioKey: string;
@@ -86,6 +101,12 @@ export interface PublicLearningSession {
   startedAt: string;
   updatedAt: string;
   completedAt: string | null;
+}
+
+export interface LearningSessionEnvelope {
+  session?: PublicLearningSession;
+  nextAction?: NextAction | null;
+  error?: string;
 }
 
 export interface TurnSubmission {

@@ -42,6 +42,7 @@ describe("learningSessionPlayerReducer", () => {
     const result = learningSessionPlayerReducer(createInitialPlayerState(10), {
       type: "LOAD_SUCCESS",
       session: session(),
+      nextAction: null,
       now: 20,
     });
 
@@ -68,10 +69,29 @@ describe("learningSessionPlayerReducer", () => {
     let state = createInitialPlayerState();
     state = learningSessionPlayerReducer(state, { type: "COUNT_HINT" });
     state = learningSessionPlayerReducer(state, { type: "COUNT_REPLAY" });
-    state = learningSessionPlayerReducer(state, { type: "SUBMIT_SUCCESS", session: session(), now: 50 });
+    state = learningSessionPlayerReducer(state, { type: "SUBMIT_SUCCESS", session: session(), nextAction: null, now: 50 });
 
     expect(state.hintCount).toBe(0);
     expect(state.replayCount).toBe(0);
     expect(state.draft).toBe("");
+  });
+
+  it("keeps a completed session recommendation after automatic completion or reload", () => {
+    const nextAction = {
+      kind: "MISSION" as const,
+      scenarioKey: "cafe-order",
+      reason: "Use the skill again.",
+      evidenceRefs: ["evidence-1"],
+    };
+    const completed = session("COMPLETED");
+    const afterTurn = learningSessionPlayerReducer(createInitialPlayerState(), {
+      type: "SUBMIT_SUCCESS", session: completed, nextAction, now: 30,
+    });
+    const afterReload = learningSessionPlayerReducer(createInitialPlayerState(), {
+      type: "LOAD_SUCCESS", session: completed, nextAction, now: 40,
+    });
+
+    expect(afterTurn.nextAction).toEqual(nextAction);
+    expect(afterReload.nextAction).toEqual(nextAction);
   });
 });

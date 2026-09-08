@@ -47,15 +47,9 @@ export const learnerRepo = {
     easeFactor?: number;
     repetitionCount?: number;
   }) {
-    const existing = await this.getVocabularyMastery(userId, vocabularyItemId);
-    if (existing) {
-      return prisma.vocabularyMastery.update({
-        where: { id: existing.id },
-        data,
-      });
-    }
-    return prisma.vocabularyMastery.create({
-      data: {
+    return prisma.vocabularyMastery.upsert({
+      where: { userId_vocabularyItemId: { userId, vocabularyItemId } },
+      create: {
         userId,
         vocabularyItemId,
         masteryScore: data.masteryScore,
@@ -66,6 +60,20 @@ export const learnerRepo = {
         intervalDays: data.intervalDays ?? 0,
         easeFactor: data.easeFactor ?? 2.5,
         repetitionCount: data.repetitionCount ?? 0,
+      },
+      update: {
+        masteryScore: data.masteryScore,
+        ...(data.correctCount !== undefined
+          ? { correctCount: { increment: data.correctCount } }
+          : {}),
+        ...(data.incorrectCount !== undefined
+          ? { incorrectCount: { increment: data.incorrectCount } }
+          : {}),
+        ...(data.lastReviewedAt !== undefined ? { lastReviewedAt: data.lastReviewedAt } : {}),
+        ...(data.nextReviewAt !== undefined ? { nextReviewAt: data.nextReviewAt } : {}),
+        ...(data.intervalDays !== undefined ? { intervalDays: data.intervalDays } : {}),
+        ...(data.easeFactor !== undefined ? { easeFactor: data.easeFactor } : {}),
+        ...(data.repetitionCount !== undefined ? { repetitionCount: data.repetitionCount } : {}),
       },
     });
   },

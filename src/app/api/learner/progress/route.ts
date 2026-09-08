@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
+import { getLearnerTimeline } from "@/server/learning/timeline";
 
 export async function GET() {
   try {
@@ -12,8 +13,11 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    const profile = await prisma.learnerProfile.findUnique({ where: { userId } });
-    const skillMasteries = await prisma.skillMastery.findMany({ where: { userId } });
+    const [profile, skillMasteries, timeline] = await Promise.all([
+      prisma.learnerProfile.findUnique({ where: { userId } }),
+      prisma.skillMastery.findMany({ where: { userId } }),
+      getLearnerTimeline(userId),
+    ]);
 
     const recentAttempts = await prisma.attempt.findMany({
       where: { userId },
@@ -26,15 +30,18 @@ export async function GET() {
       where: {
         userId,
         active: true,
-        vocabularyItem: {
-          mastery: {
-            some: { userId, nextReviewAt: { lte: new Date() } },
+        OR: [
+          { vocabularyItem: { mastery: { none: { userId } } } },
+          {
+            vocabularyItem: {
+              mastery: {
+                some: { userId, nextReviewAt: { lte: new Date() } },
+              },
+            },
           },
-        },
+        ],
       },
     });
-
-    const weeklyStudyTime = Math.min(profile?.totalStudyMinutes ?? 0, 120);
 
     return NextResponse.json({
       listeningMastery: profile?.listeningMastery ?? 0.5,
@@ -42,7 +49,7 @@ export async function GET() {
       spellingMastery: profile?.spellingMastery ?? 0.5,
       totalStudyMinutes: profile?.totalStudyMinutes ?? 0,
       currentStreak: profile?.currentStreak ?? 0,
-      weeklyStudyTime,
+      weeklyStudyTime: timeline.weeklyStudyTime,
       cardsDueToday,
       recentScores: recentAttempts.map((a) => ({
         date: a.createdAt.toISOString(),

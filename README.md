@@ -1,154 +1,87 @@
 # ListenAI
 
-Sản phẩm tự học tiếng Anh A2 với bài học ngắn, trò chơi từ vựng, chấm bài, flashcard SRS và gia sư AI có truy xuất dữ liệu giáo trình.
+Ứng dụng tự học tiếng Anh AI-native cho người Việt. Mission, Lesson Coach và Daily Quest dẫn dắt vòng học: trả lời → phản hồi → sửa lỗi → evidence → mastery/memory → hoạt động tiếp theo. Bài học, trò chơi từ vựng và flashcards hỗ trợ luyện tập.
 
-## Trải nghiệm AI-first
+## Kiến trúc
 
-ListenAI hiện dùng `LearningSession` nhiều lượt thay cho việc chỉ hỏi đáp một lần:
+Next.js 16.3.1 App Router, React 19, TypeScript, Auth.js Credentials/JWT, Prisma 6 và SQLite. Tutor dùng provider tương thích OpenAI hoặc fallback xác định; server giữ validator, điểm, trạng thái và evidence.
 
-- **Lesson Coach:** AI bám theo title/topic/objective/transcript/vocabulary của bài, hỏi gợi mở và chỉ sửa một điểm mỗi lượt.
-- **Mission Talk:** ba tình huống nhập vai `lost-luggage`, `cafe-order`, `mystery-clue`; câu trả lời của học viên làm state nhiệm vụ thay đổi.
-- **Comeback challenge:** lỗi quan trọng được chuyển thành `CHOICE`, `REORDER`, `RETRY`, `USE_IN_SENTENCE` hoặc `FILL_BLANK`, chấm bằng validator chỉ tồn tại phía server.
-- **Daily AI Quest:** chọn kỹ năng yếu và từ đến hạn để lập nhiệm vụ ngắn; có deterministic fallback khi AI provider không khả dụng.
-- **Resume và evidence:** session/turn/intervention được lưu, reload không mất hội thoại; evidence cập nhật `SkillMastery` và quick game cập nhật SRS.
+- Session/turn/intervention được lưu để tải lại hội thoại. `clientTurnId` chống ghi trùng.
+- Evidence, mastery và learner memory ghi trong cùng transaction. Memory có kiểu dữ liệu được kiểm tra và chỉ bản tóm tắt giới hạn được đưa vào ngữ cảnh tutor.
+- Session hoàn tất có đề xuất tiếp theo trong phản hồi API; giao diện mở Coach, Mission, Quest hoặc Mission luyện sửa lỗi có mục tiêu.
+- Dashboard/progress dùng timeline gồm phiên AI, evidence, bài luyện và lượt ôn thẻ. Tổng phút tuần tính từ toàn bộ phiên hoàn tất trong bảy ngày, độc lập với giới hạn 50 mục hiển thị.
 
-Kiến trúc và contract: `docs/AI_FIRST_ARCHITECTURE.md`.
+Chi tiết: [Learning runtime](docs/learning.md), [AI architecture](docs/AI_FIRST_ARCHITECTURE.md), [Plan 03 và nghiệm thu](planning/03_2026-09-08_learning-loop-completion/plan.md).
 
 ## Chạy local
 
+Dùng Node.js theo `.nvmrc`. Sao chép `.env.example` thành `.env`, đặt `DATABASE_URL` tới SQLite local và cấu hình auth secret.
+
 ```bash
 npm install
-npm run db:push
-npm run db:seed
-npm run dataset:import
+```
+
+Chỉ với database demo mới: `npm run db:push`, `npm run db:seed`, rồi `npm run dataset:import`. Seed xóa dữ liệu hiện có; không chạy trên database có tiến độ người học. Với database đang dùng, áp dụng migrations phù hợp sau khi sao lưu.
+
+```bash
 npm run dev
 ```
 
-Mở `http://localhost:3000`.
+Mở `http://localhost:3000`. Database demo có `learner@example.com` và `teacher@example.com`, mật khẩu `demo1234`.
 
-Tài khoản demo:
+## Dataset và hoạt động học
 
-- Học viên: `learner@example.com` / `demo1234`
-- Giáo viên: `teacher@example.com` / `demo1234`
+Dataset gồm 5 unit, 116 từ vựng, 10 chủ điểm ngữ pháp, 54 bộ bài tập và 200 knowledge chunks. `npm run dataset:import` nhập idempotent. Nội dung Educaplay tham khảo giữ DRAFT, không thuộc curriculum học viên.
 
-## Dataset
+Game Hub ưu tiên Mission và Daily Quest; Quick comeback gồm chọn nhanh, ghép cặp, nghe và viết. Curriculum dựa vào trạng thái PUBLISHED, không phụ thuộc tên khóa học.
 
-`npm run dataset:import` nhập idempotent 5 unit TATQHP1:
+## AI provider
 
-- 116 từ vựng đã chuẩn hóa nghĩa
-- 10 chủ điểm ngữ pháp
-- 54 bộ bài tập
-- 200 knowledge chunks cho tutor
-
-Bài Educaplay Đà Nẵng chỉ được dùng để đối chiếu format gameplay/audio và được giữ ở trạng thái `DRAFT`, không xuất hiện trong curriculum học viên và không phát audio.
-
-## Game Hub
-
-Trang `/learner/games` ưu tiên AI Mission và Daily Quest. Ba chế độ từ vựng cũ được giữ dưới nhóm **Quick comeback**:
-
-- Chọn nhanh
-- Ghép cặp
-- Nghe & viết
-
-Mỗi session có timer, tim, điểm, feedback và chơi lại.
-
-## Gia sư AI
-
-Mặc định tutor dùng retrieval nội bộ từ dataset, không cần API key. Để dùng model tương thích OpenAI:
+Mặc định dùng mock/fallback với retrieval từ dataset, không cần API key. Cấu hình provider bên ngoài bằng:
 
 ```env
 AI_PROVIDER=openai
 OPENAI_API_KEY=...
-OPENAI_MODEL=gpt-4o-mini
+OPENAI_MODEL=your-model
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-Nếu provider lỗi, hệ thống tự fallback về dataset retrieval. Trả lời của tutor bằng tiếng Việt — nhánh giọng đọc tiếng Việt sẽ dùng VieNeu (xem dưới).
+Provider lỗi hoặc trả dữ liệu không hợp lệ sẽ dùng fallback. Eval mock kiểm hợp đồng/phase/grounding nội bộ; không chứng minh hiệu quả học tập với người học thật.
 
 ## Giọng đọc
 
-ListenAI dùng kiến trúc **hai đường dẫn (dual-path)**:
+Tiếng Anh dùng Web Speech API và giọng hệ thống. Kokoro không đăng ký trong runtime; script `tts:prebuild` và thư viện Kokoro còn là legacy, không cần chạy để dùng app.
 
-### 1. Tiếng Anh — Voice hệ thống miễn phí
+Tiếng Việt dùng VieNeu sidecar; khi không khả dụng, speech controller thử Web Speech nếu thiết bị có giọng phù hợp.
 
-Mọi nội dung tiếng Anh (từ vựng, câu ví dụ, trò chơi Nghe & viết, flashcard) dùng Web Speech API với giọng hệ thống miễn phí:
+- `GET/POST /api/tts/vie` yêu cầu đăng nhập.
+- App và sidecar phải có cùng `TTS_API_KEY`. Thiếu cấu hình sẽ từ chối phục vụ.
+- App dùng `VIENEU_URL` (mặc định `http://localhost:8001`). Có thể để trống `VIENEU_DEFAULT_VOICE` để lấy giọng từ sidecar.
+- Cache mới của Next nằm ở `TTS_PROXY_CACHE_DIR` (mặc định `tts-service/cache/proxy`), ngoài `public/`; phản hồi audio dùng `Cache-Control: private, no-store`.
+- Cache riêng của sidecar dùng `TTS_CACHE_DIR`; Docker đặt `/app/cache`. Các file public audio được sinh trước đây không tự bị xóa.
 
-- Bấm là phát ngay, không tải voice/model trên web.
-- Không dùng Google voice vì thiếu cảm xúc/nhấn nhá.
-- Ưu tiên Natural → Premium/Enhanced → Microsoft/Apple → voice hệ thống khác.
-
-### 2. Tiếng Việt — VieNeu-TTS (sidecar)
-
-Mọi nội dung tiếng Việt (feedback của tutor, chú giải nghĩa) dùng VieNeu:
-
-- Sidecar FastAPI trong `tts-service/`, package `vieneu==3.3.0` (pin chính xác).
-- `Vieneu(mode="v3turbo", precision="int8")` khởi tạo một lần, warm-up lúc startup.
-- Next.js gọi sidecar qua API route nội bộ `/api/tts/vie` — **không expose public**.
-- Xác thực giữa Next.js và sidecar bằng shared secret `TTS_API_KEY`.
-- Audio cache trên **đĩa** (thư mục `TTS_CACHE_DIR`), trả header `Cache-Control: immutable`.
-- Với sidecar down, ứng dụng vẫn chạy — chỉ mất audio tiếng Việt, không crash.
-
-### Cấu hình môi trường
-
-Xem `.env.example`:
-
-```env
-NEXT_PUBLIC_KOKORO_MODEL_ID=onnx-community/Kokoro-82M-v1.0-ONNX
-NEXT_PUBLIC_KOKORO_DEFAULT_VOICE=bf_emma
-VIENEU_URL=http://localhost:8001
-TTS_API_KEY=
-TTS_CACHE_DIR=public/tts
-KOKORO_MODEL_ID=onnx-community/Kokoro-82M-v1.0-ONNX
-KOKORO_DEFAULT_VOICE=bf_emma
-VIENEU_DEFAULT_VOICE=
-```
-
-### Prebuild audio
-
-Chạy để sinh sẵn audio 116 từ vựng (Kokoro) và nội dung tiếng Việt (VieNeu) vào `public/tts`:
-
-```bash
-npm run tts:prebuild
-```
-
-Lệnh này tạo file `.wav` theo khóa cache, trình duyệt sẽ đọc từ `/tts/kokoro/<key>.wav` thay vì tổng hợp lại.
-
-### Chạy sidecar VieNeu
+Chạy sidecar trực tiếp với cùng secret trong môi trường shell:
 
 ```bash
 cd tts-service
 pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8001 --workers 1
+uvicorn main:app --host 127.0.0.1 --port 8001 --workers 1
 ```
 
-Hoặc dùng Docker (model bake vào image hoặc mount HuggingFace volume `HF_HOME`):
+Hoặc `docker compose build tts` rồi `docker compose up tts`. Compose truyền `TTS_API_KEY` và chỉ publish cổng TTS trên loopback. Sidecar dùng `vieneu==3.3.0`, khởi tạo model lúc startup; chỉ chạy một worker. Chất lượng giọng và tốc độ audio thực tế cần kiểm riêng với model đã cài.
+
+## Kiểm tra và triển khai
 
 ```bash
-docker compose build tts
-docker compose up tts
-```
-
-### Kiểm tra thủ công
-
-1. Chạy `npm run dev` + sidecar VieNeu, đăng nhập `learner@example.com` / `demo1234`.
-2. Mở `/learner/games`, chọn **Nghe và viết**, bấm loa → audio phát từ Kokoro (Network tab: request `/tts/kokoro/*.wav` hoặc IndexedDB).
-3. Mở flashcard, bấm loa hai lần → lần hai trả từ cache IndexedDB `listena-kokoro-audio`.
-4. Trong bài học, bấm hai từ liên tiếp → âm thanh cũ phải bị dừng.
-5. Chặn Web Worker trong DevTools → ứng dụng không sập, Web Speech chỉ là fallback cuối.
-6. Hỏi tutor bằng tiếng Việt → bấm nút loa trên phản hồi, audio phát từ VieNeu (header `X-TTS-Cache`, `X-TTS-Engine: vieneu-3.3.0`).
-7. Tắt sidecar VieNeu → ứng dụng vẫn chạy, chỉ mất audio tiếng Việt.
-
-## Kiểm tra
-
-- **Trạng thái cập nhật 2026-09-01:**
-  - [x] Type-check: `npm run type-check` PASS.
-  - [ ] Unit test: đã có test Vitest trong `src/**`, chưa chạy trong lần xác thực này.
-  - [ ] Lint: artifact hiện có 0 lỗi và 40 cảnh báo; chưa chạy trong lần xác thực này.
-  - [ ] Build: chưa chạy trong lần xác thực này.
-  - [ ] Production: cần xác minh Prisma migrations, biến môi trường, PostgreSQL và VieNeu sidecar trước khi deploy.
-
-```bash
-npm run type-check
 npm test
+npm run type-check
+npm run lint
+npm run eval
+npx prisma validate
 npm run build
+npm run test:e2e
 ```
+
+E2E dùng database SQLite mới trong thư mục temp, tự chạy migrations/seed/import với provider mock; không dùng database người học. Không chạy build và E2E đồng thời vì cùng dùng `.next`. Bằng chứng và giới hạn nghiệm thu cập nhật trong [TESTING-ACCEPTANCE](planning/03_2026-09-08_learning-loop-completion/specs/TESTING-ACCEPTANCE.md).
+
+`render.yaml` và dịch vụ PostgreSQL trong Compose là cấu hình hạ tầng chưa đồng bộ với SQLite hiện tại. Chưa triển khai production; cần kế hoạch chuyển provider, migration, backup/restore và cấu hình dịch vụ trước khi sử dụng.

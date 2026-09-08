@@ -22,6 +22,17 @@ export async function POST(req: Request) {
       );
     }
 
+    const course = await prisma.course.findUnique({
+      where: { id: parsed.data.courseId },
+      select: { createdById: true },
+    });
+    if (!course) {
+      return NextResponse.json({ error: "Course not found" }, { status: 404 });
+    }
+    if (course.createdById !== session.user.id && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const lesson = await prisma.lesson.create({
       data: {
         courseId: parsed.data.courseId,

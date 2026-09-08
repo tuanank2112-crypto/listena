@@ -1,13 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { GamesClient } from "./games-client";
 
-const COURSE_TITLE = "TATQHP1 - SOLUTIONS Pre-Intermediate";
-
 export default async function GamesPage() {
   const lessons = await prisma.lesson.findMany({
     where: {
-      course: { title: COURSE_TITLE },
-      title: { startsWith: "Bài " },
       status: "PUBLISHED",
     },
     orderBy: { title: "asc" },

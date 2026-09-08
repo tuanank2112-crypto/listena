@@ -1,22 +1,14 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+const geistSans = { variable: "--font-geist-sans" } as const;
+const geistMono = { variable: "--font-geist-mono" } as const;
 
 export const metadata: Metadata = {
-  title: "ListenAI - Học tiếng Anh thích ứng",
+  title: "ListenAI - Hoc tieng Anh thich ung",
   description:
-    "Hệ thống học tiếng Anh thích ứng với AI - Luyện nghe, chép chính tả, và học từ vựng thông minh.",
+    "He thong hoc tieng Anh thich ung voi AI - Luyen nghe, chep chinh ta, va hoc tu vung thong minh.",
 };
 
 export default function RootLayout({

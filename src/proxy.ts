@@ -31,7 +31,13 @@ export async function proxy(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+  // Match Auth.js URL precedence, including HTTPS behind a reverse proxy.
+  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? req.url;
+  const token = await getToken({
+    req,
+    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+    secureCookie: new URL(authUrl).protocol === "https:",
+  });
 
   if (!token) {
     const loginUrl = new URL("/login", req.url);
@@ -43,12 +49,12 @@ export async function proxy(req: NextRequest) {
 
   // Teacher routes protection
   if (hasSegment(pathname, "teacher") && role !== "TEACHER" && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/learner", req.url));
+    return NextResponse.redirect(new URL("/learner/dashboard", req.url));
   }
 
   // Learner routes protection
   if (hasSegment(pathname, "learner") && role !== "LEARNER" && role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/teacher", req.url));
+    return NextResponse.redirect(new URL("/teacher/dashboard", req.url));
   }
 
   // Admin routes protection

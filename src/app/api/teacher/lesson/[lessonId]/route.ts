@@ -29,6 +29,10 @@ export async function GET(
       return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
     }
 
+    if (lesson.createdById !== session.user.id && session.user.role !== "ADMIN") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     return NextResponse.json(lesson);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";

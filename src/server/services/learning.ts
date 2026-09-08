@@ -34,7 +34,7 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     include: { lesson: true },
   });
 
-  if (!exercise) {
+  if (!exercise || exercise.lesson.status !== "PUBLISHED") {
     throw new Error("Exercise not found");
   }
   if (exercise.lessonId !== params.lessonId) {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TutorTurnOutputSchema } from "@/server/validation/learning-session";
+import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
 import { DeterministicMockTutorProvider } from "@/server/ai/tutor-provider-contract";
 import {
   evaluateTutorTurn,
@@ -128,7 +129,22 @@ describe("tutor orchestrator", () => {
 
     expect(result.state.scenarioKey).toBe("cafe-order");
     expect(TutorTurnOutputSchema.safeParse(result.opening).success).toBe(true);
-    expect(result.meta.groundedKnowledgeIds.length).toBeGreaterThan(0);
+    expect(result.meta.groundedKnowledgeIds).toEqual([]);
+  });
+
+  it("completes a deterministic BOSS turn when the learner succeeds", async () => {
+    const state = createMissionState(getMissionTemplate("lost-luggage"));
+    state.phase = "BOSS";
+
+    const result = await evaluateTutorTurn(
+      { state, learnerMessage: "I lost my black suitcase." },
+      { provider: new DeterministicMockTutorProvider() },
+    );
+
+    expect(result.output).toMatchObject({
+      statePatch: expect.objectContaining({ phase: "DEBRIEF" }),
+      shouldComplete: true,
+    });
   });
 
   it("falls back deterministically when provider output violates the schema", async () => {

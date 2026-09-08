@@ -4,6 +4,7 @@ import {
   searchKnowledge,
 } from "@/server/dataset/catalog";
 import type { MissionTemplate } from "@/server/ai/mission-templates";
+import type { LearnerMemory } from "@/server/learner-memory/repository";
 
 export type TutorSkill =
   "listening" | "vocabulary" | "spelling" | "grammar" | "communication";
@@ -13,6 +14,7 @@ export interface LearnerTutorContext {
   preferredTopics?: string[];
   skillMastery?: Partial<Record<TutorSkill, number>>;
   dueVocabulary?: string[];
+  learnerMemory?: LearnerMemory;
 }
 
 export interface LessonTutorContext {
@@ -43,6 +45,7 @@ export interface GroundedTutorContext {
     preferredTopics: string[];
     weakestSkills: TutorSkill[];
     dueVocabulary: string[];
+    memory?: BoundedLearnerMemory;
   };
   lesson: {
     title?: string;
@@ -62,24 +65,27 @@ export interface GroundedTutorContext {
   verifiedKnowledge: GroundedKnowledgeSource[];
 }
 
+export interface BoundedLearnerMemory {
+  goals: Array<{ text: string }>;
+  recurringErrors: Array<{ errorType: string; count: number }>;
+  provenSkills: Array<{
+    skillKey: string;
+    masteryScore: number;
+    evidenceCount: number;
+  }>;
+  preferredTopics: string[];
+}
+
 export function buildGroundedTutorContext(input: {
   template: MissionTemplate;
+  learnerGoal?: string;
   learnerMessage?: string;
   learnerContext?: LearnerTutorContext;
   lessonContext?: LessonTutorContext;
 }): GroundedTutorContext {
   const { template, learnerContext, lessonContext } = input;
   const unit = resolveUnit(lessonContext, template.recommendedUnit);
-  const query = [
-    input.learnerMessage,
-    lessonContext?.topic,
-    ...(lessonContext?.targetVocabulary ?? []),
-    ...(lessonContext?.targetGrammar ?? []),
-    ...template.targetVocabulary,
-    ...template.targetGrammar,
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const query = [input.learnerMessage ?? ""].filter(Boolean).join(" ");
   const sources = searchKnowledge(query, unit, 8)
     .filter((item) => item.type !== "exercise")
     .slice(0, 5)
@@ -98,6 +104,7 @@ export function buildGroundedTutorContext(input: {
       preferredTopics: cleanList(learnerContext?.preferredTopics, 5),
       weakestSkills: weakestSkills(learnerContext?.skillMastery),
       dueVocabulary: cleanList(learnerContext?.dueVocabulary, 8),
+      memory: boundLearnerMemory(learnerContext?.learnerMemory),
     },
     lesson: {
       title: lessonContext?.title ?? unitContext?.title,
@@ -114,7 +121,7 @@ export function buildGroundedTutorContext(input: {
     },
     mission: {
       scenarioKey: template.key,
-      learnerGoal: template.learnerGoal,
+      learnerGoal: cleanText(input.learnerGoal, 240) || template.learnerGoal,
       npcRole: template.npcRole,
       targetVocabulary: template.targetVocabulary,
       targetGrammar: template.targetGrammar,
@@ -168,10 +175,35 @@ function cleanList(
 ) {
   return (values ?? [])
     .map((value) => cleanText(value, itemLimit))
-    .filter(Boolean)
     .slice(0, limit);
 }
 
 function cleanText(value: string | undefined, limit: number) {
   return value?.replace(/\s+/g, " ").trim().slice(0, limit) ?? "";
+}
+
+function boundLearnerMemory(memory: LearnerMemory | undefined): BoundedLearnerMemory | undefined {
+  if (!memory) return undefined;
+  const topics = memory.preferences.topics;
+  return {
+    goals: memory.goals
+      .map((goal) => ({ text: cleanText(goal.text, 240) }))
+      .filter((goal) => Boolean(goal.text))
+      .slice(0, 3),
+    recurringErrors: memory.recurringErrors
+      .map((error) => ({ errorType: cleanText(error.errorType, 80), count: error.count }))
+      .filter((error) => Boolean(error.errorType))
+      .slice(0, 4),
+    provenSkills: memory.provenSkills
+      .map((skill) => ({
+        skillKey: cleanText(skill.skillKey, 80),
+        masteryScore: skill.masteryScore,
+        evidenceCount: skill.evidenceCount,
+      }))
+      .filter((skill) => Boolean(skill.skillKey))
+      .slice(0, 6),
+    preferredTopics: Array.isArray(topics)
+      ? cleanList(topics, 5)
+      : [],
+  };
 }

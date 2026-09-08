@@ -104,6 +104,7 @@ model User {
   updatedAt DateTime @updatedAt
 
   learnerProfile    LearnerProfile?
+  learnerMemory     LearnerMemory?
   attempts          Attempt[]
   vocabularyMastery VocabularyMastery[]
   skillMastery      SkillMastery[]
@@ -115,6 +116,18 @@ model User {
   coursesCreated    Course[]            @relation("CourseCreator")
   lessonsCreated    Lesson[]            @relation("LessonCreator")
   lessonsReviewed   Lesson[]            @relation("LessonReviewer")
+}
+
+model LearnerMemory {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  goalsJson       String   @default("[]")
+  errorsJson      String   @default("[]")
+  skillsJson      String   @default("[]")
+  preferencesJson String   @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model LearnerProfile {

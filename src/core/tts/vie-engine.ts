@@ -1,6 +1,5 @@
 "use client";
 
-import { createTTSCacheKey, resolveTTSCacheKeyInput } from "./cache-key";
 import type { SpeakOptions, SpeakResult, SpeechEngine, SpeechEngineContext } from "./speech";
 
 /**
@@ -8,8 +7,6 @@ import type { SpeakOptions, SpeakResult, SpeechEngine, SpeechEngineContext } fro
  * Sidecar VieNeu chạy riêng trên VIENEU_URL; route này cache trên đĩa và
  * trả header immutable để browser dùng lại audio cũ.
  */
-
-const ENGINE_VERSION = "vieneu-3.3.0";
 
 const VIENEU_DEFAULT_VOICE = process.env.NEXT_PUBLIC_VIENEU_DEFAULT_VOICE ?? "";
 
@@ -37,13 +34,9 @@ export class VieNeuSpeechEngine implements SpeechEngine {
 
   async speak(options: SpeakOptions, context: SpeechEngineContext): Promise<SpeakResult> {
     const voice = options.voice || VIENEU_DEFAULT_VOICE;
-    const resolved = resolveTTSCacheKeyInput(
-      { text: options.text, engineVersion: ENGINE_VERSION, speed: options.speed },
-      voice
-    );
-
     context.updateState({ phase: "synthesizing", error: null });
-    const buffer = await fetchVieneuAudio(resolved.text, resolved.voice, resolved.speed ?? 1);
+    // Resolve an omitted voice from the sidecar's live voice list on the server.
+    const buffer = await fetchVieneuAudio(options.text, voice, options.speed ?? 1);
     if (!buffer || !buffer.byteLength) throw new Error("VieNeu không trả audio");
 
     // Phát audio trực tiếp từ ArrayBuffer trả về (audio đã cache ở server)

@@ -18,4 +18,9 @@ describe("dataset catalog", () => {
     expect(results[0]?.title.toLowerCase()).toBe("skateboarding");
     expect(results.every((result) => result.unit === 1)).toBe(true);
   });
+
+  it("rejects stop-word-only queries", () => {
+    expect(searchKnowledge("something maybe later", 1)).toEqual([]);
+    expect(searchKnowledge("Tell me a joke please", 1)).toEqual([]);
+  });
 });

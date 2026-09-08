@@ -103,6 +103,7 @@ export type LearningSessionSnapshot = Prisma.LearningSessionGetPayload<{
       select: {
         id: true;
         type: true;
+        prompt: true;
         specJson: true;
         validatorJson: true;
         status: true;
@@ -169,7 +170,7 @@ export class LearningSessionRepository {
         },
         vocabularyMastery: {
           where: { nextReviewAt: { lte: new Date() } },
-          orderBy: { nextReviewAt: "asc" },
+          orderBy: [{ nextReviewAt: "asc" }, { vocabularyItemId: "asc" }],
           take: 8,
           select: {
             vocabularyItem: {
@@ -244,6 +245,7 @@ export class LearningSessionRepository {
           select: {
             id: true,
             type: true,
+            prompt: true,
             specJson: true,
             validatorJson: true,
             status: true,

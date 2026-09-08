@@ -1,0 +1,34 @@
+# ListenAI kernel — 0.1.1
+# CURRENT CHECKPOINT 2026-09-08: Plan03 completed local acceptance. Read docs/LEARNING_LOOP_CHECKPOINT_2026-09-08.md. Final gates: 139 unit, type-check, lint 0 error/37 warnings, eval mock 15/15, Prisma validate, build, Python sidecar 3/3, E2E 15/15 fresh SQLite. No commit/deploy/production claims.
+<agent_startup_protocol>
+0. Skill .xay-dung-nao-bo từ Fitc84/brain4agent.old: init_brain.js <repo> --check. Xem binding đường dẫn trong AGENTS.md; chỉ ghi khi cần nâng cấp.
+1. Đọc kernel → index.md → memory/hot/today.md và state.json → plan và docs module.
+2. Đối chiếu mã thật trước khi tin báo cáo lịch sử. Đọc docs Next cục bộ trước sửa framework.
+3. Không reset/seed DB người dùng; E2E dùng database tạm riêng và AI_PROVIDER=mock.
+4. Kết thúc: đồng bộ plan, docs, roadmap, changelog và hot memory theo .compact.
+</agent_startup_protocol>
+
+## Sản phẩm
+- User xác nhận 2026-09-07: TỰ HỌC TIẾNG ANH AI-NATIVE; AI dẫn dắt trải nghiệm.
+- Loop: mục tiêu → nhiệm vụ/ngữ cảnh → learner response → coaching → comeback → evidence → bước tiếp theo thích ứng.
+- Mission, Lesson Coach, Daily Quest là entry chính; lesson/quiz/dictation/flashcards hỗ trợ sửa lỗi.
+- Không coi chatbot phụ hay course-first là định hướng sản phẩm. Không suy hiệu quả học tập từ tests xanh.
+
+## Kiến trúc
+- Next16.3.1 App Router, React19.2.8, TypeScript, Tailwind4, Auth.js5 Credentials/JWT.
+- Prisma6/SQLite; 2 migrations hiện có. Render PostgreSQL chưa khớp provider, chưa deploy.
+- Session: server/learning → ai/tutor-orchestrator → provider/fallback → transaction → DTO.
+- State, validator, evidence/mastery thuộc server; không đưa acceptedAnswers/correctIndex xuống client.
+- clientTurnId chống ghi trùng; auto/manual completion tăng thời gian một lần.
+- English WebSpeech; Vietnamese VieNeu + WebSpeech fallback. Kokoro còn legacy, không đăng ký runtime.
+- Dataset 5 unit,116 vocabulary,10 grammar topics,54 exercise sets,200 keyword retrieval chunks.
+- Educaplay chỉ tham khảo, không đưa vào curriculum/audio.
+
+## Công việc
+- 2026-09-08 20:30: Plan03 closed local. Root stopped stale repo Next dev server PID 24896; E2E then launched normally. Auto-completion CTA can be PRACTICE by design when mastery <0.6; deterministic mock now honors successful BOSS shouldComplete/DEBRIEF and has regression test.
+- 2026-09-07 20:55: P13 eval không còn self-assert; run.ts gọi startMission/evaluateTutorTurn với DeterministicMockTutorProvider, kiểm phase + grounded IDs. Kết quả 15/15, grounded 4/15 đúng kỳ vọng.
+- Plan planning/01_2026-09-07_project-hardening/plan.md, target0.1.1 PATCH.
+- User cho phép orchestrator điều phối model: Astra runtime, Sol UI, Luna utility; root contracts/integration.
+- Subagents bị usage limit giữa chừng; root tiếp quản, không coi code dở là đã nghiệm thu.
+- Baseline74 tests; kết quả cuối đọc state.json và TESTING-ACCEPTANCE.
+- Roadmap: learner memory xuyên phiên, next action có evidence, nhiệm vụ cá nhân, eval sư phạm, production DB/TTS.

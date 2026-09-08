@@ -13,7 +13,7 @@ export interface KnowledgeResult {
 
 const STOP_WORDS = new Set([
   "a", "an", "and", "are", "các", "cho", "của", "do", "giải", "giúp", "hãy", "is",
-  "la", "minh", "nao", "the", "the", "toi", "trong", "va", "ve", "what",
+  "la", "minh", "nao", "the", "the", "toi", "trong", "va", "ve", "what", "who", "how", "where", "when", "why", "can", "could", "would", "please", "know", "know",
   "tu", "nghia", "gi", "mot", "vi", "du",
 ]);
 
@@ -28,7 +28,7 @@ function normalize(value: string) {
 }
 
 function queryTerms(query: string) {
-  return [...new Set(normalize(query).split(" ").filter((term) => term.length > 1 && !STOP_WORDS.has(term)))];
+  return [...new Set(normalize(query).split(" ").filter((term) => term.length > 2 && !STOP_WORDS.has(term)))];
 }
 
 export function getDatasetUnit(title: string) {
@@ -63,14 +63,14 @@ export function searchKnowledge(query: string, unit: number | null, limit = 5): 
       for (const term of terms) {
         if (title === term) score += 30;
         else if (title.includes(term)) score += 8;
-        if (text.includes(term)) score += 2;
+        if (text.includes(term)) score += 1;
       }
       const hasQueryMatch = score > 0;
       if (hasQueryMatch && /ngu phap|grammar|thi |tense|article|conditional/.test(normalizedQuery) && chunk.type === "grammar") score += 4;
       if (hasQueryMatch && /tu vung|vocabulary|nghia|word/.test(normalizedQuery) && chunk.type === "vocabulary") score += 4;
       return { ...chunk, score };
     })
-    .filter((chunk) => chunk.score > 0)
+    .filter((chunk) => chunk.score >= 2)
     .sort((left, right) => right.score - left.score || left.title.localeCompare(right.title))
     .slice(0, limit)
     .map((chunk) => ({

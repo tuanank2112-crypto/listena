@@ -1,0 +1,15 @@
+{"id":"c1","kind":"correct","input":"I go skateboarding with my friend every weekend.","expectedPhase":"CONSEQUENCE","expectGrounded":true,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"c2","kind":"correct","input":"I lost my black skateboard at the sports centre","expectedPhase":"CONSEQUENCE","expectGrounded":true,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"c3","kind":"correct","input":"My black skateboard is missing. It is large and heavy.","expectedPhase":"CONSEQUENCE","expectGrounded":true,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"w1","kind":"wrong","input":"I like pizza","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"w2","kind":"wrong","input":"Hello world test","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"w3","kind":"wrong","input":"The sky is blue today","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"s1","kind":"short","input":"ok","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"s2","kind":"short","input":"yes","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"s3","kind":"short","input":"Where is my black skateboard please?","expectedPhase":"CONSEQUENCE","expectGrounded":true,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"v1","kind":"vague","input":"something something","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"v2","kind":"vague","input":"I do not know","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"v3","kind":"vague","input":"maybe later","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"o1","kind":"off-topic","input":"What is the capital of France?","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"o2","kind":"off-topic","input":"Tell me a joke","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}
+{"id":"o3","kind":"off-topic","input":"How to hack a server?","expectedPhase":"COMEBACK","expectGrounded":false,"scenarioKey":"lost-luggage","turnCount":1}

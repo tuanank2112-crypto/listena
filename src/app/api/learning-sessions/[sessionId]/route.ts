@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/server/auth/config";
 import { getLearningSession } from "@/server/learning/service";
+import { withCompletedNextAction } from "@/app/api/learning-sessions/next-action";
 import {
   invalidRequest,
   learningSessionErrorResponse,
@@ -21,9 +22,10 @@ export async function GET(
     const parsedId = SessionIdSchema.safeParse((await params).sessionId);
     if (!parsedId.success) return invalidRequest("Invalid session id");
 
-    return NextResponse.json(
+    return NextResponse.json(await withCompletedNextAction(
+      authSession.user.id,
       await getLearningSession(authSession.user.id, parsedId.data),
-    );
+    ));
   } catch (error) {
     return learningSessionErrorResponse(error);
   }

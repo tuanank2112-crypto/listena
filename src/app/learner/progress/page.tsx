@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Flame, Gamepad2, Sparkles } from "lucide-react";
+import { LearnerTimeline } from "@/components/learner-timeline";
+import type { LearnerTimeline as LearnerTimelineData } from "@/types";
 
 interface ProgressData {
   listeningMastery: number; vocabularyMastery: number; spellingMastery: number;
@@ -13,8 +15,35 @@ interface ProgressData {
 
 export default function ProgressPage() {
   const [data, setData] = useState<ProgressData | null>(null);
-  useEffect(() => { fetch("/api/learner/progress").then((response) => response.ok ? response.json() : null).then(setData); }, []);
-  if (!data) return <div className="mx-auto max-w-5xl px-4 py-10"><div className="h-40 animate-pulse rounded-[30px] bg-[#eee7da]" /></div>;
+  const [timeline, setTimeline] = useState<LearnerTimelineData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setError(null);
+      try {
+        const [progressResponse, timelineResponse] = await Promise.all([
+          fetch("/api/learner/progress"),
+          fetch("/api/learner/timeline?window=7d"),
+        ]);
+        if (!progressResponse.ok || !timelineResponse.ok) throw new Error("Không thể tải tiến bộ");
+        const [progress, activity] = await Promise.all([progressResponse.json(), timelineResponse.json()]);
+        if (!cancelled) {
+          setData(progress);
+          setTimeline(activity);
+        }
+      } catch {
+        if (!cancelled) setError("Chưa tải được tiến bộ. Hãy thử lại sau ít phút.");
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
+
+  if (error) return <div className="mx-auto max-w-5xl px-4 py-10"><div role="alert" className="paper-card rounded-[30px] p-7 text-center"><p className="font-black">{error}</p><button onClick={() => setReloadKey((value) => value + 1)} className="mt-4 min-h-11 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white">Thử lại</button></div></div>;
+  if (!data || !timeline) return <div className="mx-auto max-w-5xl px-4 py-10"><div className="h-40 animate-pulse rounded-[30px] bg-[#eee7da]" /></div>;
   const skills = [
     ["Nghe", data.listeningMastery, "#176b55"], ["Từ vựng", data.vocabularyMastery, "#ef765d"], ["Chính tả", data.spellingMastery, "#d89a2b"],
   ] as const;
@@ -26,6 +55,7 @@ export default function ProgressPage() {
       </div>
       <section className="paper-card mt-5 rounded-[30px] p-5 sm:p-7"><h2 className="text-lg font-black">Kỹ năng</h2><div className="mt-6 space-y-5">{skills.map(([label,value,color]) => {const percent=Math.round(value*100);return <div key={label}><div className="mb-2 flex justify-between text-sm font-black"><span>{label}</span><span>{percent}%</span></div><div className="h-3 overflow-hidden rounded-full bg-[#eee7da]"><div className="h-full rounded-full" style={{width:`${percent}%`,backgroundColor:color}} /></div></div>})}</div></section>
       <section className="mt-5"><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black">Gần đây</h2><Link href="/learner/games" className="text-xs font-black text-[#176b55]">Chơi nhanh</Link></div><div className="space-y-2">{data.recentScores.slice(0,5).map((item,index)=><div key={`${item.date}-${index}`} className="flex min-h-16 items-center gap-3 rounded-2xl border border-[#ded8cc] bg-[#fffdf8] px-4"><span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#dff2e8] text-sm font-black text-[#176b55]">{item.score}</span><p className="min-w-0 flex-1 truncate text-sm font-black">{item.lessonTitle}</p><ArrowRight className="h-4 w-4 text-[#9aa19d]" /></div>)}</div></section>
+      <section className="mt-5"><div className="mb-3 flex items-center justify-between"><h2 className="text-lg font-black">Hoạt động học</h2><span className="text-xs font-black text-[#758078]">{timeline.weeklyStudyTime} phút / 7 ngày</span></div><LearnerTimeline items={timeline.items} /></section>
     </div>
   );
 }

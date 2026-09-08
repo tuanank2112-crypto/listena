@@ -18,10 +18,11 @@ services:
     container_name: listena-tts
     restart: unless-stopped
     ports:
-      - "8001:8001"
+      - "127.0.0.1:8001:8001"
     environment:
       HF_HOME: /data/hf
       TTS_CACHE_DIR: /app/cache
+      TTS_API_KEY: ${TTS_API_KEY:-}
     volumes:
       - tts-hf-cache:/data/hf
       - tts-audio-cache:/app/cache

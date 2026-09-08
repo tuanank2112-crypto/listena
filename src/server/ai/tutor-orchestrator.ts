@@ -100,11 +100,12 @@ export async function startMission(
   const state = MissionStateSchema.parse(
     createMissionState(template, {
       goal: input.goal ?? dailyQuest?.goal,
-      targetVocabulary: dailyQuest?.targetVocabulary,
+      targetVocabulary: [...(dailyQuest?.targetVocabulary ?? []), ...(input.lessonContext?.targetVocabulary ?? [])],
     }),
   );
   const groundedContext = buildGroundedTutorContext({
     template,
+    learnerGoal: state.learnerGoal,
     learnerContext: input.learnerContext,
     lessonContext: input.lessonContext,
   });
@@ -142,6 +143,7 @@ export async function evaluateTutorTurn(
       : getMissionTemplate(state.scenarioKey);
   const groundedContext = buildGroundedTutorContext({
     template,
+    learnerGoal: state.learnerGoal,
     learnerMessage,
     learnerContext: input.learnerContext,
     lessonContext: input.lessonContext,

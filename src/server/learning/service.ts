@@ -16,7 +16,7 @@ import {
   LearningSessionNotFoundError,
   LearningSessionValidationError,
 } from "@/server/learning/errors";
-import { evaluateInterventionAnswer, splitIntervention } from "@/server/learning/intervention";
+import { applyInterventionOutcome, evaluateInterventionAnswer, splitIntervention } from "@/server/learning/intervention";
 import { toPublicTutorContent } from "@/server/learning/public-content";
 import {
   LearningSessionRepository,
@@ -31,11 +31,17 @@ import {
   nextTurnSequence,
   parseMissionState,
 } from "@/server/learning/state";
+import {
+  appendEvidenceToMemory,
+  getLearnerMemory,
+  type LearnerMemory,
+} from "@/server/learner-memory/repository";
 import type {
   CreateLearningSessionInput,
   SubmitLearningTurnInput,
   TutorTurnOutput,
 } from "@/server/validation/learning-session";
+import { GeneratedInterventionSchema } from "@/server/validation/learning-session";
 
 type LearningEventInput = {
   type: "HINT" | "REPLAY" | "PAUSE" | "RESUME" | "ABANDON";
@@ -56,9 +62,10 @@ export async function createLearningSession(
     );
   }
 
-  const [lesson, learner] = await Promise.all([
+  const [lesson, learner, learnerMemory] = await Promise.all([
     input.lessonId ? repository.findLessonForStart(input.lessonId) : null,
     repository.findLearnerContext(userId),
+    getLearnerMemory(userId),
   ]);
   if (input.lessonId && !lesson) {
     throw new LearningSessionValidationError(
@@ -70,7 +77,7 @@ export async function createLearningSession(
     throw new LearningSessionNotFoundError();
   }
 
-  const learnerContext = makeLearnerContext(learner);
+  const learnerContext = makeLearnerContext(learner, learnerMemory);
   const lessonContext = makeLessonContext(lesson);
   const generated = await startMission({
     mode: input.mode,
@@ -154,17 +161,33 @@ export async function submitLearningTurn(
         input.content,
       )
     : null;
-  const learnerContext = await repository.findLearnerContext(userId);
+  const [learnerContext, learnerMemory] = await Promise.all([
+    repository.findLearnerContext(userId),
+    getLearnerMemory(userId),
+  ]);
   if (!learnerContext) throw new LearningSessionNotFoundError();
   const currentState = parseMissionState(snapshot.stateJson);
   const generated = await evaluateTutorTurn({
     state: currentState,
     learnerMessage: input.content,
     recentTurns: makeRecentTurns(snapshot),
-    learnerContext: makeLearnerContext(learnerContext),
+    learnerContext: makeLearnerContext(learnerContext, learnerMemory),
     lessonContext: makeLessonContext(snapshot.lesson),
   });
-  const nextState = applyTutorTurn(currentState, generated.output);
+  const output = intervention && interventionEvaluation
+    ? applyInterventionOutcome(
+        currentState,
+        generated.output,
+        interventionEvaluation,
+        GeneratedInterventionSchema.parse({
+          type: intervention.type,
+          prompt: intervention.prompt,
+          spec: parseJsonObject(intervention.specJson),
+          validator: parseJsonObject(intervention.validatorJson),
+        }),
+      )
+    : generated.output;
+  const nextState = applyTutorTurn(currentState, output);
 
   try {
     const duplicate = await repository.transaction(async (tx) => {
@@ -205,7 +228,7 @@ export async function submitLearningTurn(
             interventionId: intervention?.id ?? null,
             interventionCorrect: interventionEvaluation?.correct ?? null,
           }),
-          skillTags: generated.output.targetSkill,
+          skillTags: output.targetSkill,
         },
       });
       const aiTurn = await tx.learningTurn.create({
@@ -214,25 +237,20 @@ export async function submitLearningTurn(
           sequence: learnerSequence + 1,
           clientTurnId: getAiClientTurnId(input.clientTurnId),
           actor: "AI",
-          turnType: generated.output.intervention ? "INTERVENTION" : "COACH",
-          contentJson: JSON.stringify(toPublicTutorContent(generated.output)),
-          skillTags: generated.output.targetSkill,
+          turnType: output.intervention ? "INTERVENTION" : "COACH",
+          contentJson: JSON.stringify(toPublicTutorContent(output)),
+          skillTags: output.targetSkill,
         },
       });
 
-      const evidenceScore = interventionEvaluation
-        ? interventionEvaluation.correct
-          ? Math.max(0.8, generated.output.score)
-          : Math.min(0.4, generated.output.score)
-        : generated.output.score;
-      await tx.learningEvidence.create({
+      const evidence = await tx.learningEvidence.create({
         data: {
           sessionId,
           turnId: learnerTurn.id,
-          skillKey: generated.output.targetSkill,
+          skillKey: output.targetSkill,
           evidenceType: intervention ? "INTERVENTION" : "TUTOR_TURN",
-          score: evidenceScore,
-          confidence: generated.output.confidence,
+          score: output.score,
+          confidence: output.confidence,
           hintCount: input.hintCount,
           replayCount: input.replayCount,
           responseTimeMs: input.responseTimeMs,
@@ -241,10 +259,16 @@ export async function submitLearningTurn(
       await updateSkillMastery(
         tx,
         userId,
-        generated.output.targetSkill,
-        evidenceScore,
-        generated.output.confidence,
+        output.targetSkill,
+        output.score,
+        output.confidence,
       );
+      await appendEvidenceToMemory(tx, userId, {
+        id: evidence.id,
+        skillKey: evidence.skillKey,
+        score: evidence.score,
+        errorType: output.detectedError?.type ?? null,
+      });
 
       if (intervention && interventionEvaluation) {
         const completed = await tx.intervention.updateMany({
@@ -260,27 +284,24 @@ export async function submitLearningTurn(
         }
       }
 
-      await createIntervention(tx, sessionId, aiTurn.id, generated.output);
+      await createIntervention(tx, sessionId, aiTurn.id, output);
       await createAiInteraction(tx, {
         userId,
         sessionId,
         turnId: aiTurn.id,
         purpose: "evaluate_turn",
         input: { state: currentState, learnerMessage: input.content },
-        output: generated.output,
+        output,
         meta: generated.meta,
       });
-      await tx.learningSession.update({
-        where: { id: sessionId },
-        data: {
-          stateJson: JSON.stringify(nextState),
-          status: generated.output.shouldComplete ? "COMPLETED" : "ACTIVE",
-          completedAt: generated.output.shouldComplete ? new Date() : null,
-          summary: generated.output.shouldComplete
-            ? makeSummary(nextState)
-            : undefined,
-        },
-      });
+      if (output.shouldComplete) {
+        await finalizeLearningSession(tx, owned, nextState);
+      } else {
+        await tx.learningSession.update({
+          where: { id: sessionId },
+          data: { stateJson: JSON.stringify(nextState) },
+        });
+      }
       return false;
     });
     if (duplicate) {
@@ -366,36 +387,44 @@ export async function completeLearningSession(userId: string, sessionId: string)
   await repository.transaction(async (tx) => {
     const owned = await findOwnedSessionInTransaction(tx, userId, sessionId);
     if (!owned) throw new LearningSessionNotFoundError();
-    if (owned.status === "COMPLETED") return;
-    if (owned.status === "ABANDONED") {
-      throw new LearningSessionConflictError("Abandoned sessions cannot be completed");
-    }
-
-    const state = parseMissionState(owned.stateJson);
-    const completedAt = new Date();
-    const studyMinutes = Math.max(
-      1,
-      Math.min(120, Math.round((completedAt.getTime() - owned.startedAt.getTime()) / 60_000)),
-    );
-    await tx.learningSession.update({
-      where: { id: sessionId },
-      data: {
-        status: "COMPLETED",
-        completedAt,
-        stateJson: JSON.stringify({ ...state, phase: "DEBRIEF" }),
-        summary: makeSummary({ ...state, phase: "DEBRIEF" }),
-      },
-    });
-    await tx.learnerProfile.updateMany({
-      where: { userId },
-      data: {
-        totalStudyMinutes: { increment: studyMinutes },
-        lastActivityAt: completedAt,
-      },
-    });
+    await finalizeLearningSession(tx, owned, parseMissionState(owned.stateJson));
   });
 
   return { session: await getOwnedSessionDto(userId, sessionId) };
+}
+
+async function finalizeLearningSession(
+  tx: Prisma.TransactionClient,
+  owned: NonNullable<Awaited<ReturnType<typeof findOwnedSessionInTransaction>>>,
+  state: ReturnType<typeof parseMissionState>,
+) {
+  if (owned.status === "COMPLETED") return;
+  if (owned.status === "ABANDONED") {
+    throw new LearningSessionConflictError("Abandoned sessions cannot be completed");
+  }
+  const completedAt = new Date();
+  const studyMinutes = Math.max(
+    1,
+    Math.min(120, Math.round((completedAt.getTime() - owned.startedAt.getTime()) / 60_000)),
+  );
+  const completedState = { ...state, phase: "DEBRIEF" as const };
+  const transition = await tx.learningSession.updateMany({
+    where: { id: owned.id, userId: owned.userId, status: "ACTIVE" },
+    data: {
+      status: "COMPLETED",
+      completedAt,
+      stateJson: JSON.stringify(completedState),
+      summary: makeSummary(completedState),
+    },
+  });
+  if (transition.count !== 1) throw new LearningSessionConflictError();
+  await tx.learnerProfile.updateMany({
+    where: { userId: owned.userId },
+    data: {
+      totalStudyMinutes: { increment: studyMinutes },
+      lastActivityAt: completedAt,
+    },
+  });
 }
 
 async function getOwnedSessionRecord(userId: string, sessionId: string) {
@@ -468,6 +497,7 @@ function makeRecentTurns(snapshot: LearningSessionSnapshot): RecentTutorTurn[] {
 
 function makeLearnerContext(
   learner: NonNullable<Awaited<ReturnType<LearningSessionRepository["findLearnerContext"]>>>,
+  learnerMemory: LearnerMemory | null,
 ): LearnerTutorContext {
   const profile = learner.learnerProfile;
   const skillMastery = Object.fromEntries(
@@ -488,6 +518,7 @@ function makeLearnerContext(
       .filter(Boolean),
     skillMastery,
     dueVocabulary: learner.dueVocabulary,
+    learnerMemory: learnerMemory ?? undefined,
   };
 }
 
