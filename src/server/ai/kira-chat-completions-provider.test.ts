@@ -59,7 +59,7 @@ describe("KiraChatCompletionsProvider", () => {
       "Content-Type": "application/json",
       Authorization: "Bearer test-kira-key",
     });
-    expect(init.redirect).toBe("error");
+    expect(init.redirect).toBe("manual");
     const body = JSON.parse(String(init.body)) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(["max_tokens", "messages", "model"]);
     expect(body).toMatchObject({
@@ -124,6 +124,71 @@ describe("KiraChatCompletionsProvider", () => {
       status: 503,
       details: { retryAfterSeconds: 60 },
     });
+  });
+
+  it("does not follow an upstream redirect after attaching the credential", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(null, {
+        status: 302,
+        headers: { location: "https://attacker.example/collect" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "upstream_failure" },
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://kiraai.vn/api/v1/chat/completions",
+      expect.objectContaining({ redirect: "manual" }),
+    );
+  });
+
+  it("waits past 20 seconds for a queued Kira generation, but remains bounded", async () => {
+    vi.useFakeTimers();
+    let resolveResponse: ((response: Response) => void) | undefined;
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((resolve, reject) => {
+          resolveResponse = resolve;
+          (init.signal as AbortSignal).addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+
+    const pending = provider.generateJson<{ answer: string }>({
+      purpose: "lesson_tutor",
+      systemPrompt: "Test prompt",
+      input: {},
+      schemaName: "answer",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      maxOutputTokens: 1,
+    });
+    await vi.advanceTimersByTimeAsync(20_001);
+    resolveResponse?.(
+      new Response(
+        JSON.stringify({
+          choices: [{ finish_reason: "stop", message: { content: '{"answer":"OK"}' } }],
+        }),
+        { status: 200 },
+      ),
+    );
+
+    await expect(pending).resolves.toMatchObject({ output: { answer: "OK" } });
   });
 
   it("fails closed on non-JSON Chat Completions text", async () => {

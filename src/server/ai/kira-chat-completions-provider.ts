@@ -26,6 +26,11 @@ const DEFAULT_BASE_URL = "https://kiraai.vn/api/v1";
 const KIRA_API_ORIGIN = "https://kiraai.vn";
 const KIRA_API_PATH = "/api/v1";
 const DEFAULT_MODEL = "glm-5.3-flash-free";
+// Free-tier upstreams can queue a valid generation longer than the 20-second
+// default used by the direct OpenAI provider. HTTP wall time does not consume
+// Workers CPU, while the cap keeps a stalled learner request bounded.
+const DEFAULT_TIMEOUT_MS = 45_000;
+const MAX_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_TOKENS = 4_000;
 const MAX_INPUT_CHARS = 32_000;
 const MAX_SCHEMA_CHARS = 32_000;
@@ -48,7 +53,10 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
     this.apiKey = config.apiKey;
     this.modelName = config.model?.trim() || DEFAULT_MODEL;
     this.baseUrl = resolveKiraBaseUrl(config.baseUrl);
-    this.timeoutMs = Math.min(Math.max(config.timeoutMs ?? 20_000, 1), 20_000);
+    this.timeoutMs = Math.min(
+      Math.max(config.timeoutMs ?? DEFAULT_TIMEOUT_MS, 1),
+      MAX_TIMEOUT_MS,
+    );
   }
 
   async generateJson<T>(
@@ -121,9 +129,10 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
             ],
             max_tokens: maxOutputTokens,
           }),
-          // A configured Kira credential must never follow an unexpected
-          // redirect to another origin.
-          redirect: "error",
+          // Workers does not implement `redirect: "error"`. `manual` keeps
+          // the response local so the non-2xx branch below fails closed on
+          // every redirect instead of forwarding this credential elsewhere.
+          redirect: "manual",
           signal: controller.signal,
         });
       } catch {
