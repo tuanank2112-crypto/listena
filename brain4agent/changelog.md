@@ -3,7 +3,7 @@
 ## Unreleased — KiraAI adapter and P65 deployed
 - Deploy KiraAI with non-secret configuration `AI_PROVIDER=kira`, `KIRAAI_MODEL=glm-5.3-flash-free`, and `KIRAAI_BASE_URL=https://kiraai.vn/api/v1` as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; the value of `KIRAAI_API_KEY` is not stored in this repository.
 - Add a native-D1 reservation/commit-fence boundary for P65 learning-session, private-lesson/attempt and adaptive-game graphs, with 40 rolling-24-hour AI reservations, a 30-second pending lease, and an applicable 12-second one-off cooldown.
-- Document the protocol boundary: Kira uses Chat Completions with server-side JSON/Zod validation, whereas OpenAI remains an optional Responses transport with its strict-schema/store controls. No Kira secret installation or live-AI success is claimed by this entry.
+- Document the protocol boundary: Kira uses Chat Completions with server-side JSON/Zod validation, whereas OpenAI remains an optional Responses transport with its strict-schema/store controls. Secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` installs the binding name only; no live-AI success is claimed by this entry.
 
 ## 0.5.0 — 2026-09-10 (Cloudflare deployment; live-provider key pending)
 - Restore the tracked core curriculum to production D1 via an additive, idempotent import: 5 lessons, 116 vocabulary items, 20 segments and 54 exercises. Existing user data was preserved; the system curriculum owner cannot log in.

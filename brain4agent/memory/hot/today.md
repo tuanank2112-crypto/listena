@@ -1,9 +1,9 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
-## Plan06 KiraAI provider deployment 2026-09-10 — pending fresh secret and smoke
+## Plan06 KiraAI provider deployment 2026-09-10 — secret binding installed, smoke pending
 - Account owner selected KiraAI for the next Worker deployment: `AI_PROVIDER=kira`, model `glm-5.3-flash-free`, base URL `https://kiraai.vn/api/v1`, and secret name `KIRAAI_API_KEY`. The key value was not written to a repository file or log.
 - Kira documents OpenAI-compatible `POST /chat/completions`, not OpenAI `POST /responses`. The adapter must parse the completion JSON and run the existing server-side Zod validation; it cannot claim OpenAI Responses strict-schema or `store:false` behavior.
-- P65/Kira code is public as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; public `/api/health` and `/login` returned HTTP 200 with the Kira key absent. No genuine Kira lesson has been claimed yet.
+- P65/Kira code is public as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; public `/api/health` and `/login` returned HTTP 200 with the Kira key absent. Cloudflare then created the opaque `KIRAAI_API_KEY` binding as secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b`. No genuine Kira lesson has been claimed yet.
 
 ## Plan06 deployment 2026-09-10 — personalized AI and adaptive games
 - Worker `listena-english` version `8d50494f-773f-46bb-9910-23c4474d9b4d` is public at https://listena-english.tuanank2112.workers.dev. Remote D1 received only additive migrations `0002_personalized_ai_learning.sql` and `0003_personalized_generation_guards.sql`, then the reviewed idempotent core import. Postflight: original user preserved; 1 non-loginable system curriculum owner; 5 lessons, 116 vocabulary, 20 segments and 54 exercises.

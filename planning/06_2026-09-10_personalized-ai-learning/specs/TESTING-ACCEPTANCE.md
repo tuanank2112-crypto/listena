@@ -37,7 +37,7 @@
 - ✅ local Worker D1 — migration/import ownership checks plus native reservation, mission state-CAS and adaptive claim SQL execute in isolated SQLite-compatible D1 emulation; private lesson/attempt statement-contract tests are green.
 - ✅ server — remote D1 additive migration/import counts verified; pre-existing user preserved.
 - ✅ server — P65/Kira code deployed as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; public `/api/health` and `/login` returned HTTP 200 with the hosted Kira key still absent. Worker `8d50494f-773f-46bb-9910-23c4474d9b4d` is the pre-P65 baseline.
-- ⬜ server — user-owned secret configured and a real provider smoke produces a persisted private lesson without exposing secrets.
+- ◐ server — `KIRAAI_API_KEY` binding is deployed in secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b`; its value is opaque. A real provider smoke must still produce a persisted private lesson without exposing secrets.
 
 ## Failure classification
 

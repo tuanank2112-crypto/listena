@@ -5,7 +5,7 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/06_2026-09-10_personalized-ai-learning | [Plan 06](../planning/06_2026-09-10_personalized-ai-learning/plan.md) — private AI lessons, adaptive server-authoritative games and additive D1 curriculum recovery; Kira Chat Completions code is deployed, awaiting only a fresh hosted secret and genuine smoke |
+| Kế hoạch hiện tại | planning/06_2026-09-10_personalized-ai-learning | [Plan 06](../planning/06_2026-09-10_personalized-ai-learning/plan.md) — private AI lessons, adaptive server-authoritative games and additive D1 curriculum recovery; Kira Chat Completions code and opaque secret binding are deployed, awaiting genuine smoke |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |

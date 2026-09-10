@@ -118,6 +118,6 @@ MUST NOT:
 | native mission state-CAS SQL executes and stale replay adds no evidence | ✅ | ✅ | ⬜ authenticated smoke |
 | native adaptive answer claim SQL executes and replay adds no evidence/mastery | ✅ | ✅ | ⬜ authenticated smoke |
 | native private lesson/attempt fence statement contracts | ✅ | ✅ statement contract | ⬜ authenticated smoke |
-| fresh hosted secret, real Kira private lesson, provenance, secret non-leak | n/a | n/a | ⬜ owner action |
+| hosted secret binding, real Kira private lesson, provenance, secret non-leak | n/a | n/a | ◐ binding name deployed; genuine smoke pending |
 
-P65 Worker code was deployed as version `ee5de83a-c2a9-45e3-996a-e624072bb250`; the public health/login baseline passed while the key remained absent. The public exit gate remains open until the account owner installs a fresh secret and performs one bounded genuine-provider smoke. Passing local emulation is evidence of SQL contract validity, not proof of Kira account availability or learning efficacy.
+P65 Worker code was deployed as version `ee5de83a-c2a9-45e3-996a-e624072bb250`; the public health/login baseline passed while the key remained absent. The secret binding then created version `d1347978-d0c6-4c66-bf44-01315783ec9b`; its value remains intentionally opaque. The public exit gate remains open until one bounded genuine-provider smoke succeeds. Passing local emulation is evidence of SQL contract validity, not proof of Kira account availability or learning efficacy.

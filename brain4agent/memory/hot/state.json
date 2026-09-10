@@ -1,12 +1,12 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan06_p65_kira_deployed_awaiting_fresh_secret_and_real_smoke",
+  "system_status": "plan06_p65_kira_secret_binding_deployed_awaiting_real_smoke",
   "active_plan": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
   "checkpoint": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
-  "current_verification": { "type_check": "PASS after P65/Kira changes via npx tsc --noEmit", "unit_tests": "225 passed across 56 files after P65/Kira changes", "lint": "0 errors / 34 pre-existing warnings after P65/Kira changes", "build": "PASS via OpenNext Worker build after P65/Kira changes", "e2e": "16/16 PASS on isolated fresh SQLite DB after P65/Kira changes", "d1": "remote additive migrations 0002/0003 and idempotent core import verified: 5 lessons, 116 vocabulary, 20 segments, 54 exercises; pre-existing user preserved", "cloudflare": "Worker ee5de83a-c2a9-45e3-996a-e624072bb250 deployed with Kira non-secret configuration and no KIRAAI_API_KEY; public /api/health and /login HTTP smoke PASS. Fresh owner secret and Kira live smoke remain pending" },
+  "current_verification": { "type_check": "PASS after P65/Kira changes via npx tsc --noEmit", "unit_tests": "225 passed across 56 files after P65/Kira changes", "lint": "0 errors / 34 pre-existing warnings after P65/Kira changes", "build": "PASS via OpenNext Worker build after P65/Kira changes", "e2e": "16/16 PASS on isolated fresh SQLite DB after P65/Kira changes", "d1": "remote additive migrations 0002/0003 and idempotent core import verified: 5 lessons, 116 vocabulary, 20 segments, 54 exercises; pre-existing user preserved", "cloudflare": "Worker ee5de83a-c2a9-45e3-996a-e624072bb250 deployed with Kira non-secret configuration; secret-change version d1347978-d0c6-4c66-bf44-01315783ec9b adds KIRAAI_API_KEY. Public /api/health and /login HTTP smoke PASS; secret content is opaque and Kira live smoke remains pending" },
   "last_verification": {
-    "timestamp": "2026-09-10T19:14:25+07:00",
+    "timestamp": "2026-09-10T19:38:15+07:00",
     "scenarios_passed": [
       "type-check",
       "unit-tests-225",
@@ -14,10 +14,11 @@
       "OpenNext-Worker-build",
       "E2E-16-P65-Kira-regression-suite",
       "remote-D1-additive-import",
-      "production-health-login-smoke-P65-Kira"
+      "production-health-login-smoke-P65-Kira",
+      "production-KIRAAI-secret-binding-version"
     ],
-    "benchmark_accuracy": "P65/Kira local implementation and public code-deployment gates passed; fresh hosted secret and real-provider smoke remain pending",
-    "grade": "P65/Kira Worker deployed; live-provider gate pending"
+    "benchmark_accuracy": "P65/Kira local implementation, public code deployment and secret-binding gates passed; real-provider smoke remains pending",
+    "grade": "P65/Kira Worker and opaque secret binding deployed; live-provider gate pending"
   },
   "active_plans_completed": 3
 }

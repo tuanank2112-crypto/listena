@@ -1,7 +1,7 @@
 # Plan 06 — Personalized AI learning and adaptive games
 
 - STT: 06
-- Status: IN PROGRESS — P65 D1/resource hardening and public code deployment are verified; a fresh user-owned Kira secret and genuine smoke remain pending
+- Status: IN PROGRESS — P65 D1/resource hardening, public code deployment and the Kira secret binding are verified; a genuine authenticated smoke remains pending
 - Started: 2026-09-10 (Asia/Saigon)
 - Target: 0.5.0 MINOR
 - Acceptance environments: local Node/SQLite, local Worker D1 emulator, and public Cloudflare Workers + D1.
@@ -20,6 +20,7 @@
 - 2026-09-10: Prisma's Cloudflare D1 adapter rejects callback-form transactions and does not provide their ACID guarantee. P65 replaces every production-reachable multi-row learning/game callback boundary with parameterized native `DB.batch()` plus an explicit commit fence; local Node/SQLite keeps callback transactions.
 - 2026-09-10: Live provider resource control is shared per learner, not per UI screen or Worker isolate: 40 reservations per rolling 24 hours and a 30-second pending lease apply to every live call; one-off provisioning/tutor/admin purposes also have a 12-second cooldown. Learning-loop `start_mission` and conversational `evaluate_turn` deliberately rely on the pending lease + shared daily cap so a learner can immediately continue after an AI reply or next-action CTA. A rejected reservation returns `AI_REQUEST_LIMIT`/429 before any upstream request.
 - 2026-09-10: P65/Kira code was deployed as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250` with the Kira secret intentionally absent. Public `/api/health` and `/login` returned HTTP 200; this proves code availability, not provider account availability or a generated-lesson outcome.
+- 2026-09-10: The Production `KIRAAI_API_KEY` binding was created in Cloudflare, resulting in secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` at 100% deployment. Secret contents are intentionally not observable; this is not evidence that the provider accepts the value or that a generated lesson succeeds.
 
 ## Superseded decisions
 
@@ -51,7 +52,8 @@
 - [x] Run prior Plan06 local/unit/type/Worker/D1 acceptance gates.
 - [x] Verify P65 native D1/resource changes with the full local gate suite and Worker build.
 - [x] Deploy Kira configuration with the hosted key absent and verify the public health/login baseline.
-- [ ] Configure a freshly rotated `KIRAAI_API_KEY` as a hosted Worker secret and verify one bounded authenticated generated-lesson smoke.
+- [x] Create the Production `KIRAAI_API_KEY` secret binding and verify its name/version only.
+- [ ] Verify one bounded authenticated generated-lesson smoke and safe persisted provenance.
 - [ ] Synchronize project knowledge, commit and push only the task-owned changes.
 
 ## Spec router

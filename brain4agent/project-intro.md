@@ -6,6 +6,6 @@ Next.js16.3.3 App Router, React19.2.8, TypeScript, Tailwind4, Auth.js5, Prisma6 
 
 The structured provider calls a real configured API only when its hosted key is configured. KiraAI is deployed through its documented OpenAI-compatible Chat Completions endpoint; OpenAI Responses remains an explicit alternate transport. There is no runtime deterministic fallback: unavailable provider state is explicit. Server keeps scoring, validators, state and mastery; private AI lesson validators never leave the server. Retrieval is keyword-based from the dataset, not a vector database.
 
-Giới hạn: the deployed Worker still awaits a fresh owner-entered `KIRAAI_API_KEY` and a genuine live-provider smoke; mission templates remain authored; there is no STT/pronunciation scoring, token streaming or learner efficacy evaluation. Render PostgreSQL is not a supported target. Brain dự án dùng engine1.7.2/template1.4.0 từ Fitc84/brain4agent.old, không phải chính source hub.
+Giới hạn: the deployed Worker has an opaque `KIRAAI_API_KEY` binding but still awaits a genuine live-provider smoke; mission templates remain authored; there is no STT/pronunciation scoring, token streaming or learner efficacy evaluation. Render PostgreSQL is not a supported target. Brain dự án dùng engine1.7.2/template1.4.0 từ Fitc84/brain4agent.old, không phải chính source hub.
 
 Xem [index](index.md), [roadmap](roadmap.md), [plan](../planning/01_2026-09-07_project-hardening/plan.md).
