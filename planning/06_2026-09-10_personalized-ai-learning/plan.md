@@ -44,7 +44,7 @@
 - [x] Implement server-owned adaptive game runs and replace client-trusted submissions.
 - [x] Run local/unit/type/Worker/D1 acceptance gates.
 - [ ] Configure the user-owned provider key as a hosted Worker secret, deploy and verify public behavior.
-- [ ] Synchronize project knowledge, commit and push only the task-owned changes.
+- [x] Synchronize project knowledge, commit and push only the task-owned changes.
 
 ## Spec router
 
