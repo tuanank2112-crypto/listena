@@ -1,10 +1,10 @@
 {
-  "current_version": "0.3.0",
+  "current_version": "0.4.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan04_local_gates_complete",
-  "active_plan": "planning/04_2026-09-10_learning-integrity-truth/plan.md",
-  "checkpoint": "docs/LEARNING_INTEGRITY_CHECKPOINT_2026-09-10.md",
-  "current_verification": { "type_check": "PASS", "unit_tests": "152 passed across 38 files", "lint": "0 errors / 37 warnings", "build": "PASS", "eval": "15/15 mock PASS", "prisma_validate": "PASS", "memory_tts_dedicated": "3 Python sidecar tests PASS", "e2e": "16/16 PASS on isolated fresh SQLite DB with AI_PROVIDER=mock" },
+  "system_status": "plan05_cloudflare_d1_public_verified",
+  "active_plan": "planning/05_2026-09-10_cloudflare-workers-d1/plan.md",
+  "checkpoint": "planning/05_2026-09-10_cloudflare-workers-d1/plan.md",
+  "current_verification": { "type_check": "PASS", "unit_tests": "152 passed across 38 files", "lint": "0 errors / 37 warnings", "build": "PASS via OpenNext Worker build", "eval": "15/15 mock PASS", "prisma_validate": "PASS", "e2e": "16/16 PASS on isolated fresh SQLite DB with AI_PROVIDER=mock", "cloudflare": "public Worker + D1 registration and CSRF/Credentials/session smoke PASS; temporary smoke users deleted" },
   "last_verification": {
     "timestamp": "2026-09-07T20:55:00+07:00",
     "scenarios_passed": [
@@ -20,5 +20,5 @@
     "benchmark_accuracy": "100% local gates passed",
     "grade": "Grade A Local Verified"
   },
-  "active_plans_completed": 2
+  "active_plans_completed": 3
 }

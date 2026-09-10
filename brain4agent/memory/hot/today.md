@@ -1,5 +1,12 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Final verification 2026-09-10 — Plan05 Cloudflare Worker + D1 public
+- User chọn Cloudflare Workers + D1. Vinext check đạt 16/18 nhưng `next-auth` bị chặn; giữ Auth.js và dùng OpenNext. Next nâng 16.3.1 → 16.3.3.
+- D1 `listena-english` APAC nhận `migrations/0001_initial_schema.sql` (56 commands), schema-only. Không seed/reset/import production.
+- Prisma: local Node/dev/E2E dùng libSQL SQLite với timestamp `unixepoch-ms`; Worker production dùng `@prisma/client/wasm.js` + request-scoped `PrismaD1`. TTS Worker bỏ disk cache và fallback browser speech.
+- Worker public: https://listena-english.tuanank2112.workers.dev (version `ec0849c7-7f01-46e5-bdf4-be8392268fdc`). Hosted `NEXTAUTH_SECRET`; build scan xác nhận local auth/OpenAI/TTS secret không nằm trong Worker artifact. `AUTH_URL`/`NEXTAUTH_URL` là Worker vars public cố định; `trustHost` xử lý internal localhost hop của OpenNext.
+- Gates: type-check PASS, lint 0 error/37 warnings, unit 152/152, Prisma validate PASS, eval 15/15, E2E 16/16 isolated SQLite, Worker build PASS. Production: `/api/health`, D1 registration, CSRF, Credentials login, session đều PASS. Tài khoản smoke được select exact và xoá; count test account còn 0.
+
 ## Final verification 2026-09-10 — Plan04 completed local
 - Audit after Plan03 selected only three connected P1 gaps: Daily Quest planned recency was absent from the real start path; zero-evidence sessions could complete and receive time; learner meters displayed profile columns rather than AI-updated SkillMastery.
 - Plan04 passes bounded owned Quest history to the planner; excludes malformed states. Completion now requires persisted evidence. Evidence-backed early exits become PARTIAL with remediation UI/no trophy, while BOSS success remains COMPLETED. Dashboard/progress resolve adaptive mastery first.

@@ -72,7 +72,7 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
-    logger.error({ error }, "Registration failed");
+    logger.error({ err: error }, "Registration failed");
     return NextResponse.json(
       { error: "Đăng ký thất bại. Vui lòng thử lại sau." },
       { status: 500 }

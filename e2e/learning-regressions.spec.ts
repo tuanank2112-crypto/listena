@@ -1,8 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
-import { PrismaClient } from "@prisma/client";
 import { randomUUID } from "node:crypto";
+import { prisma as db } from "../src/lib/prisma";
 
-const db = new PrismaClient();
 test.afterAll(async () => db.$disconnect());
 
 async function login(page: Page) {

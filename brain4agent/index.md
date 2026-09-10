@@ -5,12 +5,12 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/04_2026-09-10_learning-integrity-truth | [Plan 04](../planning/04_2026-09-10_learning-integrity-truth/plan.md) — integrity completion, Daily Quest recency và mastery display; local gates PASS, production deferred |
+| Kế hoạch hiện tại | planning/05_2026-09-10_cloudflare-workers-d1 | [Plan 05](../planning/05_2026-09-10_cloudflare-workers-d1/plan.md) — OpenNext Worker + D1 public deployment; local and production smoke gates PASS, no production seed/import |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |
 | DB/dataset | prisma; dataset; scripts | [Data](-data-architecture.md), [Dataset](../dataset/README.md) |
-| Vận hành | configs; e2e/setup.ts | [README](../README.md), [Plan04 operations](../planning/04_2026-09-10_learning-integrity-truth/specs/OPERATIONS.md) |
+| Vận hành | `wrangler.jsonc`; `migrations`; e2e/setup.ts | [Plan05 operations](../planning/05_2026-09-10_cloudflare-workers-d1/specs/OPERATIONS.md) |
 | Bộ nhớ | brain4agent | [Gotchas](-known-gotchas.md), [Roadmap](roadmap.md), [Changelog](changelog.md) |
 
 ## Code map

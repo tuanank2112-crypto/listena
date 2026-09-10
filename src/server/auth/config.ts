@@ -67,5 +67,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
+  // OpenNext invokes route handlers through the Worker runtime's internal URL.
+  // Cloudflare terminates the public HTTPS request before that hop.
+  trustHost: true,
   secret: process.env.NEXTAUTH_SECRET,
 });

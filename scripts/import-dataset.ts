@@ -2,7 +2,8 @@
  * Import the verified TATQHP1 dataset and Educaplay dictation into ListenAI.
  * Run with: npm run dataset:import
  */
-import { PrismaClient, type CefrLevel, type ExerciseType } from "@prisma/client";
+import type { CefrLevel, ExerciseType } from "@prisma/client";
+import { prisma } from "../src/lib/prisma";
 import vocabularyData from "../dataset/vocabulary.json";
 import lessonsData from "../dataset/lessons.json";
 import grammarData from "../dataset/grammar-reference.json";
@@ -10,7 +11,6 @@ import exercisesData from "../dataset/exercises.json";
 import { cleanVocabularyMeaning } from "../src/core/text/vocabulary";
 import danangLessonData from "../dataset/danang-getaway-lesson.json";
 
-const prisma = new PrismaClient();
 const COURSE_TITLE = "TATQHP1 - SOLUTIONS Pre-Intermediate";
 const DATASET_SOURCE = "Sách HDH TATQHP1 SOLUTIONS đã chỉnh sửa theo ý kiến hội đồng lần 2.docx";
 const EDUCAPLAY_SOURCE = "https://www.educaplay.com/learning-resources/30215767-da_nang_family_getaway.html";

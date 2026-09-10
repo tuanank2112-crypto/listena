@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-09-10 (Cloudflare Workers + D1 public release)
+- Deploy OpenNext Next 16.3.3 app to public Cloudflare Worker and bind production D1 as `DB`; schema is checked-in `migrations/0001_initial_schema.sql` (56 commands).
+- Prisma selects local libSQL SQLite for Node/dev/E2E and request-scoped D1 with the Worker WASM client in production. Auth.js redirects use the fixed public Worker origin and trusted internal OpenNext host.
+- Remove Worker-incompatible TTS disk cache; optional VieNeu failure remains browser-speech fallback.
+- Verified: type-check, 152 unit tests, lint 0 error/37 existing warnings, Prisma validate, eval 15/15, isolated SQLite E2E 16/16, Worker build, production D1 registration and CSRF/Credentials/session smoke. Temporary production smoke users were deleted exactly; no production seed/import.
+- Does not claim custom-domain setup, backup/restore readiness, paid Cloudflare features, third-party AI/TTS configuration, quotas, or pedagogical efficacy.
+
 ## 0.3.0 — 2026-09-10 (working tree, chưa commit/deploy)
 - Daily Quest start path truyền history scenario owned đã validate cho planner, tránh lặp authored scenario khi còn lựa chọn khác.
 - Session không evidence không thể complete/cộng phút; manual end có evidence nhưng chưa qua success state là `PARTIAL`, debrief chỉ dẫn luyện tiếp thay vì trophy. Auto BOSS success vẫn là `COMPLETED`.

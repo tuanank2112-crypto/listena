@@ -1,7 +1,6 @@
-import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { prisma } from "../src/lib/prisma";
 
-const prisma = new PrismaClient();
 
 async function main() {
   console.log("🌱 Seeding database...");

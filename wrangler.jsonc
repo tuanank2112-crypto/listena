@@ -1,0 +1,28 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "main": ".open-next/worker.js",
+  "name": "listena-english",
+  "compatibility_date": "2026-09-10",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    "AUTH_URL": "https://listena-english.tuanank2112.workers.dev",
+    "NEXTAUTH_URL": "https://listena-english.tuanank2112.workers.dev"
+  },
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "services": [
+    {
+      "binding": "WORKER_SELF_REFERENCE",
+      "service": "listena-english"
+    }
+  ],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "listena-english",
+      "database_id": "79a3a0c6-ed8b-41ba-b68f-a6c007c3c789"
+    }
+  ]
+}
