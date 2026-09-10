@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import {
   BarChart3,
+  BrainCircuit,
   BookOpen,
   Gamepad2,
   GraduationCap,
@@ -19,6 +20,7 @@ import { cn } from "@/lib/utils";
 const learnerNav = [
   { href: "/learner/dashboard", label: "Hôm nay", icon: LayoutDashboard },
   { href: "/learner/lessons", label: "Bài học", icon: BookOpen },
+  { href: "/learner/personalized-lessons", label: "Bài AI", icon: BrainCircuit },
   { href: "/learner/games", label: "Trò chơi", icon: Gamepad2 },
   { href: "/learner/flashcards", label: "Ôn từ", icon: Sparkles },
   { href: "/learner/progress", label: "Tiến bộ", icon: BarChart3 },
@@ -89,7 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className={cn("min-h-screen pb-24 lg:ml-[232px] lg:pb-0", isTeacher && "bg-[#030014] text-white")}>{children}</main>
 
       {!isTeacher && (
-        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-5 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
+        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-3 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
           {learnerNav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TutorTurnOutputSchema } from "@/server/validation/learning-session";
 import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
 import { DeterministicMockTutorProvider } from "@/server/ai/tutor-provider-contract";
@@ -9,6 +9,8 @@ import {
 import { TUTOR_SYSTEM_PROMPT } from "@/server/ai/tutor-prompts";
 
 describe("tutor orchestrator", () => {
+  afterEach(() => vi.unstubAllEnvs());
+
   const lessonContext = {
     title: "Weekend Plans",
     unit: 4,
@@ -21,7 +23,28 @@ describe("tutor orchestrator", () => {
   };
 
   it("starts LESSON_COACH from the actual lesson instead of lost luggage", async () => {
-    const result = await startMission({ mode: "LESSON_COACH", lessonContext });
+    const provider = new DeterministicMockTutorProvider(() => ({
+      npcReply: "Weekend Plans: Linh asks Ben to go skateboarding on Saturday.",
+      coachMessage: "Hãy nhìn vào đoạn hội thoại của bài.",
+      pedagogicalAct: "ASK_GUIDING",
+      targetSkill: "communication",
+      score: 0,
+      confidence: 0.9,
+      detectedError: null,
+      statePatch: {
+        phase: "ENCOUNTER",
+        trustDelta: 0,
+        evidenceDelta: 0,
+        successfulTurn: false,
+        recovered: false,
+      },
+      intervention: null,
+      shouldComplete: false,
+    }));
+    const result = await startMission(
+      { mode: "LESSON_COACH", lessonContext },
+      { provider },
+    );
 
     expect(result.state).toMatchObject({
       scenarioKey: "lesson-coach",
@@ -39,8 +62,10 @@ describe("tutor orchestrator", () => {
 
   it("sends every lesson grounding field and lesson-coach instructions to the provider", async () => {
     let providerInput: Record<string, unknown> | undefined;
+    let providerSafetyIdentifier: string | undefined;
     const provider = new DeterministicMockTutorProvider((request) => {
       providerInput = request.input;
+      providerSafetyIdentifier = request.safetyIdentifier;
       return {
         npcReply: "What does Linh plan to do on Saturday?",
         coachMessage: "Hãy dựa vào đoạn hội thoại của bài.",
@@ -61,7 +86,10 @@ describe("tutor orchestrator", () => {
       };
     });
 
-    await startMission({ mode: "LESSON_COACH", lessonContext }, { provider });
+    await startMission(
+      { mode: "LESSON_COACH", lessonContext, learnerKey: "learner-42" },
+      { provider },
+    );
 
     expect(providerInput).toMatchObject({
       operation: "START_MISSION",
@@ -78,40 +106,19 @@ describe("tutor orchestrator", () => {
       },
     });
     expect(String(providerInput?.instruction)).toContain("not a role-play NPC");
+    expect(providerSafetyIdentifier).toBe("learner-42");
   });
 
-  it("uses an input-dependent Socratic fallback for LESSON_COACH follow-ups", async () => {
+  it("fails closed when an injected provider violates the output schema", async () => {
     const invalidProvider = new DeterministicMockTutorProvider(() => ({
       invalid: true,
     }));
-    const mission = await startMission(
-      { mode: "LESSON_COACH", lessonContext },
-      { provider: invalidProvider },
-    );
-    const withTarget = await evaluateTutorTurn(
-      {
-        state: mission.state,
-        learnerMessage: "I go skateboarding with Linh",
-        lessonContext,
-      },
-      { provider: invalidProvider },
-    );
-    const differentIdea = await evaluateTutorTurn(
-      {
-        state: mission.state,
-        learnerMessage: "Ben will meet her on Saturday",
-        lessonContext,
-      },
-      { provider: invalidProvider },
-    );
-
-    expect(withTarget.output.pedagogicalAct).toBe("ASK_GUIDING");
-    expect(withTarget.output.npcReply).toContain("skateboarding");
-    expect(differentIdea.output.npcReply).toContain("Saturday");
-    expect(withTarget.output.npcReply).not.toBe(differentIdea.output.npcReply);
-    expect(
-      `${withTarget.output.npcReply} ${differentIdea.output.npcReply}`,
-    ).not.toContain("suitcase");
+    await expect(
+      startMission(
+        { mode: "LESSON_COACH", lessonContext },
+        { provider: invalidProvider },
+      ),
+    ).rejects.toMatchObject({ code: "AI_UNAVAILABLE" });
   });
 
   it("starts a grounded mission with shared-contract output", async () => {
@@ -147,27 +154,25 @@ describe("tutor orchestrator", () => {
     });
   });
 
-  it("falls back deterministically when provider output violates the schema", async () => {
-    const invalidProvider = new DeterministicMockTutorProvider(() => ({
-      invalid: true,
-    }));
-    const mission = await startMission(
-      { scenarioKey: "lost-luggage" },
-      { provider: invalidProvider },
-    );
-    const first = await evaluateTutorTurn(
-      { state: mission.state, learnerMessage: "black suitcase" },
-      { provider: invalidProvider },
-    );
-    const second = await evaluateTutorTurn(
-      { state: mission.state, learnerMessage: "black suitcase" },
-      { provider: invalidProvider },
-    );
+  it("fails closed when no explicitly configured live provider exists", async () => {
+    vi.stubEnv("AI_PROVIDER", "");
+    vi.stubEnv("OPENAI_API_KEY", "");
 
-    expect(first).toEqual(second);
-    expect(first.meta.fallbackReason).toBe("schema_validation_failed");
-    expect(TutorTurnOutputSchema.safeParse(first.output).success).toBe(true);
-    expect(first.output.intervention?.type).toBe("USE_IN_SENTENCE");
+    await expect(startMission({ scenarioKey: "lost-luggage" })).rejects.toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "provider_not_configured" },
+    });
+  });
+
+  it("does not select a deterministic provider from environment settings", async () => {
+    vi.stubEnv("AI_PROVIDER", "deterministic-test");
+    vi.stubEnv("LISTENAI_TEST_MODE", "1");
+    vi.stubEnv("DATABASE_URL", "file:C:/tmp/listena-e2e-123/test.db");
+
+    await expect(startMission({ scenarioKey: "cafe-order" })).rejects.toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "provider_not_configured" },
+    });
   });
 
   it("keeps a valid provider result and removes an intervention that leaks its answer", async () => {

@@ -1,6 +1,6 @@
 {
   "name": "listena",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "engines": {
     "node": ">=20"
@@ -24,6 +24,7 @@
     "db:reset": "prisma migrate reset --force",
     "postinstall": "prisma generate",
     "dataset:import": "tsx scripts/import-dataset.ts",
+    "dataset:build-d1-import": "tsx scripts/build-d1-core-import.ts",
     "tts:prebuild": "tsx scripts/tts-prebuild.ts",
     "eval": "tsx eval/run.ts"
   },

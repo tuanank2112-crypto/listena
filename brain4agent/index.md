@@ -5,21 +5,21 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/05_2026-09-10_cloudflare-workers-d1 | [Plan 05](../planning/05_2026-09-10_cloudflare-workers-d1/plan.md) — OpenNext Worker + D1 public deployment; local and production smoke gates PASS, no production seed/import |
+| Kế hoạch hiện tại | planning/06_2026-09-10_personalized-ai-learning | [Plan 06](../planning/06_2026-09-10_personalized-ai-learning/plan.md) — private AI lessons, adaptive server-authoritative games and additive D1 curriculum recovery; deployed, awaiting user-owned live-provider secret smoke |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |
 | DB/dataset | prisma; dataset; scripts | [Data](-data-architecture.md), [Dataset](../dataset/README.md) |
-| Vận hành | `wrangler.jsonc`; `migrations`; e2e/setup.ts | [Plan05 operations](../planning/05_2026-09-10_cloudflare-workers-d1/specs/OPERATIONS.md) |
+| Vận hành | `wrangler.jsonc`; `migrations`; e2e/setup.ts | [Plan06 operations](../planning/06_2026-09-10_personalized-ai-learning/specs/OPERATIONS.md) |
 | Bộ nhớ | brain4agent | [Gotchas](-known-gotchas.md), [Roadmap](roadmap.md), [Changelog](changelog.md) |
 
 ## Code map
 - src/app: landing/login/register; learner dashboard/games/session/lessons/flashcards/progress/attempt; teacher dashboard/courses/lessons; API.
 - src/features/learning-session: client types/reducer, start button, intervention renderer, request IDs.
 - src/components: AppShell, providers. src/lib và src/types: Prisma singleton/log/utilities/types.
-- src/server: auth, validation, AI/provider/fallback/grounding, learning persistence, legacy services/repos, dataset catalog.
+- src/server: auth, validation, live OpenAI Responses provider/grounding, personalized-learning, adaptive-games, learning persistence, legacy services/repos, dataset catalog.
 - src/core: assessment/text, games/scoring, learner model, recommendation, SM-2, TTS.
-- prisma: schema/2 migrations/demo seed. Seed có xóa dữ liệu: chỉ chạy trên DB mới hoặc E2E riêng.
+- prisma: schema/3 additive migrations/demo seed. Seed có xóa dữ liệu: chỉ chạy trên DB mới hoặc E2E riêng.
 - dataset: JSON giáo trình và raw source; scripts: import, regeneration, legacy prebuild.
 - e2e: setup database tạm, smoke, learning regressions; unit tests colocated trong src.
 - tts-service: Python sidecar; public: static assets/cache ignored.
@@ -27,4 +27,4 @@
 
 ## API
 /api/learning-sessions: create; /:id:resume; /:id/turns:reply; /:id/events:analytics; /:id/complete:debrief.
-Hỗ trợ: attempt,flashcard,game-session,recommendation,learner/progress,tutor,tts/vie và teacher lesson CRUD/generation.
+Hỗ trợ: attempt, flashcard, game-runs + answers (server-authoritative), learner/personalized-lessons + attempts (private), recommendation, learner/progress, tutor, tts/vie và teacher lesson CRUD/generation. `game-session` is legacy 410.

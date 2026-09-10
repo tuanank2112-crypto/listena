@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.5.0 — 2026-09-10 (Cloudflare deployment; live-provider key pending)
+- Restore the tracked core curriculum to production D1 via an additive, idempotent import: 5 lessons, 116 vocabulary items, 20 segments and 54 exercises. Existing user data was preserved; the system curriculum owner cannot log in.
+- Add owner-private, persisted personalized lessons backed by a real OpenAI Responses structured-output boundary. The browser never receives validators or correct answers; missing/invalid upstream configuration returns a typed unavailable response rather than mock content.
+- Add calibration/evidence and familiar Quiz/Match/Spell games that use server-owned adaptive selection, hidden validators, exactly-once answer writes and per-learner resource guards (10 seconds / 12 fresh runs per 24 hours).
+- Deploy Worker `8d50494f-773f-46bb-9910-23c4474d9b4d`. Verified 204 unit tests, type-check, lint 0 errors/36 warnings, Worker build, E2E 16/16 and public root/login HTTP smoke. `OPENAI_API_KEY` is not configured in production yet, so a genuine-provider smoke and live-AI claim remain deliberately pending.
+
 ## 0.4.0 — 2026-09-10 (Cloudflare Workers + D1 public release)
 - Deploy OpenNext Next 16.3.3 app to public Cloudflare Worker and bind production D1 as `DB`; schema is checked-in `migrations/0001_initial_schema.sql` (56 commands).
 - Prisma selects local libSQL SQLite for Node/dev/E2E and request-scoped D1 with the Worker WASM client in production. Auth.js redirects use the fixed public Worker origin and trusted internal OpenNext host.

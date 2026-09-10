@@ -1,24 +1,24 @@
 {
-  "current_version": "0.4.0",
+  "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan05_cloudflare_d1_public_verified",
-  "active_plan": "planning/05_2026-09-10_cloudflare-workers-d1/plan.md",
-  "checkpoint": "planning/05_2026-09-10_cloudflare-workers-d1/plan.md",
-  "current_verification": { "type_check": "PASS", "unit_tests": "152 passed across 38 files", "lint": "0 errors / 37 warnings", "build": "PASS via OpenNext Worker build", "eval": "15/15 mock PASS", "prisma_validate": "PASS", "e2e": "16/16 PASS on isolated fresh SQLite DB with AI_PROVIDER=mock", "cloudflare": "public Worker + D1 registration and CSRF/Credentials/session smoke PASS; temporary smoke users deleted" },
+  "system_status": "plan06_deployed_awaiting_user_owned_provider_secret",
+  "active_plan": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
+  "checkpoint": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
+  "current_verification": { "type_check": "PASS", "unit_tests": "204 passed across 52 files", "lint": "0 errors / 36 warnings", "build": "PASS via OpenNext Worker build", "e2e": "16/16 PASS on isolated fresh SQLite DB using a test-process-only Responses transport stub", "d1": "remote additive migrations 0002/0003 and idempotent core import verified: 5 lessons, 116 vocabulary, 20 segments, 54 exercises; pre-existing user preserved", "cloudflare": "Worker 8d50494f-773f-46bb-9910-23c4474d9b4d deployed; root and login HTTP smoke PASS; OPENAI_API_KEY intentionally absent pending owner installation" },
   "last_verification": {
-    "timestamp": "2026-09-07T20:55:00+07:00",
+    "timestamp": "2026-09-10T17:55:00+07:00",
     "scenarios_passed": [
       "type-check",
-      "unit-tests-106",
+      "unit-tests-204",
       "lint-0-errors",
-      "prisma-validate-and-migrate",
-      "production-build",
-      "e2e-7-tests",
-      "pedagogical-eval-15-orchestrator-mock",
-      "demo-login-and-lessons-games-visible"
+      "type-check",
+      "OpenNext-Worker-build",
+      "E2E-16-test-process-only-Responses-stub",
+      "remote-D1-additive-import",
+      "production-root-login-smoke"
     ],
-    "benchmark_accuracy": "100% local gates passed",
-    "grade": "Grade A Local Verified"
+    "benchmark_accuracy": "local implementation gates passed; real-provider smoke intentionally pending owner secret",
+    "grade": "Deployed, live-provider gate pending"
   },
   "active_plans_completed": 3
 }

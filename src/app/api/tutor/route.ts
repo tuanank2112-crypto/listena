@@ -1,15 +1,34 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 import { getDatasetUnit, searchKnowledge } from "@/server/dataset/catalog";
+import { AIUnavailableError, isAIProviderError } from "@/server/ai/errors";
+import {
+  createConfiguredOpenAIResponsesProvider,
+  type JsonSchema,
+} from "@/server/ai/openai-responses-provider";
 
 const TutorRequestSchema = z.object({
   lessonId: z.string().uuid(),
   question: z.string().trim().min(2).max(1000),
   exerciseId: z.string().uuid().optional(),
 });
+
+const TutorAnswerSchema = z.object({
+  answer: z.string().trim().min(1).max(2_000),
+});
+
+const TutorAnswerJsonSchema: JsonSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["answer"],
+  properties: {
+    answer: { type: "string" },
+  },
+};
 
 interface TutorSource {
   id: string;
@@ -18,88 +37,69 @@ interface TutorSource {
   text: string;
 }
 
-function fallbackAnswer(question: string, sources: TutorSource[], lessonTitle: string) {
-  if (!sources.length) {
-    return `Mình chưa tìm thấy phần kiến thức phù hợp trong ${lessonTitle}. Hãy hỏi cụ thể một từ, cấu trúc ngữ pháp hoặc bài tập trong bài này nhé.`;
-  }
-
-  const evidence = sources
-    .slice(0, 2)
-    .map((source, index) => {
-      const excerpt = source.text.replace(/\s+/g, " ").trim().slice(0, 420);
-      return `${index + 1}. ${source.title}: ${excerpt}${source.text.length > 420 ? "…" : ""}`;
-    })
-    .join("\n\n");
-  return [
-    `Dựa trên nội dung đã xác minh của ${lessonTitle}:`,
-    evidence,
-    "Bài tập nhỏ: hãy tự đặt một câu tiếng Anh với kiến thức vừa xem, rồi gửi mình kiểm tra.",
-  ].join("\n\n");
-}
-
 async function generateAIAnswer(params: {
   question: string;
   lessonTitle: string;
   cefrLevel: string;
   sources: TutorSource[];
+  safetyIdentifier: string;
 }) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (process.env.AI_PROVIDER !== "openai" || !apiKey) {
-    return { answer: fallbackAnswer(params.question, params.sources, params.lessonTitle), model: "dataset-retrieval" };
+  const provider = createConfiguredOpenAIResponsesProvider();
+  if (!provider) {
+    throw new AIUnavailableError({ reason: "provider_not_configured" });
   }
 
-  const baseUrl = process.env.OPENAI_BASE_URL ?? "https://api.openai.com/v1";
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-  const response = await fetch(`${baseUrl}/chat/completions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-    body: JSON.stringify({
-      model,
-      temperature: 0.25,
-      max_tokens: 700,
-      messages: [
-        {
-          role: "system",
-          content: [
-            "Bạn là gia sư tiếng Anh cho người Việt ở trình độ A2.",
-            "Chỉ dùng ngữ cảnh được cung cấp; không bịa kiến thức ngoài nguồn.",
-            "Giải thích ngắn gọn bằng tiếng Việt, giữ ví dụ tiếng Anh và kết thúc bằng một bài tập nhỏ.",
-            "Nếu ngữ cảnh không đủ, nói rõ điều đó.",
-          ].join(" "),
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            lesson: params.lessonTitle,
-            cefrLevel: params.cefrLevel,
-            question: params.question,
-            verifiedContext: params.sources.map((source) => ({
-              title: source.title,
-              type: source.type,
-              text: source.text,
-            })),
-          }),
-        },
-      ],
-    }),
+  const response = await provider.generateJson<unknown>({
+    purpose: "lesson_tutor",
+    systemPrompt: [
+      "Bạn là gia sư tiếng Anh cho người Việt ở trình độ được cung cấp.",
+      "Chỉ dùng ngữ cảnh đã xác minh của máy chủ; không bịa kiến thức ngoài nguồn.",
+      "Giải thích ngắn gọn bằng tiếng Việt, giữ ví dụ tiếng Anh và kết thúc bằng một bài tập nhỏ.",
+      "Nếu ngữ cảnh không đủ, nói rõ điều đó.",
+    ].join(" "),
+    input: {
+      lesson: params.lessonTitle,
+      cefrLevel: params.cefrLevel,
+      question: params.question,
+      verifiedContext: params.sources.map((source) => ({
+        title: source.title,
+        type: source.type,
+        text: source.text,
+      })),
+    },
+    schemaName: "lesson_tutor_answer",
+    schema: TutorAnswerJsonSchema,
+    safetyIdentifier: params.safetyIdentifier,
+    maxOutputTokens: 700,
   });
 
-  if (!response.ok) throw new Error(`AI tutor failed with status ${response.status}`);
-  const payload = await response.json();
-  const answer = payload.choices?.[0]?.message?.content;
-  if (typeof answer !== "string" || !answer.trim()) throw new Error("AI tutor returned no content");
-  return { answer: answer.trim(), model };
+  const parsed = TutorAnswerSchema.safeParse(response.output);
+  if (!parsed.success) {
+    throw new AIUnavailableError({
+      reason: "schema_validation_failed",
+      provider: response.provider,
+      model: response.model,
+      requestId: response.requestId,
+    });
+  }
+
+  return { ...parsed.data, ...response };
 }
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
   try {
     const session = await auth();
-    if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const parsed = TutorRequestSchema.safeParse(await request.json());
     if (!parsed.success) {
-      return NextResponse.json({ error: "Câu hỏi không hợp lệ", details: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json(
+        { error: "Câu hỏi không hợp lệ", details: parsed.error.flatten() },
+        { status: 400 },
+      );
     }
 
     const lesson = await prisma.lesson.findUnique({
@@ -118,11 +118,16 @@ export async function POST(request: Request) {
       },
     });
     if (!lesson || lesson.status !== "PUBLISHED") {
-      return NextResponse.json({ error: "Không tìm thấy bài học" }, { status: 404 });
+      return NextResponse.json(
+        { error: "Không tìm thấy bài học" },
+        { status: 404 },
+      );
     }
 
     const unit = getDatasetUnit(lesson.title);
-    const knowledge = unit ? searchKnowledge(parsed.data.question, unit, 5) : [];
+    const knowledge = unit
+      ? searchKnowledge(parsed.data.question, unit, 5)
+      : [];
     const sources: TutorSource[] = knowledge.map((item) => ({
       id: item.id,
       title: item.title,
@@ -136,40 +141,65 @@ export async function POST(request: Request) {
           id: `lesson-${lesson.id}-vocabulary-${vocabularyItem.id}`,
           title: vocabularyItem.displayText,
           type: "vocabulary",
-          text: [vocabularyItem.displayText, vocabularyItem.ipa, vocabularyItem.meaningVi, vocabularyItem.meaningEn, vocabularyItem.exampleSentence]
+          text: [
+            vocabularyItem.displayText,
+            vocabularyItem.ipa,
+            vocabularyItem.meaningVi,
+            vocabularyItem.meaningEn,
+            vocabularyItem.exampleSentence,
+          ]
             .filter(Boolean)
             .join(". "),
-          matchesQuestion: normalizedQuestion.includes(vocabularyItem.displayText.toLowerCase()),
+          matchesQuestion: normalizedQuestion.includes(
+            vocabularyItem.displayText.toLowerCase(),
+          ),
         }))
-        .sort((left, right) => Number(right.matchesQuestion) - Number(left.matchesQuestion));
+        .sort(
+          (left, right) =>
+            Number(right.matchesQuestion) - Number(left.matchesQuestion),
+        );
       sources.push(
-        ...vocabularySources.slice(0, 8).map(({ matchesQuestion: _matchesQuestion, ...source }) => source),
+        ...vocabularySources
+          .slice(0, 8)
+          .map(({ id, title, type, text }) => ({ id, title, type, text })),
         {
           id: `lesson-${lesson.id}-transcript`,
           title: `${lesson.title} transcript`,
           type: "lesson",
-          text: lesson.transcript.slice(0, 2400),
-        }
+          text: lesson.transcript.slice(0, 2_400),
+        },
       );
     }
+
     const result = await generateAIAnswer({
       question: parsed.data.question,
       lessonTitle: lesson.title,
       cefrLevel: lesson.cefrLevel,
       sources,
-    }).catch((error) => {
-      logger.warn({ error, lessonId: lesson.id }, "AI tutor provider failed, using dataset retrieval");
-      return { answer: fallbackAnswer(parsed.data.question, sources, lesson.title), model: "dataset-retrieval" };
+      safetyIdentifier: session.user.id,
     });
 
     await prisma.aIInteraction.create({
       data: {
         userId: session.user.id,
         purpose: "dataset_tutor",
+        provider: result.provider,
         model: result.model,
-        promptVersion: "2.0",
-        validatedOutput: JSON.stringify({ answer: result.answer, sourceIds: sources.slice(0, 2).map((source) => source.id) }),
+        promptVersion: "responses-tutor-1.0",
+        inputHash: createHash("sha256")
+          .update(
+            JSON.stringify({
+              lessonId: lesson.id,
+              question: parsed.data.question,
+            }),
+          )
+          .digest("hex"),
+        validatedOutput: JSON.stringify({
+          answer: result.answer,
+          sourceIds: sources.slice(0, 2).map((source) => source.id),
+        }),
         latencyMs: Date.now() - startedAt,
+        traceId: result.requestId,
         success: true,
       },
     });
@@ -177,10 +207,38 @@ export async function POST(request: Request) {
     return NextResponse.json({
       answer: result.answer,
       model: result.model,
-      sources: sources.slice(0, 2).map(({ id, title, type }) => ({ id, title, type })),
+      sources: sources
+        .slice(0, 2)
+        .map(({ id, title, type }) => ({ id, title, type })),
     });
   } catch (error) {
-    logger.error({ error }, "Dataset tutor request failed");
-    return NextResponse.json({ error: "Gia sư AI đang bận. Vui lòng thử lại." }, { status: 500 });
+    if (isAIProviderError(error)) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          ...(error.details.retryAfterSeconds
+            ? { retryAfterSeconds: error.details.retryAfterSeconds }
+            : {}),
+        },
+        {
+          status: error.status,
+          headers: error.details.retryAfterSeconds
+            ? { "Retry-After": String(error.details.retryAfterSeconds) }
+            : undefined,
+        },
+      );
+    }
+    logger.error(
+      { errorName: error instanceof Error ? error.name : "unknown" },
+      "Dataset tutor request failed",
+    );
+    return NextResponse.json(
+      {
+        error: "Gia sư AI đang bận. Vui lòng thử lại.",
+        code: "INTERNAL_ERROR",
+      },
+      { status: 500 },
+    );
   }
 }

@@ -1,5 +1,11 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Plan06 deployment 2026-09-10 — personalized AI and adaptive games
+- Worker `listena-english` version `8d50494f-773f-46bb-9910-23c4474d9b4d` is public at https://listena-english.tuanank2112.workers.dev. Remote D1 received only additive migrations `0002_personalized_ai_learning.sql` and `0003_personalized_generation_guards.sql`, then the reviewed idempotent core import. Postflight: original user preserved; 1 non-loginable system curriculum owner; 5 lessons, 116 vocabulary, 20 segments and 54 exercises.
+- Personalized lessons are private owner-bound artifacts generated through a real server-side OpenAI Responses boundary (`POST /responses`, strict JSON schema, `store:false`, ≤20 s deadline). No runtime mock/fallback is selectable. Missing/invalid provider configuration returns typed unavailable status without inventing lesson/tutor copy.
+- Games retain Quiz/Match/Spell forms but the server owns candidate selection, hidden validators, scoring, evidence and mastery. New runs are limited to one per 10 seconds and 12 per rolling 24 hours; answer retry is idempotent.
+- Gates: `npm test` 204/204, type-check PASS, lint 0 errors/36 warnings, Worker build PASS, E2E 16/16 using a test-process-only Responses transport stub. `OPENAI_API_KEY` is intentionally not present in production; owner must install it as Worker secret then perform the one real-provider smoke before calling AI live.
+
 ## Final verification 2026-09-10 — Plan05 Cloudflare Worker + D1 public
 - User chọn Cloudflare Workers + D1. Vinext check đạt 16/18 nhưng `next-auth` bị chặn; giữ Auth.js và dùng OpenNext. Next nâng 16.3.1 → 16.3.3.
 - D1 `listena-english` APAC nhận `migrations/0001_initial_schema.sql` (56 commands), schema-only. Không seed/reset/import production.

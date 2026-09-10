@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
-import { ArrowRight, BookOpen, Gamepad2 } from "lucide-react";
+import { ArrowRight, BookOpen, Bot, Gamepad2 } from "lucide-react";
 
 const COLORS = ["#176b55", "#ef765d", "#d89a2b", "#5c6fb3", "#9a5f7a"];
 
@@ -21,7 +21,7 @@ export default async function LessonsPage() {
     <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       <header className="mb-7 flex items-end justify-between gap-4">
         <div><p className="text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Lộ trình học</p><h1 className="mt-1 text-3xl font-black tracking-[-.05em] sm:text-4xl">Các chặng đang mở</h1></div>
-        <Link href="/learner/games" className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white sm:flex"><Gamepad2 className="h-4 w-4" /> Chơi nhanh</Link>
+        <div className="hidden items-center gap-2 sm:flex"><Link href="/learner/personalized-lessons" className="flex min-h-11 items-center gap-2 rounded-2xl bg-[#ffe5dc] px-4 text-xs font-black text-[#a84e3f]"><Bot className="h-4 w-4" /> Bài AI riêng</Link><Link href="/learner/games" className="flex min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white"><Gamepad2 className="h-4 w-4" /> Chơi nhanh</Link></div>
       </header>
 
       <div className="relative space-y-4 before:absolute before:bottom-12 before:left-7 before:top-12 before:w-px before:bg-[#cfc8bc] sm:before:left-10">

@@ -95,6 +95,33 @@ enum InterventionStatus {
   SKIPPED
 }
 
+// A profile starts with a prior, not an AI-certified language level. The
+// calibration service promotes this only after enough server-scored evidence.
+enum CalibrationStatus {
+  UNASSESSED
+  CALIBRATING
+  CALIBRATED
+}
+
+enum PersonalizedLessonStatus {
+  GENERATING
+  READY
+  FAILED
+  ARCHIVED
+}
+
+enum AdaptiveGameMode {
+  QUIZ
+  MATCH
+  SPELL
+}
+
+enum AdaptiveGameRunStatus {
+  ACTIVE
+  COMPLETED
+  EXPIRED
+}
+
 model User {
   id        String   @id @default(uuid())
   name      String
@@ -104,19 +131,23 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  learnerProfile    LearnerProfile?
-  learnerMemory     LearnerMemory?
-  attempts          Attempt[]
-  vocabularyMastery VocabularyMastery[]
-  skillMastery      SkillMastery[]
-  flashcards        Flashcard[]
-  reviewLogs        ReviewLog[]
-  recommendations   Recommendation[]
-  aiInteractions    AIInteraction[]
-  learningSessions  LearningSession[]
-  coursesCreated    Course[]            @relation("CourseCreator")
-  lessonsCreated    Lesson[]            @relation("LessonCreator")
-  lessonsReviewed   Lesson[]            @relation("LessonReviewer")
+  learnerProfile             LearnerProfile?
+  learnerMemory              LearnerMemory?
+  attempts                   Attempt[]
+  vocabularyMastery          VocabularyMastery[]
+  skillMastery               SkillMastery[]
+  flashcards                 Flashcard[]
+  reviewLogs                 ReviewLog[]
+  recommendations            Recommendation[]
+  aiInteractions             AIInteraction[]
+  learningSessions           LearningSession[]
+  personalizedLessons        PersonalizedLesson[]
+  personalizedLessonAttempts PersonalizedLessonAttempt[]
+  adaptiveGameRuns           AdaptiveGameRun[]
+  adaptiveEvidence           AdaptiveEvidence[]
+  coursesCreated             Course[]                    @relation("CourseCreator")
+  lessonsCreated             Lesson[]                    @relation("LessonCreator")
+  lessonsReviewed            Lesson[]                    @relation("LessonReviewer")
 }
 
 model LearnerMemory {
@@ -132,20 +163,22 @@ model LearnerMemory {
 }
 
 model LearnerProfile {
-  id                      String    @id @default(uuid())
-  userId                  String    @unique
-  estimatedCefrLevel      CefrLevel @default(A2)
-  listeningMastery        Float     @default(0.5)
-  vocabularyMastery       Float     @default(0.5)
-  spellingMastery         Float     @default(0.5)
-  preferredAccent         String?   @default("us")
-  preferredTopics         String    @default("")
-  recommendedPlaybackRate Float     @default(1.0)
-  totalStudyMinutes       Int       @default(0)
-  currentStreak           Int       @default(0)
-  lastActivityAt          DateTime? @default(now())
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
+  id                      String            @id @default(uuid())
+  userId                  String            @unique
+  estimatedCefrLevel      CefrLevel         @default(A2)
+  listeningMastery        Float             @default(0.5)
+  vocabularyMastery       Float             @default(0.5)
+  spellingMastery         Float             @default(0.5)
+  preferredAccent         String?           @default("us")
+  preferredTopics         String            @default("")
+  recommendedPlaybackRate Float             @default(1.0)
+  totalStudyMinutes       Int               @default(0)
+  currentStreak           Int               @default(0)
+  calibrationStatus       CalibrationStatus @default(UNASSESSED)
+  calibratedAt            DateTime?
+  lastActivityAt          DateTime?         @default(now())
+  createdAt               DateTime          @default(now())
+  updatedAt               DateTime          @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -224,9 +257,12 @@ model VocabularyItem {
   exampleSentence String?
   audioUrl        String?
 
-  lessons    LessonVocabulary[]
-  mastery    VocabularyMastery[]
-  flashcards Flashcard[]
+  lessons             LessonVocabulary[]
+  mastery             VocabularyMastery[]
+  flashcards          Flashcard[]
+  personalizedLessons PersonalizedLessonVocabulary[]
+  adaptiveGameRounds  AdaptiveGameRound[]
+  adaptiveEvidence    AdaptiveEvidence[]
 }
 
 model LessonVocabulary {
@@ -416,6 +452,7 @@ model AIInteraction {
 
   @@index([createdAt])
   @@index([purpose, success])
+  @@index([userId, purpose, createdAt])
   @@index([sessionId, createdAt])
   @@index([traceId])
 }
@@ -504,4 +541,140 @@ model Intervention {
   sourceTurn LearningTurn?   @relation(fields: [sourceTurnId], references: [id], onDelete: SetNull)
 
   @@index([sessionId, status])
+}
+
+// Private persisted AI artifact. `contentJson` is safe for the owner-facing
+// player; `validatorJson` remains server-only and is never serialized to it.
+model PersonalizedLesson {
+  id                 String                   @id @default(uuid())
+  userId             String
+  status             PersonalizedLessonStatus @default(GENERATING)
+  targetSkill        String
+  cefrLevel          CefrLevel
+  difficulty         Float
+  title              String?
+  objectivesJson     String                   @default("[]")
+  contentJson        String?
+  validatorJson      String?
+  sourceSnapshotHash String
+  generationKey      String
+  provider           String?
+  model              String?
+  promptVersion      String
+  failureCode        String?
+  createdAt          DateTime                 @default(now())
+  readyAt            DateTime?
+  expiresAt          DateTime?
+
+  user       User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabulary PersonalizedLessonVocabulary[]
+  attempts   PersonalizedLessonAttempt[]
+
+  @@unique([userId, generationKey])
+  @@index([userId, status, createdAt])
+  @@unique([userId, targetSkill, sourceSnapshotHash])
+}
+
+// Vocabulary remains globally normalized for SRS, while this join makes its
+// AI-generated use private to the lesson owner.
+model PersonalizedLessonVocabulary {
+  personalizedLessonId String
+  vocabularyItemId     String
+  isTarget             Boolean @default(true)
+  importance           Float   @default(1.0)
+
+  personalizedLesson PersonalizedLesson @relation(fields: [personalizedLessonId], references: [id], onDelete: Cascade)
+  vocabularyItem     VocabularyItem     @relation(fields: [vocabularyItemId], references: [id], onDelete: Restrict)
+
+  @@id([personalizedLessonId, vocabularyItemId])
+  @@index([vocabularyItemId])
+}
+
+model PersonalizedLessonAttempt {
+  id               String   @id @default(uuid())
+  lessonId         String
+  userId           String
+  exerciseId       String
+  clientAttemptId  String
+  submittedAnswer  String
+  normalizedAnswer String?
+  score            Float
+  correct          Boolean?
+  feedbackVi       String
+  gradingMethod    String
+  responseTimeMs   Int?
+  createdAt        DateTime @default(now())
+
+  lesson PersonalizedLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([lessonId, clientAttemptId])
+  @@index([userId, lessonId, createdAt])
+}
+
+// A run is issued by the server and owns every answer key. The browser sees
+// only `publicJson` and can never turn a claimed Boolean into evidence.
+model AdaptiveGameRun {
+  id                    String                @id @default(uuid())
+  userId                String
+  mode                  AdaptiveGameMode
+  status                AdaptiveGameRunStatus @default(ACTIVE)
+  targetSkill           String
+  difficulty            Float
+  selectionSnapshotHash String
+  startedAt             DateTime              @default(now())
+  completedAt           DateTime?
+  expiresAt             DateTime
+
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  rounds AdaptiveGameRound[]
+
+  @@index([userId, status, startedAt])
+}
+
+model AdaptiveGameRound {
+  id               String    @id @default(uuid())
+  runId            String
+  position         Int
+  vocabularyItemId String
+  publicJson       String
+  validatorJson    String
+  answeredAt       DateTime?
+  correct          Boolean?
+  score            Float?
+  clientAnswerId   String?
+  responseTimeMs   Int?
+  feedbackVi       String?
+
+  run            AdaptiveGameRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  vocabularyItem VocabularyItem  @relation(fields: [vocabularyItemId], references: [id], onDelete: Restrict)
+
+  @@unique([runId, position])
+  @@unique([runId, clientAnswerId])
+  @@index([vocabularyItemId])
+}
+
+// This is separate from LearningEvidence because a game has no LearningSession
+// foreign key. It is the only game result allowed to drive future adaptation.
+model AdaptiveEvidence {
+  id               String   @id @default(uuid())
+  userId           String
+  sourceKind       String
+  sourceId         String
+  skillKey         String
+  vocabularyItemId String?
+  score            Float
+  confidence       Float    @default(1.0)
+  difficulty       Float
+  gradingMethod    String
+  responseTimeMs   Int?
+  hintCount        Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vocabularyItem VocabularyItem? @relation(fields: [vocabularyItemId], references: [id], onDelete: SetNull)
+
+  @@index([userId, skillKey, createdAt])
+  @@index([userId, vocabularyItemId, createdAt])
+  @@unique([sourceKind, sourceId, skillKey])
 }

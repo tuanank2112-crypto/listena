@@ -1,4 +1,6 @@
+import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { AIUnavailableError } from "@/server/ai/errors";
 import { createAIProviderFromEnv } from "./provider";
 
 describe("createAIProviderFromEnv", () => {
@@ -8,15 +10,13 @@ describe("createAIProviderFromEnv", () => {
 
   it("forwards the configured base URL and model to OpenAI-compatible calls", async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
-      choices: [{
-        message: {
-          content: JSON.stringify({
-            summaryVi: "Ổn",
-            errors: [],
-            recommendedActions: [],
-          }),
-        },
-      }],
+      id: "resp_test",
+      status: "completed",
+      output_text: JSON.stringify({
+        summaryVi: "Ổn",
+        errors: [],
+        recommendedActions: [],
+      }),
     }), { status: 200 }));
     vi.stubGlobal("fetch", fetchMock);
 
@@ -33,13 +33,29 @@ describe("createAIProviderFromEnv", () => {
       wordDiffs: [],
       cefrLevel: "A2",
       errorTypes: [],
+      safetyIdentifier: "learner-1",
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://kira.example/api/v1/chat/completions");
+    expect(url).toBe("https://kira.example/api/v1/responses");
+    expect(init.headers).toMatchObject({ Authorization: "Bearer test-key" });
     expect(JSON.parse(String(init.body))).toMatchObject({
       model: "kira-3.5-flash",
+      store: false,
+      max_output_tokens: 1200,
+      safety_identifier: createHash("sha256").update("learner-1").digest("hex"),
+      text: {
+        format: {
+          type: "json_schema",
+          strict: true,
+          name: "error_analysis",
+        },
+      },
     });
+  });
+
+  it("does not select a mock provider when live configuration is absent", () => {
+    expect(() => createAIProviderFromEnv({})).toThrow(AIUnavailableError);
   });
 });

@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import type { LearningSessionRecord, LearningSessionSnapshot } from "./repository";
 import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
 import { planDailyQuest } from "@/server/ai/daily-quest";
+import { AIUnavailableError } from "@/server/ai/errors";
 import { createEvaluateTurnFallback, createStartMissionFallback } from "@/server/ai/tutor-fallback";
 
 const mocks = vi.hoisted(() => ({
@@ -171,6 +172,20 @@ function addEvidence() {
 }
 
 describe("Daily Quest start history", () => {
+  it("does not persist a session, AI turn, or evidence when live AI is unavailable", async () => {
+    mocks.start.mockRejectedValue(
+      new AIUnavailableError({ reason: "provider_not_configured" }),
+    );
+
+    await expect(
+      createLearningSession(userId, { mode: "MISSION", scenarioKey: "cafe-order" }),
+    ).rejects.toMatchObject({ code: "AI_UNAVAILABLE", status: 503 });
+
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(record.turns).toEqual([]);
+    expect(record.evidence).toEqual([]);
+  });
+
   it("passes only the owned validated recent history into the real Quest start path", async () => {
     mocks.recentQuestHistory.mockResolvedValue(["cafe-order"]);
 
@@ -195,6 +210,20 @@ describe("Daily Quest start history", () => {
 });
 
 describe("session intervention persistence", () => {
+  it("does not write a learner turn, fictitious AI turn, or evidence when live AI is unavailable", async () => {
+    mocks.evaluate.mockRejectedValue(
+      new AIUnavailableError({ reason: "provider_not_configured" }),
+    );
+
+    await expect(
+      submitLearningTurn(userId, sessionId, turnInput),
+    ).rejects.toMatchObject({ code: "AI_UNAVAILABLE", status: 503 });
+
+    expect(mocks.transaction).not.toHaveBeenCalled();
+    expect(record.turns).toEqual([]);
+    expect(record.evidence).toEqual([]);
+  });
+
   it("writes memory with the exact new evidence inside the turn transaction and skips it on retry", async () => {
     await submitLearningTurn(userId, sessionId, turnInput);
     await submitLearningTurn(userId, sessionId, turnInput);

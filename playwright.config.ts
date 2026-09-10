@@ -1,4 +1,5 @@
 import { defineConfig, devices } from "@playwright/test";
+import { randomUUID } from "node:crypto";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -6,7 +7,13 @@ import path from "node:path";
 // This test process and its workers share a fresh DB; never seed the user's dev.db.
 process.env.LISTENAI_E2E_DIR ??= mkdtempSync(path.join(tmpdir(), "listena-e2e-"));
 process.env.DATABASE_URL = `file:${path.join(process.env.LISTENAI_E2E_DIR, "test.db").replaceAll("\\", "/")}`;
-process.env.AI_PROVIDER = "mock";
+// Exercise the production Responses transport with a generated fake key. The
+// Playwright web-server command below preloads a process-only upstream stub;
+// application runtime never gets an environment-selected mock provider.
+process.env.AI_PROVIDER = "openai";
+process.env.OPENAI_API_KEY = `e2e-not-a-secret-${randomUUID()}`;
+process.env.OPENAI_MODEL = "e2e-responses-test-stub";
+process.env.OPENAI_BASE_URL = "https://api.openai.com/v1";
 process.env.NEXTAUTH_SECRET = "listena-isolated-e2e-secret";
 process.env.AUTH_URL = "http://127.0.0.1:3100";
 process.env.NEXTAUTH_URL = process.env.AUTH_URL;
@@ -23,7 +30,8 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: {
-    command: "npm run dev -- --port 3100",
+    command:
+      "node --require ./e2e/openai-responses-test-stub.cjs ./node_modules/next/dist/bin/next dev --port 3100",
     url: "http://127.0.0.1:3100",
     timeout: 120000,
     reuseExistingServer: false,

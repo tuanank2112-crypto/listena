@@ -16,7 +16,10 @@ export async function POST(req: Request) {
       );
     }
 
-    const { name, email, password, role } = parsed.data;
+    const { name, email, password } = parsed.data;
+    // Public registration never grants a privileged authoring role. Teachers
+    // are provisioned through an authenticated administrative workflow.
+    const role = "LEARNER" as const;
 
     // Check existing user
     const existing = await prisma.user.findUnique({ where: { email } });
@@ -38,31 +41,28 @@ export async function POST(req: Request) {
       },
     });
 
-    // Create learner profile + skill masteries only for LEARNER role
-    if (role === "LEARNER") {
-      await prisma.learnerProfile.create({
+    await prisma.learnerProfile.create({
+      data: {
+        userId: user.id,
+        estimatedCefrLevel: "A2",
+        listeningMastery: 0.5,
+        vocabularyMastery: 0.5,
+        spellingMastery: 0.5,
+        lastActivityAt: new Date(),
+      },
+    });
+
+    // Initialize skill masteries
+    const skills = ["listening", "vocabulary", "spelling", "function_words", "segmentation", "final_sounds"];
+    for (const skill of skills) {
+      await prisma.skillMastery.create({
         data: {
           userId: user.id,
-          estimatedCefrLevel: "A2",
-          listeningMastery: 0.5,
-          vocabularyMastery: 0.5,
-          spellingMastery: 0.5,
-          lastActivityAt: new Date(),
+          skillKey: skill,
+          masteryScore: 0.5,
+          evidenceCount: 0,
         },
       });
-
-      // Initialize skill masteries
-      const skills = ["listening", "vocabulary", "spelling", "function_words", "segmentation", "final_sounds"];
-      for (const skill of skills) {
-        await prisma.skillMastery.create({
-          data: {
-            userId: user.id,
-            skillKey: skill,
-            masteryScore: 0.5,
-            evidenceCount: 0,
-          },
-        });
-      }
     }
 
     logger.info({ userId: user.id, role }, "User registered");

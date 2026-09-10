@@ -27,9 +27,9 @@ import {
 } from "@/server/ai/tutor-prompts";
 import type { TutorTurnProvider } from "@/server/ai/tutor-provider-contract";
 import {
-  createEvaluateTurnFallback,
-  createStartMissionFallback,
-} from "@/server/ai/tutor-fallback";
+  AIUnavailableError,
+  isAIProviderError,
+} from "@/server/ai/errors";
 
 type LearningSessionMode = z.infer<typeof LearningSessionModeSchema>;
 
@@ -47,6 +47,7 @@ export interface StartMissionInput {
 export interface EvaluateTutorTurnInput {
   state: MissionState;
   learnerMessage: string;
+  learnerKey?: string;
   recentTurns?: RecentTutorTurn[];
   learnerContext?: LearnerTutorContext;
   lessonContext?: LessonTutorContext;
@@ -109,17 +110,16 @@ export async function startMission(
     learnerContext: input.learnerContext,
     lessonContext: input.lessonContext,
   });
-  const fallback = createStartMissionFallback(template);
   const generated = await generateValidatedTurn({
     purpose: "start_mission",
     provider: options.provider,
+    safetyIdentifier: input.learnerKey,
     input: buildStartMissionProviderInput({
       state,
       openingLine: template.openingLine,
       firstPrompt: template.firstPrompt,
       groundedContext,
     }),
-    fallback,
     groundedKnowledgeIds: groundedContext.verifiedKnowledge.map(
       (source) => source.id,
     ),
@@ -148,22 +148,16 @@ export async function evaluateTutorTurn(
     learnerContext: input.learnerContext,
     lessonContext: input.lessonContext,
   });
-  const fallback = createEvaluateTurnFallback({
-    state,
-    learnerMessage,
-    template,
-  });
-
   return generateValidatedTurn({
     purpose: "evaluate_turn",
     provider: options.provider,
+    safetyIdentifier: input.learnerKey,
     input: buildEvaluateTurnProviderInput({
       state,
       learnerMessage,
       recentTurns: input.recentTurns ?? [],
       groundedContext,
     }),
-    fallback,
     groundedKnowledgeIds: groundedContext.verifiedKnowledge.map(
       (source) => source.id,
     ),
@@ -173,73 +167,50 @@ export async function evaluateTutorTurn(
 async function generateValidatedTurn(input: {
   purpose: "start_mission" | "evaluate_turn";
   provider?: TutorTurnProvider;
+  safetyIdentifier?: string;
   input: Record<string, unknown>;
-  fallback: TutorTurnOutput;
   groundedKnowledgeIds: string[];
 }): Promise<TutorTurnResult> {
   const provider = input.provider ?? (await createDefaultTutorProvider());
   if (!provider) {
-    return fallbackResult(
-      input.fallback,
-      input.groundedKnowledgeIds,
-      "provider_not_configured",
-    );
+    throw new AIUnavailableError({ reason: "provider_not_configured" });
   }
+
+  let response: Awaited<ReturnType<TutorTurnProvider["generate"]>>;
   try {
-    const response = await provider.generate({
+    response = await provider.generate({
       purpose: input.purpose,
       systemPrompt: TUTOR_SYSTEM_PROMPT,
       input: input.input,
+      safetyIdentifier: input.safetyIdentifier,
     });
-    const parsed = TutorTurnOutputSchema.safeParse(response.output);
-    if (!parsed.success) {
-      return fallbackResult(
-        input.fallback,
-        input.groundedKnowledgeIds,
-        "schema_validation_failed",
-        response.provider,
-        response.model,
-      );
-    }
-
-    const policyOutput = enforceNoAnswerLeak(parsed.data);
-    return {
-      output: policyOutput,
-      meta: {
-        provider: response.provider,
-        model: response.model,
-        promptVersion: TUTOR_PROMPT_VERSION,
-        groundedKnowledgeIds: input.groundedKnowledgeIds,
-      },
-    };
   } catch (error) {
-    return fallbackResult(
-      input.fallback,
-      input.groundedKnowledgeIds,
-      error instanceof Error
-        ? `provider_error:${error.name}`
-        : "provider_error",
-      provider.providerName,
-      provider.modelName,
-    );
+    if (isAIProviderError(error)) throw error;
+    throw new AIUnavailableError({
+      reason: "upstream_failure",
+      provider: provider.providerName,
+      model: provider.modelName,
+    });
   }
-}
 
-function fallbackResult(
-  output: TutorTurnOutput,
-  groundedKnowledgeIds: string[],
-  fallbackReason: string,
-  provider = "deterministic-fallback",
-  model?: string,
-): TutorTurnResult {
+  const parsed = TutorTurnOutputSchema.safeParse(response.output);
+  if (!parsed.success) {
+    throw new AIUnavailableError({
+      reason: "schema_validation_failed",
+      provider: response.provider,
+      model: response.model,
+      requestId: response.requestId,
+    });
+  }
+
+  const policyOutput = enforceNoAnswerLeak(parsed.data);
   return {
-    output: TutorTurnOutputSchema.parse(output),
+    output: policyOutput,
     meta: {
-      provider,
-      model,
+      provider: response.provider,
+      model: response.model,
       promptVersion: TUTOR_PROMPT_VERSION,
-      fallbackReason,
-      groundedKnowledgeIds,
+      groundedKnowledgeIds: input.groundedKnowledgeIds,
     },
   };
 }

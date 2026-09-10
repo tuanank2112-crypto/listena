@@ -6,12 +6,15 @@ export interface TutorProviderRequest {
   purpose: TutorProviderPurpose;
   systemPrompt: string;
   input: Record<string, unknown>;
+  /** Raw stable server-side learner ID. The live provider hashes it before sending. */
+  safetyIdentifier?: string;
 }
 
 export interface TutorProviderResponse {
   output: unknown;
   provider: string;
   model?: string;
+  requestId?: string;
 }
 
 export interface TutorTurnProvider {

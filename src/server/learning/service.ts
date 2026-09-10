@@ -175,6 +175,7 @@ export async function submitLearningTurn(
   const generated = await evaluateTutorTurn({
     state: currentState,
     learnerMessage: input.content,
+    learnerKey: userId,
     recentTurns: makeRecentTurns(snapshot),
     learnerContext: makeLearnerContext(learnerContext, learnerMemory),
     lessonContext: makeLessonContext(snapshot.lesson),

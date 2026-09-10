@@ -5,7 +5,9 @@
 import { assessDictation, assessOpenResponse } from "@/core/assessment/engine";
 import { updateMastery } from "@/core/learner-model/mastery";
 import { processReview } from "@/core/srs/sm2";
-import { createAIProviderFromEnv, type AIFeedbackErrorType } from "@/server/ai/provider";
+import { createAIProviderFromEnv } from "@/server/ai/provider";
+import { isAIProviderError } from "@/server/ai/errors";
+import type { AIFeedbackResponse } from "@/server/validation/schemas";
 import { attemptRepo } from "@/server/repos/attempt";
 import { learnerRepo } from "@/server/repos/learner";
 import { flashcardRepo } from "@/server/repos/flashcard";
@@ -131,88 +133,89 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     masteryScore: assessment.functionWordAccuracy,
   });
 
-  // 6. Try AI feedback (mock or real)
-  let aiFeedback = null;
-  try {
-    const aiProvider = createAIProviderFromEnv();
+  // 6. Closed dictation is already server-graded. Spend live AI capacity only
+  // on an explicit open-response exercise, and never label the assessment as
+  // generated AI feedback when that optional call is unavailable.
+  let aiFeedback: AIFeedbackResponse | null = null;
+  let aiFeedbackProvider: {
+    providerName: string;
+    modelName: string;
+  } | null = null;
+  let aiFeedbackStatus:
+    | "available"
+    | "unavailable"
+    | "rate_limited"
+    | "not_requested" = "not_requested";
 
-    aiFeedback = await aiProvider.analyzeErrors({
-      transcript: exercise.lesson.transcript,
-      submittedAnswer: params.submittedAnswer,
-      wordDiffs: assessment.wordDiffs.map((d) => ({
-        type: d.type,
-        expected: d.expected,
-        actual: d.actual,
-      })),
-      cefrLevel: exercise.lesson.cefrLevel,
-      errorTypes: assessment.errors.map((e) => e.type),
-    });
+  if (isOpenResponse) {
+    try {
+      const aiProvider = createAIProviderFromEnv();
+      aiFeedback = await aiProvider.analyzeErrors({
+        transcript: exercise.lesson.transcript,
+        submittedAnswer: params.submittedAnswer,
+        wordDiffs: assessment.wordDiffs.map((d) => ({
+          type: d.type,
+          expected: d.expected,
+          actual: d.actual,
+        })),
+        cefrLevel: exercise.lesson.cefrLevel,
+        errorTypes: assessment.errors.map((e) => e.type),
+        safetyIdentifier: params.userId,
+      });
+      aiFeedbackProvider = aiProvider;
+      aiFeedbackStatus = "available";
+    } catch (error) {
+      aiFeedbackStatus =
+        isAIProviderError(error) && error.code === "AI_RATE_LIMITED"
+          ? "rate_limited"
+          : "unavailable";
+      logger.warn(
+        {
+          code: isAIProviderError(error) ? error.code : "AI_UNAVAILABLE",
+          errorName: error instanceof Error ? error.name : "unknown",
+        },
+        "Live AI feedback unavailable; returning deterministic assessment without AI copy",
+      );
+    }
+  }
 
-    // Log AI interaction
+  // Provenance writes are deliberately outside the provider-failure handler:
+  // a database fault must not be mislabeled as an unavailable AI response.
+  if (aiFeedback && aiFeedbackProvider) {
     await prisma.aIInteraction.create({
       data: {
         userId: params.userId,
         purpose: "error_analysis",
-        model: process.env.OPENAI_MODEL ?? "mock",
-        promptVersion: "1.0",
+        provider: aiFeedbackProvider.providerName,
+        model: aiFeedbackProvider.modelName,
+        promptVersion: "responses-feedback-1.0",
         validatedOutput: JSON.stringify(aiFeedback),
         latencyMs: Date.now() - startTime,
         success: true,
       },
     });
 
-    // Update attempt errors with AI explanations
     if (aiFeedback.errors.length > 0) {
       const savedErrors = await prisma.attemptError.findMany({
         where: { attemptId: attempt.id },
       });
-      for (const fb of aiFeedback.errors) {
+      for (const feedback of aiFeedback.errors) {
         const matchingError = savedErrors.find(
-          (e) => e.expectedText === fb.expected && e.actualText === fb.actual
+          (error) =>
+            error.expectedText === feedback.expected &&
+            error.actualText === feedback.actual,
         );
         if (matchingError) {
           await prisma.attemptError.update({
             where: { id: matchingError.id },
             data: {
-              aiExplanation: fb.explanationVi,
-              remediationType: fb.microExercise?.type ?? null,
+              aiExplanation: feedback.explanationVi,
+              remediationType: feedback.microExercise?.type ?? null,
             },
           });
         }
       }
     }
-  } catch (error) {
-    logger.warn({ error }, "AI feedback generation failed, using deterministic fallback");
-    // Deterministic fallback feedback
-    aiFeedback = {
-      summaryVi: `Bạn đạt ${assessment.overallScore} điểm. ${assessment.errors.length} lỗi được phát hiện.`,
-      errors: assessment.errors.map((e) => ({
-        errorType: e.type as AIFeedbackErrorType,
-        expected: e.expected,
-        actual: e.actual,
-        probableCauseVi: "Lỗi trong quá trình nghe chép chính tả.",
-        explanationVi: `Từ "${e.expected}" có thể bạn chưa nghe rõ hoặc chưa quen cách viết.`,
-        microExercise: {
-          type: "FLASHCARD" as const,
-          instructionVi: "Ôn lại từ này với flashcard.",
-          items: [e.expected],
-        },
-        confidence: e.confidence,
-      })),
-      recommendedActions: ["Luyện nghe lại bài này", "Ôn tập từ vựng"],
-    };
-  }
-
-  if (isOpenResponse) {
-    aiFeedback = {
-      summaryVi: `Bài tự luận đã được ghi nhận với ${assessment.overallScore} điểm hoàn thành.`,
-      errors: [],
-      recommendedActions: [
-        "Đọc lại câu trả lời và kiểm tra thì",
-        "Bổ sung từ vựng đúng chủ đề",
-        "Hỏi Gia sư AI để nhận góp ý chi tiết",
-      ],
-    };
   }
   // 7. Create flashcards from errors
   const flashcards = [];
@@ -265,6 +268,7 @@ export async function submitAttempt(params: SubmitAttemptParams) {
     attempt,
     assessment,
     aiFeedback,
+    aiFeedbackStatus,
     flashcards,
   };
 }

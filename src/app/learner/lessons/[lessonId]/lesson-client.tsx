@@ -53,7 +53,6 @@ interface LessonData {
     id: string;
     type: string;
     prompt: string;
-    correctAnswer: string;
     metadata: string | null;
     position: number;
     segmentId: string | null;
@@ -111,7 +110,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
 
   const play = useCallback(async (target = segment) => {
     const url = target?.audioUrl || lesson.audioUrl;
-    if (!url) return speakEnglish(target?.text ?? exercise?.correctAnswer ?? "");
+    if (!url) return speakEnglish(target?.text ?? lesson.transcript.slice(0, 700));
     audioRef.current?.pause();
     const audio = new Audio(url);
     audio.playbackRate = rate;
@@ -120,7 +119,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
     audio.onerror = () => { setPlaying(false); void speakEnglish(target?.text ?? ""); };
     audioRef.current = audio;
     try { await audio.play(); } catch { void speakEnglish(target?.text ?? ""); }
-  }, [exercise?.correctAnswer, lesson.audioUrl, rate, segment, speakEnglish]);
+  }, [lesson.audioUrl, lesson.transcript, rate, segment, speakEnglish]);
 
   function move(next: number) {
     setIndex(next);
@@ -178,7 +177,9 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
     } finally { setAsking(false); }
   }
 
-  const hintText = metadata.answerMode === "open" ? "Viết 2–3 câu ngắn. Ưu tiên đúng ý." : `${exercise?.correctAnswer.split(/\s+/).slice(0, 4).join(" ")}…`;
+  const hintText = metadata.answerMode === "open"
+    ? "Viết 2–3 câu ngắn. Ưu tiên đúng ý."
+    : "Đọc kỹ yêu cầu, xác định từ khóa và thử trả lời bằng phần nội dung bạn đã học.";
 
   return (
     <div className="mx-auto min-h-screen max-w-7xl px-4 py-5 sm:px-6 sm:py-8">

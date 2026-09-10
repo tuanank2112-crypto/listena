@@ -33,10 +33,16 @@ export default async function LessonDetailPage({
       })
     : [];
   const learningContext = getUnitLearningContext(getDatasetUnit(lesson.title));
+  // Correct answers remain on the server for `/api/attempt`; the learner page
+  // receives only content needed to render the question.
+  const publicLesson = {
+    ...lesson,
+    exercises: lesson.exercises.map(({ correctAnswer: _correctAnswer, ...exercise }) => exercise),
+  };
 
   return (
     <LessonDetailClient
-      lesson={JSON.parse(JSON.stringify(lesson))}
+      lesson={JSON.parse(JSON.stringify(publicLesson))}
       lastAttemptMap={Object.fromEntries(lastAttempts.map((attempt) => [attempt.exerciseId, attempt]))}
       learningContext={learningContext}
     />

@@ -20,8 +20,9 @@ services:
         value: https://listena.onrender.com
       - key: NEXTAUTH_SECRET
         generateValue: true
-      - key: AI_PROVIDER
-        value: mock
+      # AI is intentionally unconfigured until OPENAI_API_KEY is added through
+      # the host secret manager with AI_PROVIDER=openai. The application then
+      # fails closed instead of presenting a mock response.
       - key: TTS_PROVIDER
         value: mock
       - key: LOG_LEVEL

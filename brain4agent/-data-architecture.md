@@ -1,17 +1,18 @@
 # Dữ liệu và luồng học
 
-Prisma SQLite; migrations init và add_learning_sessions. Patch0.1.1 không đổi DDL/provider. E2E tạo file DB mới trong temp/listena-e2e-*, apply migrations và seed/import ở đó; không đụng dev.db.
+Prisma uses local libSQL SQLite and request-scoped Cloudflare D1 in production. DDL is forward-only through `migrations/0001`–`0003`; production curriculum recovery is a reviewed idempotent upsert import, never reset/seed. E2E creates a temporary `listena-e2e-*` database and never touches `dev.db` or production D1.
 
 ## Model
-- User/roles, LearnerProfile.
+- User/roles, LearnerProfile (including calibration state).
 - Course→Lesson→LessonSegment/Exercise; LessonVocabulary nối VocabularyItem.
 - LearningSession→LearningTurn/LearningEvidence/Intervention; AIInteraction trace provider/output/fallback.
 - Attempt/AttemptError, VocabularyMastery, Flashcard/ReviewLog, SkillMastery, Recommendation.
+- PersonalizedLesson/PersonalizedLessonVocabulary/PersonalizedLessonAttempt are owner-private artifacts. AdaptiveGameRun/AdaptiveGameRound hold server-only validators; AdaptiveEvidence feeds mastery/calibration.
 
 ## AI-native loop
-Dashboard tìm ACTIVE session mới nhất của đúng user hoặc tạo Daily Quest. Repository lấy profile/weak skills/due vocabulary/lesson → orchestrator/retrieval/provider hoặc fallback → server validation → transaction lưu turns/outcome/evidence/mastery → public DTO → reducer/UI.
+Dashboard finds the owner's newest ACTIVE session or creates a Daily Quest. Repositories supply bounded profile/weak-skill/due-vocabulary context → orchestrator/retrieval/live provider or typed unavailable error → server validation → transaction persists turns/outcome/evidence/mastery → public DTO → reducer/UI. Personalized generation follows the same privacy boundary and persists a source snapshot hash/provenance.
 
-Intervention validator quyết định output trước state/evidence. Completion auto/manual dùng transition ACTIVE→COMPLETED và tăng phút một lần trong transaction. Unique clientTurnId/sequence ngăn ghi đôi; conflict409.
+Intervention validator decides output before state/evidence. Completion auto/manual uses ACTIVE→COMPLETED and increases minutes once in a transaction. Unique clientTurnId/sequence prevents duplicate writes. Adaptive-game and personalized-lesson answer IDs are also idempotent and their correct answers never reach the browser.
 
 ## Practice hỗ trợ
 Attempt chỉ nhận exercise đúng lesson PUBLISHED. Flashcard review kiểm ownership, dùng SM-2; counters là delta atomic. Queue lấy active cards đến hạn hoặc chưa có mastery của user. Client tiến queue sau lưu thành công; retry lỗi giữ card.

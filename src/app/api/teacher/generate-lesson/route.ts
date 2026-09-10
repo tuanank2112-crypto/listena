@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { createAIProviderFromEnv } from "@/server/ai/provider";
+import { isAIProviderError } from "@/server/ai/errors";
 import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/schemas";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
@@ -26,7 +27,10 @@ export async function POST(req: Request) {
     // Generate lesson draft with AI
     const aiProvider = createAIProviderFromEnv();
 
-    const draft = await aiProvider.generateLesson(parsed.data);
+    const draft = await aiProvider.generateLesson({
+      ...parsed.data,
+      safetyIdentifier: session.user.id,
+    });
 
     // Validate AI output
     const validated = AILessonDraftSchema.safeParse(draft);
@@ -119,6 +123,23 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ lesson }, { status: 201 });
   } catch (error) {
+    if (isAIProviderError(error)) {
+      return NextResponse.json(
+        {
+          error: error.message,
+          code: error.code,
+          ...(error.details.retryAfterSeconds
+            ? { retryAfterSeconds: error.details.retryAfterSeconds }
+            : {}),
+        },
+        {
+          status: error.status,
+          headers: error.details.retryAfterSeconds
+            ? { "Retry-After": String(error.details.retryAfterSeconds) }
+            : undefined,
+        },
+      );
+    }
     const message = error instanceof Error ? error.message : "Unknown error";
     logger.error({ error: message }, "AI lesson generation failed");
     return NextResponse.json(
