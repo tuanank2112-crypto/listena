@@ -72,6 +72,7 @@ type SessionRecord = {
 export type LearningSessionDto = ReturnType<typeof toLearningSessionDto>;
 
 export function toLearningSessionDto(record: SessionRecord) {
+  const state = parseMissionState(record.stateJson);
   return {
     id: record.id,
     lessonId: record.lessonId,
@@ -79,7 +80,10 @@ export function toLearningSessionDto(record: SessionRecord) {
     status: record.status,
     goal: record.goal,
     levelSnapshot: record.levelSnapshot,
-    state: parseMissionState(record.stateJson),
+    state,
+    ...(record.status === "COMPLETED" ? {
+      completionOutcome: state.completionOutcome === "COMPLETED" ? "COMPLETED" : "PARTIAL",
+    } : {}),
     summary: record.summary,
     lesson: record.lesson,
     turns: record.turns

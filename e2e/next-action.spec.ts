@@ -49,6 +49,29 @@ async function expectSessionCtaStartsOwnedSession(page: Page, userId: string, pr
   })).toEqual({ id: nextSessionId });
 }
 
+test("an untouched Mission cannot be completed or claim study time", async ({ page }) => {
+  const user = await createAndLoginLearner(page);
+  await db.learnerProfile.create({ data: { userId: user.id } });
+  const sessionId = await createMission(page);
+  const before = await db.learnerProfile.findUniqueOrThrow({
+    where: { userId: user.id },
+    select: { totalStudyMinutes: true },
+  });
+
+  const complete = await page.request.post(`/api/learning-sessions/${sessionId}/complete`);
+
+  expect(complete.status()).toBe(409);
+  await expect(complete.json()).resolves.toMatchObject({ code: "SESSION_CONFLICT" });
+  await expect.poll(async () => db.learningSession.findUniqueOrThrow({
+    where: { id: sessionId },
+    select: { status: true, completedAt: true },
+  })).toEqual({ status: "ACTIVE", completedAt: null });
+  await expect.poll(async () => db.learnerProfile.findUniqueOrThrow({
+    where: { userId: user.id },
+    select: { totalStudyMinutes: true },
+  })).toEqual(before);
+});
+
 test("manual completion retains a grounded next action after reload and starts an owned Mission", async ({ page }, testInfo) => {
   const user = await createAndLoginLearner(page);
   const sessionId = await createMission(page);
@@ -61,6 +84,9 @@ test("manual completion retains a grounded next action after reload and starts a
   expect((await complete.json()).nextAction).toMatchObject({ kind: "MISSION" });
 
   await page.goto(`/learner/session/${sessionId}`);
+  await expect(page.getByRole("heading", { name: "Bạn đã dừng phiên luyện tập." })).toBeVisible();
+  await expect(page.getByLabel("Phiên luyện tập chưa hoàn thành")).toBeVisible();
+  await expect(page.getByLabel("Mission hoàn thành")).toHaveCount(0);
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();
   await page.reload();
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();

@@ -1,4 +1,4 @@
-# Learning runtime — 0.2.1
+# Learning runtime — 0.3.0
 
 ListenAI dùng Mission/Coach/Quest → learner reply → server grading → feedback/comeback → evidence/mastery/memory → bước học tiếp theo. Lessons, games và flashcards hỗ trợ vòng này.
 
@@ -10,7 +10,11 @@ Transaction mỗi turn lưu learner/AI turn, evidence, mastery, memory, interven
 
 Memory JSON được kiểm tra từng entry; dữ liệu không hợp lệ bị bỏ qua với log tên field. Cập nhật skill/error không ghi đè goals/preferences. Skill aggregate giữ evidenceCount, masteryScore tốt nhất và lastEvidenceId; đây không phải cùng chỉ số với SkillMastery cập nhật theo evidence/confidence. Orchestrator nhận bản memory giới hạn trong learner context, không dùng role hội thoại giả và không gửi raw memory cho client.
 
-`finalizeLearningSession` dùng conditional ACTIVE→COMPLETED theo owner trong transaction rồi tăng 1–120 phút elapsed một lần. Auto/manual completion cùng dùng đường này; retry không tăng phút, ABANDONED trả 409. Thời gian hiện chưa trừ pause.
+`finalizeLearningSession` dùng conditional ACTIVE→COMPLETED theo owner trong transaction rồi tăng 1–120 phút elapsed một lần. Một session chưa có `LearningEvidence` bị từ chối khi gọi complete: vẫn ACTIVE, không có `completedAt` hay phút học. Manual end có evidence nhưng chưa tới success state được lưu `completionOutcome: PARTIAL`; auto BOSS success là `COMPLETED`. Debrief partial không hiển thị trophy, hướng learner vào remediation; retry hợp lệ không tăng phút. ABANDONED trả 409. Thời gian hiện chưa trừ pause.
+
+Daily Quest đọc tối đa ba scenario key hợp lệ từ Quest thuộc chính learner (ACTIVE/COMPLETED, mới nhất trước) trước lúc gọi planner. Planner tránh scenario gần đây khi còn authored alternative và vẫn có fallback deterministic khi cả ba đã dùng.
+
+Meter nghe/từ vựng/chính tả ở dashboard/progress dùng `SkillMastery` do AI sessions cập nhật; cột `LearnerProfile` chỉ là fallback tương thích nếu skill chưa có record. Điểm display được clamp 0..1, không đồng bộ ngược profile để tránh hai nguồn ghi cạnh tranh.
 
 ## Next action
 
@@ -36,4 +40,4 @@ English runtime dùng Web Speech. Vietnamese gọi route TTS yêu cầu đăng n
 
 ## Bằng chứng
 
-[Plan03 acceptance](../planning/03_2026-09-08_learning-loop-completion/specs/TESTING-ACCEPTANCE.md) là nguồn kết quả hiện tại. Vitest kiểm contracts/core với mocks; E2E dùng Next + SQLite thật trong thư mục temp và mock tutor. Không suy ra hiệu quả sư phạm, chất lượng giọng thật hoặc production readiness từ các kiểm tra local.
+[Plan04 acceptance](../planning/04_2026-09-10_learning-integrity-truth/specs/TESTING-ACCEPTANCE.md) là nguồn kết quả hiện tại. Vitest kiểm contracts/core với mocks; E2E dùng Next + SQLite thật trong thư mục temp và mock tutor. Không suy ra hiệu quả sư phạm, chất lượng giọng thật hoặc production readiness từ các kiểm tra local.

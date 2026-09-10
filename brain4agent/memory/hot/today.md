@@ -1,5 +1,11 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Final verification 2026-09-10 — Plan04 completed local
+- Audit after Plan03 selected only three connected P1 gaps: Daily Quest planned recency was absent from the real start path; zero-evidence sessions could complete and receive time; learner meters displayed profile columns rather than AI-updated SkillMastery.
+- Plan04 passes bounded owned Quest history to the planner; excludes malformed states. Completion now requires persisted evidence. Evidence-backed early exits become PARTIAL with remediation UI/no trophy, while BOSS success remains COMPLETED. Dashboard/progress resolve adaptive mastery first.
+- Gates: 152/152 unit (38 files), type-check, lint 0 error/37 warning, eval 15/15 mock, Prisma validate, build, Python TTS 3/3, isolated E2E 16/16. No schema migration, DB reset, deploy, production/real-provider/real-efficacy claim.
+- Deferred: unified evidence schema for legacy attempt/review/game; client-trusted game scoring; self-service teacher role; SQLite/Render PostgreSQL compatibility; provider quotas/timeouts; live TTS speed.
+
 ## Checkpoint 2026-09-08 — paused, not accepted
 - User authorized autonomous completion, then requested stop/report near usage limits. Three Terra High agents hit limits mid-code; root reviewed/integrated and paused.
 - Memory transaction + typed tutor context, next-action API/UI, shared timeline/curriculum, TTS auth/cache boundaries are present but not fully verified.

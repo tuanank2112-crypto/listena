@@ -2,6 +2,9 @@ import "server-only";
 
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+
+const DAILY_QUEST_HISTORY_LIMIT = 3;
 
 export const learningSessionInclude = {
   lesson: {
@@ -189,6 +192,30 @@ export class LearningSessionRepository {
         ({ vocabularyItem }) => vocabularyItem.displayText,
       ),
     };
+  }
+
+  async findRecentDailyQuestScenarioKeys(userId: string): Promise<string[]> {
+    const sessions = await this.db.learningSession.findMany({
+      where: {
+        userId,
+        mode: "DAILY_QUEST",
+        status: { in: ["ACTIVE", "COMPLETED"] },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: DAILY_QUEST_HISTORY_LIMIT,
+      select: { stateJson: true },
+    });
+
+    return sessions.flatMap(({ stateJson }) => {
+      try {
+        const parsed = JSON.parse(stateJson) as { scenarioKey?: unknown };
+        return typeof parsed.scenarioKey === "string" && isMissionScenarioKey(parsed.scenarioKey)
+          ? [parsed.scenarioKey]
+          : [];
+      } catch {
+        return [];
+      }
+    });
   }
 
   findOwned(userId: string, sessionId: string): Promise<LearningSessionRecord | null> {

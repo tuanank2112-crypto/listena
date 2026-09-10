@@ -38,4 +38,25 @@ describe("GET /api/learner/progress", () => {
       OR: expect.arrayContaining([expect.objectContaining({ vocabularyItem: { mastery: { none: { userId: "learner-1" } } } })]),
     }) }));
   });
+
+  it("returns adaptive mastery for learner meters before stale profile fields", async () => {
+    mocks.profile.mockResolvedValue({
+      listeningMastery: 0.5,
+      vocabularyMastery: 0.5,
+      spellingMastery: 0.5,
+    });
+    mocks.skills.mockResolvedValue([
+      { skillKey: "listening", masteryScore: 0.78 },
+      { skillKey: "vocabulary", masteryScore: -2 },
+      { skillKey: "spelling", masteryScore: Number.POSITIVE_INFINITY },
+    ]);
+
+    const response = await GET();
+
+    await expect(response.json()).resolves.toMatchObject({
+      listeningMastery: 0.78,
+      vocabularyMastery: 0,
+      spellingMastery: 0.5,
+    });
+  });
 });

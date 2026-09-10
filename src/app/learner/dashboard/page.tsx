@@ -1,5 +1,6 @@
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
+import { resolveDisplayMastery } from "@/server/learning/mastery-display";
 import { getLearnerTimeline } from "@/server/learning/timeline";
 import { LearnerDashboard } from "./dashboard-client";
 
@@ -65,8 +66,8 @@ export default async function LearnerDashboardPage() {
         cardsDueToday,
         currentStreak: profile?.currentStreak ?? 0,
         weeklyStudyTime: timeline.weeklyStudyTime,
-        listeningMastery: profile?.listeningMastery ?? 0.5,
-        vocabularyMastery: profile?.vocabularyMastery ?? 0.5,
+        listeningMastery: resolveDisplayMastery("listening", skillMasteries, profile),
+        vocabularyMastery: resolveDisplayMastery("vocabulary", skillMasteries, profile),
         weakSkills: skillMasteries.filter((item) => item.masteryScore < .5).map((item) => item.skillKey),
         recentAttempts: recentAttempts.map((attempt) => ({
           id: attempt.id,

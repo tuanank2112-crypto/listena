@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-09-10 (working tree, chưa commit/deploy)
+- Daily Quest start path truyền history scenario owned đã validate cho planner, tránh lặp authored scenario khi còn lựa chọn khác.
+- Session không evidence không thể complete/cộng phút; manual end có evidence nhưng chưa qua success state là `PARTIAL`, debrief chỉ dẫn luyện tiếp thay vì trophy. Auto BOSS success vẫn là `COMPLETED`.
+- Dashboard/progress dùng `SkillMastery` adaptive cho meter nghe/từ vựng/chính tả, profile chỉ fallback với skill chưa có record.
+- Local gates PASS: 152 unit, type-check, lint 0 error/37 warnings, eval mock 15/15, Prisma validate, build, Python sidecar 3/3, E2E 16/16 DB tạm.
+- Không thêm schema migration; không claim deploy/production DB, AI efficacy, live voice latency/speed, rate/quota hay production security closure.
+
 ## 0.2.1 — 2026-09-08 (working tree, chưa commit/deploy)
 - Memory, evidence và mastery commit trong cùng transaction; retry idempotent; corrupt memory được validate và rollback có test.
 - Next action sau manual/auto completion giữ qua reload và dẫn COACH/MISSION/QUEST/PRACTICE owned; mastery dưới 0.6 chủ động chọn luyện lại.

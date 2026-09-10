@@ -37,6 +37,7 @@ import {
   type LearnerMemory,
 } from "@/server/learner-memory/repository";
 import type {
+  CompletionOutcome,
   CreateLearningSessionInput,
   SubmitLearningTurnInput,
   TutorTurnOutput,
@@ -62,10 +63,13 @@ export async function createLearningSession(
     );
   }
 
-  const [lesson, learner, learnerMemory] = await Promise.all([
+  const [lesson, learner, learnerMemory, recentScenarioKeys] = await Promise.all([
     input.lessonId ? repository.findLessonForStart(input.lessonId) : null,
     repository.findLearnerContext(userId),
     getLearnerMemory(userId),
+    input.mode === "DAILY_QUEST"
+      ? repository.findRecentDailyQuestScenarioKeys(userId)
+      : Promise.resolve([]),
   ]);
   if (input.lessonId && !lesson) {
     throw new LearningSessionValidationError(
@@ -86,6 +90,7 @@ export async function createLearningSession(
     learnerKey: userId,
     learnerContext,
     lessonContext,
+    ...(input.mode === "DAILY_QUEST" ? { recentScenarioKeys } : {}),
   });
   const sessionId = randomUUID();
   const openingClientTurnId = `opening:${sessionId}`;
@@ -295,7 +300,7 @@ export async function submitLearningTurn(
         meta: generated.meta,
       });
       if (output.shouldComplete) {
-        await finalizeLearningSession(tx, owned, nextState);
+        await finalizeLearningSession(tx, owned, nextState, "COMPLETED");
       } else {
         await tx.learningSession.update({
           where: { id: sessionId },
@@ -387,7 +392,24 @@ export async function completeLearningSession(userId: string, sessionId: string)
   await repository.transaction(async (tx) => {
     const owned = await findOwnedSessionInTransaction(tx, userId, sessionId);
     if (!owned) throw new LearningSessionNotFoundError();
-    await finalizeLearningSession(tx, owned, parseMissionState(owned.stateJson));
+    if (owned.status === "COMPLETED") return;
+
+    const evidenceCount = await tx.learningEvidence.count({
+      where: { sessionId: owned.id },
+    });
+    if (evidenceCount < 1) {
+      throw new LearningSessionConflictError(
+        "Complete at least one learner response before ending this session",
+      );
+    }
+
+    const state = parseMissionState(owned.stateJson);
+    await finalizeLearningSession(
+      tx,
+      owned,
+      state,
+      state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL",
+    );
   });
 
   return { session: await getOwnedSessionDto(userId, sessionId) };
@@ -397,6 +419,7 @@ async function finalizeLearningSession(
   tx: Prisma.TransactionClient,
   owned: NonNullable<Awaited<ReturnType<typeof findOwnedSessionInTransaction>>>,
   state: ReturnType<typeof parseMissionState>,
+  completionOutcome: CompletionOutcome,
 ) {
   if (owned.status === "COMPLETED") return;
   if (owned.status === "ABANDONED") {
@@ -407,14 +430,18 @@ async function finalizeLearningSession(
     1,
     Math.min(120, Math.round((completedAt.getTime() - owned.startedAt.getTime()) / 60_000)),
   );
-  const completedState = { ...state, phase: "DEBRIEF" as const };
+  const completedState = {
+    ...state,
+    phase: "DEBRIEF" as const,
+    completionOutcome,
+  };
   const transition = await tx.learningSession.updateMany({
     where: { id: owned.id, userId: owned.userId, status: "ACTIVE" },
     data: {
       status: "COMPLETED",
       completedAt,
       stateJson: JSON.stringify(completedState),
-      summary: makeSummary(completedState),
+      summary: makeSummary(completedState, completionOutcome),
     },
   });
   if (transition.count !== 1) throw new LearningSessionConflictError();
@@ -634,7 +661,13 @@ function toCefrLevel(value: string | undefined) {
     : "A2") as "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
 }
 
-function makeSummary(state: ReturnType<typeof parseMissionState>) {
+function makeSummary(
+  state: ReturnType<typeof parseMissionState>,
+  completionOutcome: CompletionOutcome,
+) {
+  if (completionOutcome === "PARTIAL") {
+    return `Stopped early after ${state.turnCount} turns; continue with the recommended remediation.`;
+  }
   return `Completed ${state.successfulTurns}/${state.turnCount} successful turns with ${state.recoveryCount} recoveries.`;
 }
 

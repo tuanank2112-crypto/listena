@@ -1,5 +1,5 @@
-# ListenAI kernel — 0.1.1
-# CURRENT CHECKPOINT 2026-09-08: Plan03 completed local acceptance. Read docs/LEARNING_LOOP_CHECKPOINT_2026-09-08.md. Final gates: 139 unit, type-check, lint 0 error/37 warnings, eval mock 15/15, Prisma validate, build, Python sidecar 3/3, E2E 15/15 fresh SQLite. No commit/deploy/production claims.
+# ListenAI kernel — 0.3.0
+# CURRENT CHECKPOINT 2026-09-10: Plan04 completed local acceptance. Read docs/LEARNING_INTEGRITY_CHECKPOINT_2026-09-10.md. Final gates: 152 unit, type-check, lint 0 error/37 warnings, eval mock 15/15, Prisma validate, build, Python sidecar 3/3, E2E 16/16 fresh SQLite. No commit/deploy/production claims.
 <agent_startup_protocol>
 0. Skill .xay-dung-nao-bo từ Fitc84/brain4agent.old: init_brain.js <repo> --check. Xem binding đường dẫn trong AGENTS.md; chỉ ghi khi cần nâng cấp.
 1. Đọc kernel → index.md → memory/hot/today.md và state.json → plan và docs module.
@@ -25,9 +25,10 @@
 - Educaplay chỉ tham khảo, không đưa vào curriculum/audio.
 
 ## Công việc
+- 2026-09-10: Plan04 closed local. Daily Quest now consumes bounded owned scenario history; completion needs server-owned evidence, distinguishes PARTIAL from COMPLETED; dashboard/progress adaptive meters resolve SkillMastery first. Keep legacy attempts/reviews/games outside unified evidence until a new source contract exists.
 - 2026-09-08 20:30: Plan03 closed local. Root stopped stale repo Next dev server PID 24896; E2E then launched normally. Auto-completion CTA can be PRACTICE by design when mastery <0.6; deterministic mock now honors successful BOSS shouldComplete/DEBRIEF and has regression test.
 - 2026-09-07 20:55: P13 eval không còn self-assert; run.ts gọi startMission/evaluateTutorTurn với DeterministicMockTutorProvider, kiểm phase + grounded IDs. Kết quả 15/15, grounded 4/15 đúng kỳ vọng.
-- Plan planning/01_2026-09-07_project-hardening/plan.md, target0.1.1 PATCH.
+- Current plan completed: planning/04_2026-09-10_learning-integrity-truth/plan.md, target0.3.0 MINOR. Production/security follow-ons deferred to dedicated scopes.
 - User cho phép orchestrator điều phối model: Astra runtime, Sol UI, Luna utility; root contracts/integration.
 - Subagents bị usage limit giữa chừng; root tiếp quản, không coi code dở là đã nghiệm thu.
 - Baseline74 tests; kết quả cuối đọc state.json và TESTING-ACCEPTANCE.

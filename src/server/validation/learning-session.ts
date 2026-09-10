@@ -15,6 +15,8 @@ export const SessionPhaseSchema = z.enum([
   "DEBRIEF",
 ]);
 
+export const CompletionOutcomeSchema = z.enum(["COMPLETED", "PARTIAL"]);
+
 export const PedagogicalActSchema = z.enum([
   "ASK_GUIDING",
   "CLARIFY",
@@ -62,6 +64,7 @@ export const MissionStateSchema = z.object({
   successfulTurns: z.number().int().min(0),
   recoveryCount: z.number().int().min(0),
   maxTurns: z.number().int().min(3).max(20),
+  completionOutcome: CompletionOutcomeSchema.optional(),
 });
 
 const ChoiceInterventionSchema = z.object({
@@ -132,5 +135,6 @@ export const TutorTurnOutputSchema = z.object({
 export type CreateLearningSessionInput = z.infer<typeof CreateLearningSessionSchema>;
 export type SubmitLearningTurnInput = z.infer<typeof SubmitLearningTurnSchema>;
 export type MissionState = z.infer<typeof MissionStateSchema>;
+export type CompletionOutcome = z.infer<typeof CompletionOutcomeSchema>;
 export type TutorTurnOutput = z.infer<typeof TutorTurnOutputSchema>;
 export type GeneratedIntervention = z.infer<typeof GeneratedInterventionSchema>;

@@ -8,11 +8,14 @@
 - Intervention cần React key=id; flashcard queue không modulo vô hạn.
 - Windows Prisma migrate deploy với file DB chưa tồn tại có thể báo Schema engine error rỗng: E2E tạo file rỗng trước migrate.
 - Date.now khởi tạo timer trong effect, không render; event callback memoized để qua React lint.
+- `complete` không được dùng số turn client để chứng minh học: chỉ learner-owned LearningEvidence mở được partial/success completion và cộng phút.
+- Meter profile cũ có thể lệch SkillMastery của AI; learner-facing meter phải qua resolver adaptive-first, không thêm một luồng sync profile mới.
+- Daily Quest recency chỉ là lịch sử stateJson đã validate của chính learner; malformed key phải bị bỏ qua và all-recent phải fallback authored deterministic.
 
 ## Còn backlog
 - Render PostgreSQL không khớp SQLite schema/migration lock; chưa production ready.
-- TTS route chưa auth learner; sidecar chưa enforce TTS_API_KEY, docker publish port không truyền key. Speed được nhận nhưng infer bỏ qua/cache Python thiếu speed.
-- weeklyStudyTime là lifetime capped120; history thiên attempt, chưa đầy đủ AI learner timeline.
+- TTS auth/key/loopback boundary đã được Plan03 xử lý. Speed được nhận nhưng infer bỏ qua/cache Python thiếu speed; real voice behavior vẫn chưa verified.
+- Legacy attempt/review/game chưa tạo unified LearningEvidence/memory; không tự tạo synthetic session để vá tạm.
 - Legacy attempt/review nhiều write chưa cùng transaction; atomic counter không giải quyết toàn bộ concurrent schedule.
 - Kokoro scripts/dependencies còn legacy; không tự bật model download.
 - Báo cáo lịch sử có số liệu lỗi thời; audit2026-09-07 và acceptance mới được ưu tiên.

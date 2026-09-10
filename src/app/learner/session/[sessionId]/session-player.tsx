@@ -35,6 +35,7 @@ import {
   getPendingIntervention,
   type PublicIntervention,
   type PublicLearningSession,
+  type CompletionOutcome,
   type LearningSessionEnvelope,
   type NextAction,
   type SessionPhase,
@@ -60,6 +61,16 @@ interface TurnEnvelope {
   intervention?: PublicIntervention | null;
   nextAction?: NextAction | null;
   error?: string;
+}
+
+/**
+ * Older completed rows predate the additive outcome field. Only a persisted
+ * DEBRIEF state is safe legacy evidence of a successful outcome; every other
+ * missing value is shown as a partial stop so the UI never invents a trophy.
+ */
+export function resolveCompletionOutcome(session: PublicLearningSession): CompletionOutcome {
+  if (session.completionOutcome) return session.completionOutcome;
+  return session.state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL";
 }
 
 function mergeTurnEnvelope(payload: TurnEnvelope) {
@@ -442,15 +453,28 @@ function MissionSidebar({ session, learnerTurns, onComplete, completing }: { ses
 
 function Debrief({ session, nextAction }: { session: PublicLearningSession; nextAction: NextAction | null }) {
   const state = session.state;
+  const completionOutcome = resolveCompletionOutcome(session);
+  const isPartial = completionOutcome === "PARTIAL";
   return (
     <div className="mx-auto flex min-h-[78vh] max-w-3xl items-center px-4 py-10 sm:px-6">
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="paper-card relative w-full overflow-hidden rounded-[34px] p-6 sm:p-9">
-        <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[#f7d779]/55" />
+        <div className={`absolute -right-16 -top-16 h-52 w-52 rounded-full ${isPartial ? "bg-[#dff2e8]/70" : "bg-[#f7d779]/55"}`} />
         <div className="relative">
-          <span className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#176b55] text-white shadow-[0_12px_28px_rgba(23,107,85,.25)]"><Trophy className="h-8 w-8" /></span>
-          <p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Mission debrief</p>
-          <h1 className="mt-2 max-w-xl text-3xl font-black tracking-[-.05em] sm:text-5xl">Bạn đã làm tình huống chuyển động.</h1>
-          <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[#65746c]">{session.summary || `Bạn đã hoàn thành “${state.scenarioTitle}” bằng ${state.turnCount} lượt tương tác. AI đã ghi nhận những gì bạn tự nói, tự sửa và dùng lại trong ngữ cảnh mới.`}</p>
+          {isPartial ? (
+            <>
+              <span aria-label="Phiên luyện tập chưa hoàn thành" className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#dff2e8] text-[#176b55]"><Flag className="h-8 w-8" /></span>
+              <p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-[#176b55]">Practice pause</p>
+              <h1 className="mt-2 max-w-xl text-3xl font-black tracking-[-.05em] sm:text-5xl">Bạn đã dừng phiên luyện tập.</h1>
+              <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[#65746c]">{session.summary || `AI đã ghi nhận ${state.turnCount} lượt tương tác trong “${state.scenarioTitle}”. Bạn chưa hoàn thành thử thách này; hãy dùng gợi ý bên dưới để luyện tiếp đúng phần cần cải thiện.`}</p>
+            </>
+          ) : (
+            <>
+              <span aria-label="Mission hoàn thành" className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#176b55] text-white shadow-[0_12px_28px_rgba(23,107,85,.25)]"><Trophy className="h-8 w-8" /></span>
+              <p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">Mission debrief</p>
+              <h1 className="mt-2 max-w-xl text-3xl font-black tracking-[-.05em] sm:text-5xl">Bạn đã làm tình huống chuyển động.</h1>
+              <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[#65746c]">{session.summary || `Bạn đã hoàn thành “${state.scenarioTitle}” bằng ${state.turnCount} lượt tương tác. AI đã ghi nhận những gì bạn tự nói, tự sửa và dùng lại trong ngữ cảnh mới.`}</p>
+            </>
+          )}
 
           <div className="mt-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
@@ -464,7 +488,7 @@ function Debrief({ session, nextAction }: { session: PublicLearningSession; next
           {nextAction && <NextActionCard action={nextAction} />}
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">Tiếp tục học <ArrowRight className="h-4 w-4" /></Link>
+            <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">{isPartial ? "Luyện tiếp" : "Tiếp tục học"} <ArrowRight className="h-4 w-4" /></Link>
             <Link href="/learner/dashboard" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#eee7da] px-5 text-sm font-black">Về trang hôm nay</Link>
           </div>
         </div>

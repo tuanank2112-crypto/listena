@@ -5,12 +5,12 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/03_2026-09-08_learning-loop-completion | [Plan 03](../planning/03_2026-09-08_learning-loop-completion/plan.md) — hoàn thiện hợp đồng Plan 02; local gates PASS, production deferred |
+| Kế hoạch hiện tại | planning/04_2026-09-10_learning-integrity-truth | [Plan 04](../planning/04_2026-09-10_learning-integrity-truth/plan.md) — integrity completion, Daily Quest recency và mastery display; local gates PASS, production deferred |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |
 | DB/dataset | prisma; dataset; scripts | [Data](-data-architecture.md), [Dataset](../dataset/README.md) |
-| Vận hành | configs; e2e/setup.ts | [README](../README.md), [Operations](../planning/01_2026-09-07_project-hardening/specs/OPERATIONS.md) |
+| Vận hành | configs; e2e/setup.ts | [README](../README.md), [Plan04 operations](../planning/04_2026-09-10_learning-integrity-truth/specs/OPERATIONS.md) |
 | Bộ nhớ | brain4agent | [Gotchas](-known-gotchas.md), [Roadmap](roadmap.md), [Changelog](changelog.md) |
 
 ## Code map

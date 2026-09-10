@@ -7,6 +7,7 @@ export type TurnType = "PROMPT" | "RESPONSE" | "COACH" | "INTERVENTION" | "RESUL
 export type InterventionType = "CHOICE" | "REORDER" | "RETRY" | "USE_IN_SENTENCE" | "FILL_BLANK";
 
 export type NextActionKind = "COACH" | "MISSION" | "QUEST" | "PRACTICE";
+export type CompletionOutcome = "COMPLETED" | "PARTIAL";
 
 /**
  * An additive, public recommendation contract shared by API consumers and
@@ -101,6 +102,7 @@ export interface PublicLearningSession {
   startedAt: string;
   updatedAt: string;
   completedAt: string | null;
+  completionOutcome?: CompletionOutcome;
 }
 
 export interface LearningSessionEnvelope {

@@ -1,10 +1,10 @@
 {
-  "current_version": "0.2.1",
+  "current_version": "0.3.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan03_local_gates_complete",
-  "active_plan": "planning/03_2026-09-08_learning-loop-completion/plan.md",
-  "checkpoint": "docs/LEARNING_LOOP_CHECKPOINT_2026-09-08.md",
-  "current_verification": { "type_check": "PASS", "unit_tests": "139 passed across 34 files", "lint": "0 errors / 37 warnings", "build": "PASS", "eval": "15/15 mock PASS", "prisma_validate": "PASS", "memory_tts_dedicated": "24 passed (21 TypeScript + 3 Python)", "e2e": "15/15 PASS on isolated fresh SQLite DB with AI_PROVIDER=mock" },
+  "system_status": "plan04_local_gates_complete",
+  "active_plan": "planning/04_2026-09-10_learning-integrity-truth/plan.md",
+  "checkpoint": "docs/LEARNING_INTEGRITY_CHECKPOINT_2026-09-10.md",
+  "current_verification": { "type_check": "PASS", "unit_tests": "152 passed across 38 files", "lint": "0 errors / 37 warnings", "build": "PASS", "eval": "15/15 mock PASS", "prisma_validate": "PASS", "memory_tts_dedicated": "3 Python sidecar tests PASS", "e2e": "16/16 PASS on isolated fresh SQLite DB with AI_PROVIDER=mock" },
   "last_verification": {
     "timestamp": "2026-09-07T20:55:00+07:00",
     "scenarios_passed": [
@@ -20,5 +20,5 @@
     "benchmark_accuracy": "100% local gates passed",
     "grade": "Grade A Local Verified"
   },
-  "active_plans_completed": 1
+  "active_plans_completed": 2
 }

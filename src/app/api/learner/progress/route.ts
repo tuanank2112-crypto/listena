@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
+import { resolveDisplayMastery } from "@/server/learning/mastery-display";
 import { getLearnerTimeline } from "@/server/learning/timeline";
 
 export async function GET() {
@@ -44,9 +45,9 @@ export async function GET() {
     });
 
     return NextResponse.json({
-      listeningMastery: profile?.listeningMastery ?? 0.5,
-      vocabularyMastery: profile?.vocabularyMastery ?? 0.5,
-      spellingMastery: profile?.spellingMastery ?? 0.5,
+      listeningMastery: resolveDisplayMastery("listening", skillMasteries, profile),
+      vocabularyMastery: resolveDisplayMastery("vocabulary", skillMasteries, profile),
+      spellingMastery: resolveDisplayMastery("spelling", skillMasteries, profile),
       totalStudyMinutes: profile?.totalStudyMinutes ?? 0,
       currentStreak: profile?.currentStreak ?? 0,
       weeklyStudyTime: timeline.weeklyStudyTime,

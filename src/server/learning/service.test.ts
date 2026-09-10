@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Prisma } from "@prisma/client";
 import type { LearningSessionRecord, LearningSessionSnapshot } from "./repository";
 import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
-import { createEvaluateTurnFallback } from "@/server/ai/tutor-fallback";
+import { planDailyQuest } from "@/server/ai/daily-quest";
+import { createEvaluateTurnFallback, createStartMissionFallback } from "@/server/ai/tutor-fallback";
 
 const mocks = vi.hoisted(() => ({
-  snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), transaction: vi.fn(),
+  snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), recentQuestHistory: vi.fn(), transaction: vi.fn(),
   owned: vi.fn(), evaluate: vi.fn(), getMemory: vi.fn(), appendMemory: vi.fn(),
+  start: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("./repository", () => ({
@@ -14,20 +16,21 @@ vi.mock("./repository", () => ({
     findOwnedSnapshot = mocks.snapshot;
     findOwned = mocks.record;
     findLearnerContext = mocks.learner;
+    findRecentDailyQuestScenarioKeys = mocks.recentQuestHistory;
     transaction = mocks.transaction;
   },
   findOwnedSessionInTransaction: mocks.owned,
 }));
 vi.mock("@/server/ai/tutor-orchestrator", () => ({
   evaluateTutorTurn: mocks.evaluate,
-  startMission: vi.fn(),
+  startMission: mocks.start,
 }));
 vi.mock("@/server/learner-memory/repository", () => ({
   getLearnerMemory: mocks.getMemory,
   appendEvidenceToMemory: mocks.appendMemory,
 }));
 
-import { completeLearningSession, submitLearningTurn } from "./service";
+import { completeLearningSession, createLearningSession, submitLearningTurn } from "./service";
 
 const template = getMissionTemplate("lost-luggage");
 const initialState = createMissionState(template);
@@ -53,6 +56,10 @@ afterEach(() => vi.useRealTimers());
 function makeTransaction() {
   return {
     learningSession: {
+      create: vi.fn(async ({ data }: { data: Partial<LearningSessionRecord> }) => {
+        Object.assign(record, data);
+        return record;
+      }),
       update: vi.fn(async ({ data }: { data: Partial<LearningSessionRecord> }) => Object.assign(record, data)),
       updateMany: vi.fn(async ({ where, data }: {
         where: { status: string }; data: Partial<LearningSessionRecord>;
@@ -73,6 +80,7 @@ function makeTransaction() {
       }),
     },
     learningEvidence: {
+      count: vi.fn(async () => record.evidence.length),
       create: vi.fn(async ({ data }: { data: LearningSessionRecord["evidence"][number] }) => {
         const evidence = { ...data, id: `evidence-${record.evidence.length}`, createdAt: now };
         record.evidence.push(evidence);
@@ -115,6 +123,7 @@ beforeEach(() => {
   mocks.snapshot.mockImplementation(async () => structuredClone(record) as unknown as LearningSessionSnapshot);
   mocks.owned.mockImplementation(async () => ({ ...record }));
   mocks.learner.mockResolvedValue({ learnerProfile: null, skillMastery: [], dueVocabulary: [] });
+  mocks.recentQuestHistory.mockResolvedValue([]);
   mocks.getMemory.mockResolvedValue(null);
   mocks.appendMemory.mockResolvedValue(null);
   mocks.transaction.mockImplementation(async (work: (client: Prisma.TransactionClient) => unknown) => work(tx as unknown as Prisma.TransactionClient));
@@ -122,6 +131,67 @@ beforeEach(() => {
     output: createEvaluateTurnFallback({ state, learnerMessage, template }),
     meta: { provider: "test", promptVersion: "test", groundedKnowledgeIds: [] },
   }));
+  mocks.start.mockImplementation(async (input) => {
+    const quest = input.mode === "DAILY_QUEST"
+      ? planDailyQuest({
+          learnerKey: input.learnerKey,
+          dateKey: now.toISOString().slice(0, 10),
+          skillMastery: input.learnerContext?.skillMastery,
+          dueVocabulary: input.learnerContext?.dueVocabulary,
+          preferredTopics: input.learnerContext?.preferredTopics,
+          recentScenarioKeys: input.recentScenarioKeys,
+        })
+      : null;
+    const startTemplate = getMissionTemplate(quest?.scenarioKey ?? input.scenarioKey);
+    return {
+      state: createMissionState(startTemplate, {
+        goal: input.goal ?? quest?.goal,
+        targetVocabulary: quest?.targetVocabulary,
+      }),
+      opening: createStartMissionFallback(startTemplate),
+      meta: { provider: "test", promptVersion: "test", groundedKnowledgeIds: [] },
+    };
+  });
+});
+
+function addEvidence() {
+  record.evidence.push({
+    id: `evidence-${record.evidence.length}`,
+    turnId: null,
+    skillKey: "communication",
+    evidenceType: "TUTOR_TURN",
+    score: 0.4,
+    confidence: 1,
+    difficulty: 1,
+    hintCount: 0,
+    replayCount: 0,
+    responseTimeMs: null,
+    createdAt: now,
+  });
+}
+
+describe("Daily Quest start history", () => {
+  it("passes only the owned validated recent history into the real Quest start path", async () => {
+    mocks.recentQuestHistory.mockResolvedValue(["cafe-order"]);
+
+    const result = await createLearningSession(userId, { mode: "DAILY_QUEST" });
+
+    expect(mocks.recentQuestHistory).toHaveBeenCalledWith(userId);
+    expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
+      mode: "DAILY_QUEST",
+      recentScenarioKeys: ["cafe-order"],
+    }));
+    expect(result.session.state.scenarioKey).not.toBe("cafe-order");
+  });
+
+  it("does not load Quest history for Mission or Coach starts", async () => {
+    await createLearningSession(userId, { mode: "MISSION", scenarioKey: "cafe-order" });
+
+    expect(mocks.recentQuestHistory).not.toHaveBeenCalled();
+    expect(mocks.start).toHaveBeenCalledWith(expect.not.objectContaining({
+      recentScenarioKeys: expect.anything(),
+    }));
+  });
 });
 
 describe("session intervention persistence", () => {
@@ -191,7 +261,7 @@ describe("session completion accounting", () => {
     await submitLearningTurn(userId, sessionId, input);
     await completeLearningSession(userId, sessionId);
 
-    expect(result.session).toMatchObject({ status: "COMPLETED", state: { phase: "DEBRIEF", successfulTurns: 1 } });
+    expect(result.session).toMatchObject({ status: "COMPLETED", completionOutcome: "COMPLETED", state: { phase: "DEBRIEF", successfulTurns: 1 } });
     expect(tx.learnerProfile.updateMany).toHaveBeenCalledExactlyOnceWith({
       where: { userId }, data: { totalStudyMinutes: { increment: 10 }, lastActivityAt: now },
     });
@@ -202,19 +272,30 @@ describe("session completion accounting", () => {
     record.stateJson = JSON.stringify({ ...initialState, phase: "BOSS", turnCount: 7 });
     record.interventions.push(storedIntervention());
     const result = await submitLearningTurn(userId, sessionId, { ...turnInput, interventionId });
-    expect(result.session).toMatchObject({ status: "COMPLETED", state: { phase: "DEBRIEF", successfulTurns: 1 } });
+    expect(result.session).toMatchObject({ status: "COMPLETED", completionOutcome: "COMPLETED", state: { phase: "DEBRIEF", successfulTurns: 1 } });
     expect(result.aiTurn?.content).toMatchObject({ score: 1, shouldComplete: true });
     expect(tx.learnerProfile.updateMany).toHaveBeenCalledOnce();
   });
 
   it.each([[0, 1], [10, 10], [300, 120]])("counts manual completion with %i elapsed minutes as %i, only once", async (elapsed, expected) => {
     record.startedAt = new Date(now.getTime() - elapsed * 60_000);
+    addEvidence();
     const first = await completeLearningSession(userId, sessionId);
     const second = await completeLearningSession(userId, sessionId);
+    expect(first.session.completionOutcome).toBe("PARTIAL");
     expect(second).toEqual(first);
     expect(tx.learnerProfile.updateMany).toHaveBeenCalledExactlyOnceWith({
       where: { userId }, data: { totalStudyMinutes: { increment: expected }, lastActivityAt: now },
     });
+  });
+
+  it("rejects an untouched session without completing it or awarding study time", async () => {
+    await expect(completeLearningSession(userId, sessionId)).rejects.toMatchObject({ status: 409 });
+
+    expect(record.status).toBe("ACTIVE");
+    expect(record.completedAt).toBeNull();
+    expect(tx.learningSession.updateMany).not.toHaveBeenCalled();
+    expect(tx.learnerProfile.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects abandoned completion and turns without writing evidence or minutes", async () => {
@@ -226,6 +307,7 @@ describe("session completion accounting", () => {
   });
 
   it("does not increment minutes when the conditional completion transition loses a race", async () => {
+    addEvidence();
     tx.learningSession.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(completeLearningSession(userId, sessionId)).rejects.toMatchObject({ status: 409 });
     expect(tx.learnerProfile.updateMany).not.toHaveBeenCalled();
