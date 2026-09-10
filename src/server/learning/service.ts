@@ -1,14 +1,14 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import { Prisma } from "@prisma/client";
 import {
-  d1Boolean,
-  d1Timestamp,
-  executeNativeD1Batch,
-  type D1BatchStatement,
-} from "@/lib/d1-batch";
-import { getNativeD1Database, prisma } from "@/lib/prisma";
+  libSqlBoolean,
+  libSqlTimestamp,
+  executeAtomicLibSqlBatch,
+  type LibSqlBatchValue,
+  type LibSqlBatchStatement,
+} from "@/lib/libsql-batch";
+import { prisma } from "@/lib/prisma";
 import { isAIProviderError } from "@/server/ai/errors";
 import {
   reserveUserAICall,
@@ -20,7 +20,6 @@ import {
   type LearnerTutorContext,
   type LessonTutorContext,
   type RecentTutorTurn,
-  type TutorRuntimeMeta,
 } from "@/server/ai/tutor-orchestrator";
 import { toLearningSessionDto } from "@/server/learning/dto";
 import {
@@ -32,7 +31,6 @@ import { applyInterventionOutcome, evaluateInterventionAnswer, splitIntervention
 import { toPublicTutorContent } from "@/server/learning/public-content";
 import {
   LearningSessionRepository,
-  findOwnedSessionInTransaction,
   type LearningSessionRecord,
   type LearningSessionSnapshot,
 } from "@/server/learning/repository";
@@ -40,12 +38,11 @@ import {
   applyTutorTurn,
   getAiClientTurnId,
   getEventClientTurnId,
-  nextTurnSequence,
   parseMissionState,
 } from "@/server/learning/state";
 import {
-  appendEvidenceToMemory,
   getLearnerMemory,
+  parseLearnerMemory,
   planLearnerMemoryEvidenceWrite,
   type LearnerMemory,
 } from "@/server/learner-memory/repository";
@@ -63,7 +60,14 @@ type LearningEventInput = {
   clientEventId: string;
 };
 
+type LearnerMemoryWriteSnapshot = {
+  memory: LearnerMemory | null;
+  fenceSql: string;
+  fenceValues: LibSqlBatchValue[];
+};
+
 const repository = new LearningSessionRepository();
+const MAX_LEARNER_MEMORY_WRITE_ATTEMPTS = 3;
 
 export async function createLearningSession(
   userId: string,
@@ -128,61 +132,25 @@ export async function createLearningSession(
   const openingClientTurnId = `opening:${sessionId}`;
   const publicOpening = toPublicTutorContent(generated.opening);
 
-  if (getNativeD1Database()) {
-    await persistLearningSessionStartOnD1({
-      sessionId,
-      openingClientTurnId,
-      userId,
-      input,
-      lesson,
-      learnerContext,
-      generated,
-      publicOpening,
-    });
-  } else await repository.transaction(async (tx) => {
-    await tx.learningSession.create({
-      data: {
-        id: sessionId,
-        userId,
-        lessonId: lesson?.id,
-        mode: input.mode,
-        goal: generated.state.learnerGoal,
-        levelSnapshot: toCefrLevel(learnerContext.cefrLevel),
-        stateJson: JSON.stringify(generated.state),
-      },
-    });
-    const openingTurn = await tx.learningTurn.create({
-      data: {
-        sessionId,
-        sequence: 1,
-        clientTurnId: openingClientTurnId,
-        actor: "AI",
-        turnType: "PROMPT",
-        contentJson: JSON.stringify(publicOpening),
-        skillTags: generated.opening.targetSkill,
-      },
-    });
-    await createIntervention(tx, sessionId, openingTurn.id, generated.opening);
-    await createAiInteraction(tx, {
-      userId,
-      sessionId,
-      turnId: openingTurn.id,
-      purpose: "start_mission",
-      input: { mode: input.mode, scenarioKey: generated.state.scenarioKey },
-      output: generated.opening,
-      meta: generated.meta,
-    });
+  await persistLearningSessionStartWithAtomicBatch({
+    sessionId,
+    openingClientTurnId,
+    userId,
+    input,
+    lesson,
+    learnerContext,
+    generated,
+    publicOpening,
   });
 
   return { session: await getOwnedSessionDto(userId, sessionId) };
 }
 
 /**
- * Prisma's D1 adapter rejects callback transactions. A mission opening has no
- * read-after-write dependency once IDs are assigned here, so Worker D1 can
- * commit its complete graph in one native, parameterized batch instead.
+ * A mission opening has no read-after-write dependency once IDs are assigned
+ * here, so one parameterized libSQL batch can commit its complete graph.
  */
-async function persistLearningSessionStartOnD1(input: {
+async function persistLearningSessionStartWithAtomicBatch(input: {
   sessionId: string;
   openingClientTurnId: string;
   userId: string;
@@ -193,13 +161,13 @@ async function persistLearningSessionStartOnD1(input: {
   publicOpening: ReturnType<typeof toPublicTutorContent>;
 }) {
   const now = new Date();
-  const createdAt = d1Timestamp(now);
+  const createdAt = libSqlTimestamp(now);
   const openingTurnId = randomUUID();
   const interactionId = randomUUID();
   const intervention = input.generated.opening.intervention
     ? splitIntervention(input.generated.opening.intervention)
     : null;
-  const statements: D1BatchStatement[] = [
+  const statements: LibSqlBatchStatement[] = [
     {
       sql: `INSERT INTO "LearningSession"
               ("id", "userId", "lessonId", "mode", "status", "goal", "levelSnapshot", "stateJson", "startedAt", "updatedAt")
@@ -264,20 +232,20 @@ async function persistLearningSessionStartOnD1(input: {
         .digest("hex"),
       JSON.stringify(input.generated.opening),
       input.generated.meta.fallbackReason ?? null,
-      d1Boolean(true),
-      d1Boolean(!input.generated.meta.fallbackReason),
+      libSqlBoolean(true),
+      libSqlBoolean(!input.generated.meta.fallbackReason),
       createdAt,
     ],
   });
-  await executeNativeD1Batch(statements);
+  await executeAtomicLibSqlBatch(statements);
 }
 
 /**
- * The learner turn insert is the native-D1 commit fence. Every following
+ * The learner turn insert is the atomic batch commit fence. Every following
  * mutation is selected only after that exact UUID exists, so a stale state or
  * duplicate client turn cannot leave evidence/mastery without its turn.
  */
-async function persistLearningTurnOnD1(input: {
+async function persistLearningTurnWithAtomicBatch(input: {
   userId: string;
   sessionId: string;
   input: SubmitLearningTurnInput;
@@ -288,37 +256,29 @@ async function persistLearningTurnOnD1(input: {
   generated: Awaited<ReturnType<typeof evaluateTutorTurn>>;
   intervention: ReturnType<typeof resolveIntervention>;
   interventionEvaluation: ReturnType<typeof evaluateInterventionAnswer> | null;
-  learnerMemory: LearnerMemory | null;
+  memoryWriteAttempt?: number;
 }): Promise<"committed" | "duplicate"> {
   const now = new Date();
-  const timestamp = d1Timestamp(now);
+  const timestamp = libSqlTimestamp(now);
   const learnerTurnId = randomUUID();
   const aiTurnId = randomUUID();
   const evidenceId = randomUUID();
   const aiInteractionId = randomUUID();
-  const lastSequence = input.snapshot.turns.at(-1)?.sequence;
-  const learnerSequence = nextTurnSequence(lastSequence);
-  const existingMastery = await prisma.skillMastery.findUnique({
-    where: {
-      userId_skillKey: {
-        userId: input.userId,
-        skillKey: input.output.targetSkill,
-      },
-    },
-    select: { masteryScore: true },
-  });
-  const currentMastery = existingMastery?.masteryScore ?? 0.5;
-  const masteryScore = Math.min(
+  const masteryRate = 0.18 * input.output.confidence;
+  const initialMasteryScore = Math.min(
     1,
-    Math.max(
-      0,
-      currentMastery
-        + (input.output.score - currentMastery) * 0.18 * input.output.confidence,
-    ),
+    Math.max(0, 0.5 + (input.output.score - 0.5) * masteryRate),
   );
+  const nextIntervention = input.output.intervention
+    ? splitIntervention(input.output.intervention)
+    : null;
+  // Re-read the raw aggregate immediately before its guarded batch. A
+  // concurrent session that changes any aggregate field makes the first
+  // insert a no-op and is retried below with a fresh memory plan.
+  const memorySnapshot = await loadLearnerMemoryWriteSnapshot(input.userId);
   const memoryWrite = planLearnerMemoryEvidenceWrite(
     input.userId,
-    input.learnerMemory,
+    memorySnapshot.memory,
     {
       id: evidenceId,
       skillKey: input.output.targetSkill,
@@ -326,9 +286,6 @@ async function persistLearningTurnOnD1(input: {
       errorType: input.output.detectedError?.type ?? null,
     },
   );
-  const nextIntervention = input.output.intervention
-    ? splitIntervention(input.output.intervention)
-    : null;
   const requiresPendingIntervention = input.intervention ? [
     `AND EXISTS (
        SELECT 1 FROM "Intervention"
@@ -337,20 +294,22 @@ async function persistLearningTurnOnD1(input: {
     [input.intervention.id, input.sessionId] as string[],
   ] as const : ["", [] as string[]] as const;
   const fenceExists = `EXISTS (SELECT 1 FROM "LearningTurn" WHERE "id" = ?)`;
-  const statements: D1BatchStatement[] = [
+  const statements: LibSqlBatchStatement[] = [
     {
-      sql: `INSERT INTO "LearningTurn"
-              ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
-            SELECT ?, ?, ?, ?, 'LEARNER', ?, ?, ?, ?
+     sql: `INSERT INTO "LearningTurn"
+             ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
+            SELECT ?, ?, COALESCE((
+              SELECT MAX("sequence") + 1 FROM "LearningTurn" WHERE "sessionId" = ?
+            ), 1), ?, 'LEARNER', ?, ?, ?, ?
             WHERE EXISTS (
               SELECT 1 FROM "LearningSession"
-              WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
-                AND "stateJson" = ?
-            ) ${requiresPendingIntervention[0]}`,
+             WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
+               AND "stateJson" = ?
+            ) ${requiresPendingIntervention[0]} ${memorySnapshot.fenceSql}`,
       values: [
         learnerTurnId,
         input.sessionId,
-        learnerSequence,
+        input.sessionId,
         input.input.clientTurnId,
         input.intervention ? "INTERVENTION" : "RESPONSE",
         JSON.stringify({
@@ -367,17 +326,20 @@ async function persistLearningTurnOnD1(input: {
         input.userId,
         input.snapshot.stateJson,
         ...requiresPendingIntervention[1],
+        ...memorySnapshot.fenceValues,
       ],
     },
     {
-      sql: `INSERT INTO "LearningTurn"
-              ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
-            SELECT ?, ?, ?, ?, 'AI', ?, ?, ?, ?
+     sql: `INSERT INTO "LearningTurn"
+             ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
+            SELECT ?, ?, COALESCE((
+              SELECT "sequence" + 1 FROM "LearningTurn" WHERE "id" = ?
+            ), 1), ?, 'AI', ?, ?, ?, ?
             WHERE ${fenceExists}`,
       values: [
         aiTurnId,
         input.sessionId,
-        learnerSequence + 1,
+        learnerTurnId,
         getAiClientTurnId(input.input.clientTurnId),
         input.output.intervention ? "INTERVENTION" : "COACH",
         JSON.stringify(toPublicTutorContent(input.output)),
@@ -412,16 +374,20 @@ async function persistLearningTurnOnD1(input: {
             SELECT ?, ?, ?, ?, 1, ?
             WHERE ${fenceExists}
             ON CONFLICT("userId", "skillKey") DO UPDATE SET
-              "masteryScore" = excluded."masteryScore",
+              "masteryScore" = MIN(1.0, MAX(0.0,
+                "SkillMastery"."masteryScore" + (? - "SkillMastery"."masteryScore") * ?
+              )),
               "evidenceCount" = "SkillMastery"."evidenceCount" + 1,
               "lastUpdatedAt" = excluded."lastUpdatedAt"`,
       values: [
         randomUUID(),
         input.userId,
         input.output.targetSkill,
-        masteryScore,
+        initialMasteryScore,
         timestamp,
         learnerTurnId,
+        input.output.score,
+        masteryRate,
       ],
     },
     {
@@ -499,8 +465,8 @@ async function persistLearningTurnOnD1(input: {
         .digest("hex"),
       JSON.stringify(input.output),
       input.generated.meta.fallbackReason ?? null,
-      d1Boolean(true),
-      d1Boolean(!input.generated.meta.fallbackReason),
+      libSqlBoolean(true),
+      libSqlBoolean(!input.generated.meta.fallbackReason),
       timestamp,
       learnerTurnId,
     ],
@@ -558,17 +524,69 @@ async function persistLearningTurnOnD1(input: {
   }
 
   try {
-    const result = await executeNativeD1Batch(statements);
-    if (result[0]?.meta.changes === 1) return "committed";
+    const result = await executeAtomicLibSqlBatch(statements);
+    if (result[0]?.changes === 1) return "committed";
   } catch (error) {
     if (!isUniqueConflict(error)) throw error;
   }
 
   const current = await repository.findOwnedSnapshot(input.userId, input.sessionId);
   if (current?.turns.some((turn) => turn.clientTurnId === input.input.clientTurnId)) {
-    return "duplicate";
+   return "duplicate";
+  }
+  const attempt = input.memoryWriteAttempt ?? 0;
+  if (
+    attempt + 1 < MAX_LEARNER_MEMORY_WRITE_ATTEMPTS
+    && current?.status === "ACTIVE"
+    && current.stateJson === input.snapshot.stateJson
+  ) {
+    return persistLearningTurnWithAtomicBatch({
+      ...input,
+      memoryWriteAttempt: attempt + 1,
+    });
   }
   throw new LearningSessionConflictError();
+}
+
+async function loadLearnerMemoryWriteSnapshot(
+  userId: string,
+): Promise<LearnerMemoryWriteSnapshot> {
+  const record = await prisma.learnerMemory.findUnique({
+    where: { userId },
+    select: {
+      id: true,
+      userId: true,
+      goalsJson: true,
+      errorsJson: true,
+      skillsJson: true,
+      preferencesJson: true,
+    },
+  });
+  if (!record) {
+    return {
+      memory: null,
+      fenceSql: `AND NOT EXISTS (SELECT 1 FROM "LearnerMemory" WHERE "userId" = ?)`,
+      fenceValues: [userId],
+    };
+  }
+
+  return {
+    memory: parseLearnerMemory(record),
+    fenceSql: `AND EXISTS (
+      SELECT 1 FROM "LearnerMemory"
+      WHERE "userId" = ? AND "id" = ?
+        AND "goalsJson" = ? AND "errorsJson" = ?
+        AND "skillsJson" = ? AND "preferencesJson" = ?
+    )`,
+    fenceValues: [
+      userId,
+      record.id,
+      record.goalsJson,
+      record.errorsJson,
+      record.skillsJson,
+      record.preferencesJson,
+    ],
+  };
 }
 
 export async function getLearningSession(userId: string, sessionId: string) {
@@ -651,171 +669,22 @@ export async function submitLearningTurn(
     : generated.output;
   const nextState = applyTutorTurn(currentState, output);
 
-  if (getNativeD1Database()) {
-    const committed = await persistLearningTurnOnD1({
-      userId,
-      sessionId,
-      input,
-      snapshot,
-      currentState,
-      nextState,
-      output,
-      generated,
-      intervention,
-      interventionEvaluation,
-      learnerMemory,
-    });
-    if (committed === "duplicate") {
-      return buildTurnResponse(
-        await getOwnedSessionRecord(userId, sessionId),
-        input.clientTurnId,
-        true,
-      );
-    }
-    return buildTurnResponse(
-      await getOwnedSessionRecord(userId, sessionId),
-      input.clientTurnId,
-      false,
-    );
-  }
-
-  try {
-    const duplicate = await repository.transaction(async (tx) => {
-      const owned = await findOwnedSessionInTransaction(tx, userId, sessionId);
-      if (!owned) throw new LearningSessionNotFoundError();
-      const existingTurn = await tx.learningTurn.findUnique({
-        where: {
-          sessionId_clientTurnId: { sessionId, clientTurnId: input.clientTurnId },
-        },
-        select: { id: true },
-      });
-      if (existingTurn) return true;
-      if (owned.status !== "ACTIVE") {
-        throw new LearningSessionConflictError("Only active sessions accept new turns");
-      }
-      if (owned.stateJson !== snapshot.stateJson) {
-        throw new LearningSessionConflictError();
-      }
-
-      const lastTurn = await tx.learningTurn.findFirst({
-        where: { sessionId },
-        orderBy: { sequence: "desc" },
-        select: { sequence: true },
-      });
-      const learnerSequence = nextTurnSequence(lastTurn?.sequence);
-      const learnerTurn = await tx.learningTurn.create({
-        data: {
-          sessionId,
-          sequence: learnerSequence,
-          clientTurnId: input.clientTurnId,
-          actor: "LEARNER",
-          turnType: intervention ? "INTERVENTION" : "RESPONSE",
-          contentJson: JSON.stringify({
-            message: input.content,
-            responseTimeMs: input.responseTimeMs ?? null,
-            hintCount: input.hintCount,
-            replayCount: input.replayCount,
-            interventionId: intervention?.id ?? null,
-            interventionCorrect: interventionEvaluation?.correct ?? null,
-          }),
-          skillTags: output.targetSkill,
-        },
-      });
-      const aiTurn = await tx.learningTurn.create({
-        data: {
-          sessionId,
-          sequence: learnerSequence + 1,
-          clientTurnId: getAiClientTurnId(input.clientTurnId),
-          actor: "AI",
-          turnType: output.intervention ? "INTERVENTION" : "COACH",
-          contentJson: JSON.stringify(toPublicTutorContent(output)),
-          skillTags: output.targetSkill,
-        },
-      });
-
-      const evidence = await tx.learningEvidence.create({
-        data: {
-          sessionId,
-          turnId: learnerTurn.id,
-          skillKey: output.targetSkill,
-          evidenceType: intervention ? "INTERVENTION" : "TUTOR_TURN",
-          score: output.score,
-          confidence: output.confidence,
-          hintCount: input.hintCount,
-          replayCount: input.replayCount,
-          responseTimeMs: input.responseTimeMs,
-        },
-      });
-      await updateSkillMastery(
-        tx,
-        userId,
-        output.targetSkill,
-        output.score,
-        output.confidence,
-      );
-      await appendEvidenceToMemory(tx, userId, {
-        id: evidence.id,
-        skillKey: evidence.skillKey,
-        score: evidence.score,
-        errorType: output.detectedError?.type ?? null,
-      });
-
-      if (intervention && interventionEvaluation) {
-        const completed = await tx.intervention.updateMany({
-          where: { id: intervention.id, sessionId, status: "PENDING" },
-          data: {
-            status: "COMPLETED",
-            outcomeJson: JSON.stringify(interventionEvaluation),
-            completedAt: new Date(),
-          },
-        });
-        if (completed.count !== 1) {
-          throw new LearningSessionConflictError("Intervention was already completed");
-        }
-      }
-
-      await createIntervention(tx, sessionId, aiTurn.id, output);
-      await createAiInteraction(tx, {
-        userId,
-        sessionId,
-        turnId: aiTurn.id,
-        purpose: "evaluate_turn",
-        input: { state: currentState, learnerMessage: input.content },
-        output,
-        meta: generated.meta,
-      });
-      if (output.shouldComplete) {
-        await finalizeLearningSession(tx, owned, nextState, "COMPLETED");
-      } else {
-        await tx.learningSession.update({
-          where: { id: sessionId },
-          data: { stateJson: JSON.stringify(nextState) },
-        });
-      }
-      return false;
-    });
-    if (duplicate) {
-      return buildTurnResponse(
-        await getOwnedSessionRecord(userId, sessionId),
-        input.clientTurnId,
-        true,
-      );
-    }
-  } catch (error) {
-    if (isUniqueConflict(error)) {
-      const current = await getOwnedSessionRecord(userId, sessionId);
-      if (current.turns.some((turn) => turn.clientTurnId === input.clientTurnId)) {
-        return buildTurnResponse(current, input.clientTurnId, true);
-      }
-      throw new LearningSessionConflictError();
-    }
-    throw error;
-  }
-
+  const committed = await persistLearningTurnWithAtomicBatch({
+    userId,
+    sessionId,
+    input,
+    snapshot,
+    currentState,
+    nextState,
+    output,
+    generated,
+    intervention,
+    interventionEvaluation,
+  });
   return buildTurnResponse(
     await getOwnedSessionRecord(userId, sessionId),
     input.clientTurnId,
-    false,
+    committed === "duplicate",
   );
 }
 
@@ -825,59 +694,12 @@ export async function recordLearningEvent(
   input: LearningEventInput,
 ) {
   const eventTurnId = getEventClientTurnId(input.clientEventId);
-  if (getNativeD1Database()) {
-    await persistLearningEventOnD1({ userId, sessionId, input, eventTurnId });
-    return { session: await getOwnedSessionDto(userId, sessionId) };
-  }
-  try {
-    await repository.transaction(async (tx) => {
-      const owned = await findOwnedSessionInTransaction(tx, userId, sessionId);
-      if (!owned) throw new LearningSessionNotFoundError();
-      const existing = await tx.learningTurn.findUnique({
-        where: {
-          sessionId_clientTurnId: { sessionId, clientTurnId: eventTurnId },
-        },
-        select: { id: true },
-      });
-      if (existing) return;
-      if (owned.status !== "ACTIVE" && input.type !== "ABANDON") {
-        throw new LearningSessionConflictError("Only active sessions accept events");
-      }
-
-      const lastTurn = await tx.learningTurn.findFirst({
-        where: { sessionId },
-        orderBy: { sequence: "desc" },
-        select: { sequence: true },
-      });
-      await tx.learningTurn.create({
-        data: {
-          sessionId,
-          sequence: nextTurnSequence(lastTurn?.sequence),
-          clientTurnId: eventTurnId,
-          actor: "SYSTEM",
-          turnType: "RESULT",
-          contentJson: JSON.stringify({ event: input.type, value: input.value ?? 1 }),
-        },
-      });
-      if (input.type === "ABANDON" && owned.status === "ACTIVE") {
-        await tx.learningSession.update({
-          where: { id: sessionId },
-          data: { status: "ABANDONED" },
-        });
-      }
-    });
-  } catch (error) {
-    if (!isUniqueConflict(error)) throw error;
-    const current = await repository.findOwnedSnapshot(userId, sessionId);
-    if (!current?.turns.some((turn) => turn.clientTurnId === eventTurnId)) {
-      throw new LearningSessionConflictError();
-    }
-  }
+  await persistLearningEventWithAtomicBatch({ userId, sessionId, input, eventTurnId });
 
   return { session: await getOwnedSessionDto(userId, sessionId) };
 }
 
-async function persistLearningEventOnD1(input: {
+async function persistLearningEventWithAtomicBatch(input: {
   userId: string;
   sessionId: string;
   input: LearningEventInput;
@@ -890,14 +712,16 @@ async function persistLearningEventOnD1(input: {
     throw new LearningSessionConflictError("Only active sessions accept events");
   }
   const now = new Date();
-  const timestamp = d1Timestamp(now);
+  const timestamp = libSqlTimestamp(now);
   const eventId = randomUUID();
   const requiredStatus = input.input.type === "ABANDON" ? snapshot.status : "ACTIVE";
-  const statements: D1BatchStatement[] = [
+  const statements: LibSqlBatchStatement[] = [
     {
-      sql: `INSERT INTO "LearningTurn"
-              ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
-            SELECT ?, ?, ?, ?, 'SYSTEM', 'RESULT', ?, '', ?
+     sql: `INSERT INTO "LearningTurn"
+             ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
+            SELECT ?, ?, COALESCE((
+              SELECT MAX("sequence") + 1 FROM "LearningTurn" WHERE "sessionId" = ?
+            ), 1), ?, 'SYSTEM', 'RESULT', ?, '', ?
             WHERE EXISTS (
               SELECT 1 FROM "LearningSession"
               WHERE "id" = ? AND "userId" = ? AND "status" = ?
@@ -905,7 +729,7 @@ async function persistLearningEventOnD1(input: {
       values: [
         eventId,
         input.sessionId,
-        nextTurnSequence(snapshot.turns.at(-1)?.sequence),
+        input.sessionId,
         input.eventTurnId,
         JSON.stringify({ event: input.input.type, value: input.input.value ?? 1 }),
         timestamp,
@@ -925,8 +749,8 @@ async function persistLearningEventOnD1(input: {
     });
   }
   try {
-    const result = await executeNativeD1Batch(statements);
-    if (result[0]?.meta.changes === 1) return;
+    const result = await executeAtomicLibSqlBatch(statements);
+    if (result[0]?.changes === 1) return;
   } catch (error) {
     if (!isUniqueConflict(error)) throw error;
   }
@@ -936,37 +760,11 @@ async function persistLearningEventOnD1(input: {
 }
 
 export async function completeLearningSession(userId: string, sessionId: string) {
-  if (getNativeD1Database()) {
-    await completeLearningSessionOnD1(userId, sessionId);
-    return { session: await getOwnedSessionDto(userId, sessionId) };
-  }
-  await repository.transaction(async (tx) => {
-    const owned = await findOwnedSessionInTransaction(tx, userId, sessionId);
-    if (!owned) throw new LearningSessionNotFoundError();
-    if (owned.status === "COMPLETED") return;
-
-    const evidenceCount = await tx.learningEvidence.count({
-      where: { sessionId: owned.id },
-    });
-    if (evidenceCount < 1) {
-      throw new LearningSessionConflictError(
-        "Complete at least one learner response before ending this session",
-      );
-    }
-
-    const state = parseMissionState(owned.stateJson);
-    await finalizeLearningSession(
-      tx,
-      owned,
-      state,
-      state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL",
-    );
-  });
-
+  await completeLearningSessionWithAtomicBatch(userId, sessionId);
   return { session: await getOwnedSessionDto(userId, sessionId) };
 }
 
-async function completeLearningSessionOnD1(userId: string, sessionId: string) {
+async function completeLearningSessionWithAtomicBatch(userId: string, sessionId: string) {
   const snapshot = await repository.findOwnedSnapshot(userId, sessionId);
   if (!snapshot) throw new LearningSessionNotFoundError();
   if (snapshot.status === "COMPLETED") return;
@@ -986,12 +784,12 @@ async function completeLearningSessionOnD1(userId: string, sessionId: string) {
     completionOutcome: (state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL") as CompletionOutcome,
   };
   const now = new Date();
-  const timestamp = d1Timestamp(now);
+  const timestamp = libSqlTimestamp(now);
   const studyMinutes = Math.max(
     1,
     Math.min(120, Math.round((now.getTime() - snapshot.startedAt.getTime()) / 60_000)),
   );
-  const results = await executeNativeD1Batch([
+  const results = await executeAtomicLibSqlBatch([
     {
       sql: `UPDATE "LearnerProfile"
               SET "totalStudyMinutes" = "totalStudyMinutes" + ?, "lastActivityAt" = ?, "updatedAt" = ?
@@ -1026,46 +824,7 @@ async function completeLearningSessionOnD1(userId: string, sessionId: string) {
       ],
     },
   ]);
-  if (results[1]?.meta.changes !== 1) throw new LearningSessionConflictError();
-}
-
-async function finalizeLearningSession(
-  tx: Prisma.TransactionClient,
-  owned: NonNullable<Awaited<ReturnType<typeof findOwnedSessionInTransaction>>>,
-  state: ReturnType<typeof parseMissionState>,
-  completionOutcome: CompletionOutcome,
-) {
-  if (owned.status === "COMPLETED") return;
-  if (owned.status === "ABANDONED") {
-    throw new LearningSessionConflictError("Abandoned sessions cannot be completed");
-  }
-  const completedAt = new Date();
-  const studyMinutes = Math.max(
-    1,
-    Math.min(120, Math.round((completedAt.getTime() - owned.startedAt.getTime()) / 60_000)),
-  );
-  const completedState = {
-    ...state,
-    phase: "DEBRIEF" as const,
-    completionOutcome,
-  };
-  const transition = await tx.learningSession.updateMany({
-    where: { id: owned.id, userId: owned.userId, status: "ACTIVE" },
-    data: {
-      status: "COMPLETED",
-      completedAt,
-      stateJson: JSON.stringify(completedState),
-      summary: makeSummary(completedState, completionOutcome),
-    },
-  });
-  if (transition.count !== 1) throw new LearningSessionConflictError();
-  await tx.learnerProfile.updateMany({
-    where: { userId: owned.userId },
-    data: {
-      totalStudyMinutes: { increment: studyMinutes },
-      lastActivityAt: completedAt,
-    },
-  });
+  if (results[1]?.changes !== 1) throw new LearningSessionConflictError();
 }
 
 async function getOwnedSessionRecord(userId: string, sessionId: string) {
@@ -1183,81 +942,6 @@ function makeLessonContext(
   };
 }
 
-async function createIntervention(
-  tx: Prisma.TransactionClient,
-  sessionId: string,
-  sourceTurnId: string,
-  output: TutorTurnOutput,
-) {
-  if (!output.intervention) return null;
-  const intervention = splitIntervention(output.intervention);
-  return tx.intervention.create({
-    data: {
-      sessionId,
-      sourceTurnId,
-      type: intervention.public.type,
-      prompt: intervention.public.prompt,
-      specJson: JSON.stringify(intervention.public.spec),
-      validatorJson: JSON.stringify(intervention.validator),
-    },
-  });
-}
-
-async function createAiInteraction(
-  tx: Prisma.TransactionClient,
-  input: {
-    userId: string;
-    sessionId: string;
-    turnId: string;
-    purpose: string;
-    input: unknown;
-    output: TutorTurnOutput;
-    meta: TutorRuntimeMeta;
-  },
-) {
-  const serializedInput = JSON.stringify(input.input);
-  await tx.aIInteraction.create({
-    data: {
-      userId: input.userId,
-      sessionId: input.sessionId,
-      turnId: input.turnId,
-      purpose: input.purpose,
-      provider: input.meta.provider,
-      model: input.meta.model,
-      promptVersion: input.meta.promptVersion,
-      inputHash: createHash("sha256").update(serializedInput).digest("hex"),
-      validatedOutput: JSON.stringify(input.output),
-      fallbackReason: input.meta.fallbackReason,
-      schemaValid: true,
-      success: !input.meta.fallbackReason,
-    },
-  });
-}
-
-async function updateSkillMastery(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  skillKey: string,
-  score: number,
-  confidence: number,
-) {
-  const existing = await tx.skillMastery.findUnique({
-    where: { userId_skillKey: { userId, skillKey } },
-  });
-  const current = existing?.masteryScore ?? 0.5;
-  const learningRate = 0.18 * confidence;
-  const masteryScore = Math.min(1, Math.max(0, current + (score - current) * learningRate));
-  await tx.skillMastery.upsert({
-    where: { userId_skillKey: { userId, skillKey } },
-    create: { userId, skillKey, masteryScore, evidenceCount: 1 },
-    update: {
-      masteryScore,
-      evidenceCount: { increment: 1 },
-      lastUpdatedAt: new Date(),
-    },
-  });
-}
-
 function parseJsonObject(value: string): Record<string, unknown> {
   try {
     const parsed = JSON.parse(value) as unknown;
@@ -1286,12 +970,10 @@ function makeSummary(
 }
 
 function isUniqueConflict(error: unknown) {
-  if (error instanceof Prisma.PrismaClientKnownRequestError) {
-    return error.code === "P2002";
-  }
-  // D1 batch errors do not use Prisma's P2002 class. Retried browser writes
-  // can reach the native path concurrently, so map SQLite's explicit unique
-  // constraint diagnostics to the same idempotency reconciliation branch.
+  // Retried browser writes can reach the batch concurrently, so map SQLite's
+  // explicit *unique* diagnostics to idempotency reconciliation. Other
+  // SQLITE_CONSTRAINT variants (for example a trigger abort) must surface as
+  // a failed transaction, not be retried and mislabeled as a stale session.
   const message = error instanceof Error ? error.message : String(error);
-  return /(?:UNIQUE constraint failed|SQLITE_CONSTRAINT(?:_UNIQUE)?)/i.test(message);
+  return /(?:UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE|SQLITE_CONSTRAINT[^\n]*UNIQUE)/i.test(message);
 }

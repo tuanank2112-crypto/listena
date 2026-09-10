@@ -1,80 +1,128 @@
+import { createHash } from "node:crypto";
+import { PrismaLibSQL } from "@prisma/adapter-libsql";
 import { PrismaClient } from "@prisma/client";
-import { PrismaClient as WorkerPrismaClient } from "@prisma/client/wasm.js";
-import { PrismaD1 } from "@prisma/adapter-d1";
-import { getCloudflareContext } from "@opennextjs/cloudflare";
-import path from "node:path";
+import { createClient, type Client } from "@libsql/client";
+import {
+  resolveDatabaseConfig,
+  type DatabaseConfig,
+  type DatabaseRuntime,
+} from "@/lib/database-config";
+import {
+  DatabaseConfigurationError,
+  normalizeDatabaseOperationError,
+} from "@/lib/database-errors";
 
-/** Structural type keeps Node builds independent of Worker-only globals. */
-export type NativeD1Database = {
-  prepare(query: string): {
-    bind(...values: unknown[]): unknown;
-  };
-  batch(statements: unknown[]): Promise<unknown[]>;
+export {
+  DATABASE_CONFIGURATION_MISSING,
+  DatabaseConfigurationError,
+  type DatabaseConfig,
+  type DatabaseRuntime,
+} from "@/lib/database-config";
+
+type CachedClient<T> = {
+  key: string;
+  client: T;
 };
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined;
+const globalForDatabase = globalThis as unknown as {
+  prisma?: CachedClient<PrismaClient>;
+  atomicLibSql?: CachedClient<Client>;
 };
 
-export function getDatabaseRuntime(): "node-sqlite" | "cloudflare-d1" {
-  // `initOpenNextCloudflareForDev` exposes a mock binding to Next dev. Keep
-  // development, scripts, and E2E on their isolated SQLite file instead of
-  // loading Prisma's Worker WASM runtime in Node.
-  if (process.env.NODE_ENV !== "production") return "node-sqlite";
+function cacheKey(config: DatabaseConfig) {
+  // Never retain the opaque Turso token in a global key. A fingerprint still
+  // makes an in-process credential rotation select a fresh client.
+  const tokenFingerprint = config.runtime === "turso"
+    ? createHash("sha256").update(config.authToken).digest("hex")
+    : "";
+  return `${config.runtime}:${config.url}:${tokenFingerprint}`;
+}
 
+function createLibSqlClient(config: DatabaseConfig) {
   try {
-    return getCloudflareContext().env.DB ? "cloudflare-d1" : "node-sqlite";
+    return config.runtime === "turso"
+      ? createClient({ url: config.url, authToken: config.authToken })
+      : createClient({ url: config.url });
   } catch {
-    return "node-sqlite";
+    // Client construction is configuration parsing, not an operational query.
+    // Preserve the fail-closed, credential-free contract for route handlers.
+    throw new DatabaseConfigurationError();
   }
 }
 
-/**
- * Returns the native D1 binding only in the Worker runtime. Prisma's D1
- * adapter deliberately does not expose ACID transactions, so multi-record
- * commits use this binding's atomic `batch()` API at the few boundaries that
- * require all-or-nothing persistence.
- */
-export function getNativeD1Database(): NativeD1Database | undefined {
-  if (getDatabaseRuntime() !== "cloudflare-d1") return undefined;
-  return getCloudflareContext().env.DB as unknown as NativeD1Database;
+function createPrismaClient(config: DatabaseConfig) {
+  try {
+    const adapterConfig =
+      config.runtime === "turso"
+        ? { url: config.url, authToken: config.authToken }
+        : { url: config.url };
+
+    const client = new PrismaClient({
+      adapter: new PrismaLibSQL(adapterConfig, { timestampFormat: config.timestampFormat }),
+    });
+    return client.$extends({
+      name: "database-operational-errors",
+      query: {
+        $allOperations: async ({ args, query }) => {
+          try {
+            return await query(args);
+          } catch (error) {
+            throw normalizeDatabaseOperationError(error);
+          }
+        },
+      },
+    }) as unknown as PrismaClient;
+  } catch {
+    throw new DatabaseConfigurationError();
+  }
 }
 
-function getNodePrisma(): PrismaClient {
-  if (globalForPrisma.prisma) return globalForPrisma.prisma;
+export function getDatabaseRuntime(): DatabaseRuntime {
+  return resolveDatabaseConfig().runtime;
+}
 
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error("DATABASE_URL is required for local SQLite");
+/**
+ * Direct libSQL access is deliberately limited to the small set of guarded,
+ * multi-record commits. It uses the same explicit local/Turso configuration as
+ * Prisma and is cached for warm Node instances.
+ */
+export function getAtomicLibSqlClient(): Client {
+  const config = resolveDatabaseConfig();
+  const key = cacheKey(config);
+  const cached = globalForDatabase.atomicLibSql;
+  if (cached?.key === key) return cached.client;
 
-  // Keep the Node-only SQLite driver out of the Worker module graph. Cloudflare
-  // always takes the D1 branch below; local dev, scripts, and E2E load libSQL.
-  const sqliteUrl = databaseUrl.startsWith("file:./")
-    ? `file:${path.join(process.cwd(), "prisma", databaseUrl.slice("file:".length)).replaceAll("\\", "/")}`
-    : databaseUrl;
-  const requireNode = eval("require") as (specifier: string) => {
-    PrismaLibSQL: new (config: { url: string }, options?: { timestampFormat?: "unixepoch-ms" }) => unknown;
-  };
-  const { PrismaLibSQL } = requireNode("@prisma/adapter-libsql");
-  const client = new PrismaClient({
-    adapter: new PrismaLibSQL({ url: sqliteUrl }, { timestampFormat: "unixepoch-ms" }) as never,
-  });
-
-  if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = client;
+  const client = createLibSqlClient(config);
+  globalForDatabase.atomicLibSql = { key, client };
   return client;
 }
 
 /**
- * A Worker binding is request-scoped. Resolve it at method access time instead
- * of retaining it on globalThis, while preserving the existing Prisma call
- * shape used by server routes and repositories.
+ * Raw SQL batch writes must use the timestamp representation of the active
+ * driver. Local Prisma/libSQL files use integer milliseconds; Turso retains
+ * the ISO timestamp representation imported from D1.
  */
-function resolvePrismaClient(): PrismaClient {
-  if (getDatabaseRuntime() !== "cloudflare-d1") return getNodePrisma();
-  const database = getNativeD1Database();
-  if (!database) throw new Error("Cloudflare D1 binding DB is required");
-  return new WorkerPrismaClient({ adapter: new PrismaD1(database as never) }) as unknown as PrismaClient;
+export function toLibSqlTimestamp(value: Date): number | string {
+  const config = resolveDatabaseConfig();
+  return config.runtime === "turso" ? value.toISOString().replace("Z", "+00:00") : value.getTime();
 }
 
+function resolvePrismaClient(): PrismaClient {
+  const config = resolveDatabaseConfig();
+  const key = cacheKey(config);
+  const cached = globalForDatabase.prisma;
+  if (cached?.key === key) return cached.client;
+
+  const client = createPrismaClient(config);
+  globalForDatabase.prisma = { key, client };
+  return client;
+}
+
+/**
+ * Preserve the existing repository call shape while resolving a cached Node
+ * Prisma client at method access time. This module contains no Worker/D1 or
+ * WASM imports, so Vercel's request path remains Node/libSQL only.
+ */
 export const prisma = new Proxy({} as PrismaClient, {
   get(_target, property) {
     const client = resolvePrismaClient();

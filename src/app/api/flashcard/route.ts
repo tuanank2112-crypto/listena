@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { reviewFlashcard } from "@/server/services/learning";
 import { ReviewFlashcardSchema } from "@/server/validation/schemas";
 import logger from "@/lib/logger";
@@ -28,6 +29,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
     logger.error({ error: message }, "Flashcard review failed");
     return NextResponse.json(

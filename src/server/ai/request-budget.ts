@@ -1,8 +1,12 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import { executeNativeD1Batch, d1Boolean, d1Timestamp } from "@/lib/d1-batch";
-import { getNativeD1Database, prisma } from "@/lib/prisma";
+import {
+  executeAtomicLibSqlBatch,
+  libSqlBoolean,
+  libSqlTimestamp,
+} from "@/lib/libsql-batch";
+import { prisma } from "@/lib/prisma";
 import {
   AIRequestBudgetError,
   type AIProviderFailureReason,
@@ -40,9 +44,9 @@ type AICallBudgetDecision =
     };
 
 /**
- * Reserves one real upstream AI call before it is made. The Worker path uses a
- * single conditional D1 insert, so separate isolates cannot all pass a stale
- * read and exhaust the shared account quota at once.
+ * Reserves one real upstream AI call before it is made. One conditional
+ * libSQL insert prevents concurrent requests from passing a stale read and
+ * exhausting the shared account quota.
  */
 export async function reserveUserAICall(input: {
   userId: string;
@@ -63,45 +67,24 @@ export async function reserveUserAICall(input: {
     purpose: input.purpose,
   };
 
-  if (getNativeD1Database()) {
-    const result = await executeNativeD1Batch([
-      nativeReservationInsert({
-        ...input,
-        id,
-        inputHash,
-        now,
-      }),
-    ]);
-    if (result[0]?.meta.changes === 1) return reservation;
-    const decision = evaluateAICallBudget(
-      await listRecentReservations(input.userId, now),
-      now,
-      input.purpose,
-    );
-    if (!decision.allowed) throw new AIRequestBudgetError(decision);
-    // A competing Worker can commit in the tiny interval between the native
-    // conditional insert and this diagnostic read. Never fall back to Prisma
-    // in that case, or the atomic D1 fence would be bypassed.
-    throw new AIRequestBudgetError({ reason: "ACTIVE", retryAfterSeconds: 1 });
-  }
-
-  const recent = await listRecentReservations(input.userId, now);
-  throwBudgetLimit(recent, now, input.purpose);
-  await prisma.aIInteraction.create({
-    data: {
+  const result = await executeAtomicLibSqlBatch([
+    atomicReservationInsert({
+      ...input,
       id,
-      userId: input.userId,
-      purpose: "ai_call_reservation",
-      provider: input.provider ?? null,
-      model: input.model ?? null,
       inputHash,
-      fallbackReason: pendingReason(input.purpose),
-      schemaValid: false,
-      success: false,
-      createdAt: now,
-    },
-  });
-  return reservation;
+      now,
+    }),
+  ]);
+  if (result[0]?.changes === 1) return reservation;
+  const decision = evaluateAICallBudget(
+    await listRecentReservations(input.userId, now),
+    now,
+    input.purpose,
+  );
+  if (!decision.allowed) throw new AIRequestBudgetError(decision);
+  // Another request can commit between the conditional insert and diagnostic
+  // read. Keep the atomic fence closed rather than retrying through Prisma.
+  throw new AIRequestBudgetError({ reason: "ACTIVE", retryAfterSeconds: 1 });
 }
 
 /** Finalizes the lease without storing prompt or learner text in this ledger. */
@@ -122,46 +105,26 @@ export async function settleUserAICall(
   const model = safeMetadata(outcome.model);
   const requestId = safeMetadata(outcome.requestId);
 
-  if (getNativeD1Database()) {
-    await executeNativeD1Batch([
-      {
-        sql: `UPDATE "AIInteraction"
-              SET "provider" = ?, "model" = ?, "traceId" = ?,
-                  "fallbackReason" = ?, "schemaValid" = ?, "success" = ?
-              WHERE "id" = ? AND "userId" = ? AND "purpose" = ?
-                AND "fallbackReason" LIKE 'AI_CALL_PENDING:%'`,
-        values: [
-          provider,
-          model,
-          requestId,
-          fallbackReason,
-          d1Boolean(outcome.success),
-          d1Boolean(outcome.success),
-          reservation.id,
-          reservation.userId,
-          "ai_call_reservation",
-        ],
-      },
-    ]);
-    return;
-  }
-
-  await prisma.aIInteraction.updateMany({
-    where: {
-      id: reservation.id,
-      userId: reservation.userId,
-      purpose: "ai_call_reservation",
-      fallbackReason: { startsWith: "AI_CALL_PENDING:" },
+  await executeAtomicLibSqlBatch([
+    {
+      sql: `UPDATE "AIInteraction"
+            SET "provider" = ?, "model" = ?, "traceId" = ?,
+                "fallbackReason" = ?, "schemaValid" = ?, "success" = ?
+            WHERE "id" = ? AND "userId" = ? AND "purpose" = ?
+              AND "fallbackReason" LIKE 'AI_CALL_PENDING:%'`,
+      values: [
+        provider,
+        model,
+        requestId,
+        fallbackReason,
+        libSqlBoolean(outcome.success),
+        libSqlBoolean(outcome.success),
+        reservation.id,
+        reservation.userId,
+        "ai_call_reservation",
+      ],
     },
-    data: {
-      provider,
-      model,
-      traceId: requestId,
-      fallbackReason,
-      schemaValid: outcome.success,
-      success: outcome.success,
-    },
-  });
+  ]);
 }
 
 export function evaluateAICallBudget(
@@ -220,7 +183,7 @@ export function evaluateAICallBudget(
   return { allowed: true };
 }
 
-function nativeReservationInsert(input: {
+function atomicReservationInsert(input: {
   id: string;
   userId: string;
   purpose: string;
@@ -229,14 +192,14 @@ function nativeReservationInsert(input: {
   inputHash: string;
   now: Date;
 }) {
-  const createdAt = d1Timestamp(input.now);
-  const windowStart = d1Timestamp(
+  const createdAt = libSqlTimestamp(input.now);
+  const windowStart = libSqlTimestamp(
     new Date(input.now.getTime() - AI_REQUEST_ROLLING_WINDOW_MS),
   );
-  const cooldownStart = d1Timestamp(
+  const cooldownStart = libSqlTimestamp(
     new Date(input.now.getTime() - AI_REQUEST_MIN_INTERVAL_MS),
   );
-  const pendingStart = d1Timestamp(
+  const pendingStart = libSqlTimestamp(
     new Date(input.now.getTime() - AI_REQUEST_PENDING_LEASE_MS),
   );
   const cooldownPredicate = cooldownApplies(input.purpose)
@@ -306,12 +269,6 @@ async function listRecentReservations(userId: string, now: Date) {
     take: AI_REQUEST_DAILY_LIMIT,
     select: { createdAt: true, fallbackReason: true },
   });
-}
-
-function throwBudgetLimit(rows: ReservationRow[], now: Date, purpose: string) {
-  const decision = evaluateAICallBudget(rows, now, purpose);
-  if (decision.allowed) return;
-  throw new AIRequestBudgetError(decision);
 }
 
 function pendingReason(purpose: string) {

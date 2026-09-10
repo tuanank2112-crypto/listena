@@ -7,6 +7,9 @@ import {
   learningSessionErrorResponse,
 } from "@/app/api/learning-sessions/http";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();

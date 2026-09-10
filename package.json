@@ -3,7 +3,7 @@
   "version": "0.5.0",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": "24.x"
   },
   "scripts": {
     "dev": "next dev",
@@ -22,6 +22,7 @@
     "db:seed": "prisma db seed",
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset --force",
+    "migration:verify": "tsx scripts/verify-turso-migration.ts",
     "postinstall": "prisma generate",
     "dataset:import": "tsx scripts/import-dataset.ts",
     "dataset:build-d1-import": "tsx scripts/build-d1-core-import.ts",

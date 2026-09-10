@@ -1,10 +1,10 @@
 # Plan 06 — Personalized AI learning and adaptive games
 
 - STT: 06
-- Status: IN PROGRESS — P65 D1/resource hardening, public code deployment and the Kira secret binding are verified; a genuine authenticated smoke remains pending
+- Status: HISTORICAL CLOUDFARE DEPLOYMENT RECORD — P65 D1/resource hardening, public code deployment and the Kira secret binding are verified; a genuine authenticated smoke remains pending and Plan07 now owns the future Vercel/Turso hosting acceptance path
 - Started: 2026-09-10 (Asia/Saigon)
 - Target: 0.5.0 MINOR
-- Acceptance environments: local Node/SQLite, local Worker D1 emulator, and public Cloudflare Workers + D1.
+- Historical acceptance environments: local Node/SQLite, local Worker D1 emulator, and public Cloudflare Workers + D1. Current migration acceptance environments are defined only by Plan07.
 
 ## Decision log
 
@@ -21,12 +21,14 @@
 - 2026-09-10: Live provider resource control is shared per learner, not per UI screen or Worker isolate: 40 reservations per rolling 24 hours and a 30-second pending lease apply to every live call; one-off provisioning/tutor/admin purposes also have a 12-second cooldown. Learning-loop `start_mission` and conversational `evaluate_turn` deliberately rely on the pending lease + shared daily cap so a learner can immediately continue after an AI reply or next-action CTA. A rejected reservation returns `AI_REQUEST_LIMIT`/429 before any upstream request.
 - 2026-09-10: P65/Kira code was deployed as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250` with the Kira secret intentionally absent. Public `/api/health` and `/login` returned HTTP 200; this proves code availability, not provider account availability or a generated-lesson outcome.
 - 2026-09-10: The Production `KIRAAI_API_KEY` binding was created in Cloudflare, resulting in secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` at 100% deployment. Secret contents are intentionally not observable; this is not evidence that the provider accepts the value or that a generated lesson succeeds.
+- 2026-09-11: Plan07 supersedes Cloudflare+D1 as the future hosting target with a local-only Vercel Node + Turso candidate. This record, the deployed Worker and D1 data are retained for rollback history; no Plan07 staging, D1 mutation, Vercel deployment, cutover or live Kira smoke is implied by that local acceptance.
 
 ## Superseded decisions
 
 - Plan05's schema-only D1 release is superseded for curriculum availability: Plan06 authorizes a controlled core-dataset import, while preserving Plan05's no-reset/no-seed invariant.
 - Historical mock/fallback behavior is superseded for learner-facing AI flows. The deterministic provider remains a test double only, not a production remediation answer presented as AI.
 - The initial Plan06 operational choice of `OPENAI_API_KEY` as the active production secret is superseded by KiraAI's `KIRAAI_API_KEY` for this deployment. OpenAI remains a documented, explicit alternative and is never selected merely by pointing its Responses adapter at Kira.
+- The assumption that the remaining genuine Kira smoke should advance the Cloudflare path is superseded by Plan07's staging-first Vercel/Turso acceptance. The smoke remains unclaimed until its target-hosting gates and explicit write policy are satisfied.
 
 ## Work packages
 

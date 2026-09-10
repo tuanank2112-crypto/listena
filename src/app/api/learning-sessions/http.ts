@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import logger from "@/lib/logger";
 import { isAIProviderError } from "@/server/ai/errors";
 import { LearningSessionError } from "@/server/learning/errors";
@@ -11,6 +12,9 @@ export function invalidRequest(error: string, details?: unknown) {
 }
 
 export function learningSessionErrorResponse(error: unknown) {
+  const databaseResponse = databaseErrorResponse(error);
+  if (databaseResponse) return databaseResponse;
+
   if (isAIProviderError(error)) {
     return NextResponse.json(
       {

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 import { getDatasetUnit, searchKnowledge } from "@/server/dataset/catalog";
@@ -14,6 +15,9 @@ import {
   createConfiguredStructuredAIProvider,
   type JsonSchema,
 } from "@/server/ai/openai-responses-provider";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 const TutorRequestSchema = z.object({
   lessonId: z.string().uuid(),
@@ -247,6 +251,9 @@ export async function POST(request: Request) {
         .map(({ id, title, type }) => ({ id, title, type })),
     });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     if (isAIProviderError(error)) {
       return NextResponse.json(
         {

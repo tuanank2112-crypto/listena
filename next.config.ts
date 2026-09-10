@@ -1,13 +1,10 @@
 import type { NextConfig } from "next";
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-
-void initOpenNextCloudflareForDev();
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
-  // Preserve Prisma's `workerd` export condition for OpenNext. Bundling it
-  // as a normal Node package selects the Windows query engine instead.
-  serverExternalPackages: ["@prisma/client", ".prisma/client"],
+  // Keep Prisma and its libSQL adapter in the Node server bundle boundary.
+  // The Vercel target uses the default Node runtime, not OpenNext/Workers.
+  serverExternalPackages: ["@prisma/client", ".prisma/client", "@prisma/adapter-libsql", "@libsql/client"],
 };
 
 export default nextConfig;

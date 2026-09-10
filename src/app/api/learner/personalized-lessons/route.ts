@@ -10,6 +10,9 @@ import {
 } from "@/server/personalized-learning/service";
 import { personalizedLearningErrorResponse } from "./http";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 function learnerId(session: Session | null) {
   if (!session?.user?.id) return null;
   if (session.user.role !== "LEARNER" && session.user.role !== "ADMIN") return null;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import { rankRecommendations } from "@/core/recommendation/engine";
 import type { CefrLevel } from "@/core/recommendation/engine";
@@ -98,6 +99,9 @@ export async function GET() {
 
     return NextResponse.json({ recommendations });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
     logger.error({ error: message }, "Recommendation generation failed");
     return NextResponse.json(

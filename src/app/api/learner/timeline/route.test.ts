@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseUnavailableError } from "@/lib/database-errors";
 
 const mocks = vi.hoisted(() => ({ auth: vi.fn(), timeline: vi.fn(), error: vi.fn() }));
 
@@ -34,6 +35,16 @@ describe("GET /api/learner/timeline", () => {
     const response = await GET(new Request("http://localhost/api/learner/timeline?window=14d"));
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({ error: "Invalid timeline window" });
+    expect(mocks.timeline).not.toHaveBeenCalled();
+  });
+
+  it("maps an authentication database failure to an opaque 503", async () => {
+    mocks.auth.mockRejectedValue(new DatabaseUnavailableError());
+
+    const response = await GET(new Request("http://localhost/api/learner/timeline"));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
     expect(mocks.timeline).not.toHaveBeenCalled();
   });
 });

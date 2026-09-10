@@ -1,14 +1,14 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import type { CefrLevel, Prisma } from "@prisma/client";
-import { getDatabaseRuntime, getNativeD1Database, prisma } from "@/lib/prisma";
+import type { CefrLevel } from "@prisma/client";
+import { prisma } from "@/lib/prisma";
 import {
-  d1Boolean,
-  d1Timestamp,
-  executeNativeD1Batch,
-  type D1BatchStatement,
-} from "@/lib/d1-batch";
+  libSqlBoolean,
+  libSqlTimestamp,
+  executeAtomicLibSqlBatch,
+  type LibSqlBatchStatement,
+} from "@/lib/libsql-batch";
 import {
   MASTERY_INITIAL,
   MASTERY_MAX,
@@ -27,7 +27,6 @@ import {
 } from "@/server/ai/request-budget";
 import { updateMastery } from "@/core/learner-model/mastery";
 import {
-  assessCalibration,
   CALIBRATION_CONFIDENCE,
   CALIBRATION_FINAL_EVIDENCE,
   CALIBRATION_MIN_EVIDENCE,
@@ -439,64 +438,14 @@ export async function submitPersonalizedLessonAttempt(input: {
     : `Chưa đúng. ${answerKey.feedbackVi}`;
 
   try {
-    const created = shouldUseNativeD1Batch()
-      ? await persistPersonalizedLessonAttemptOnD1({
-          input,
-          lesson,
-          normalizedAnswer,
-          score,
-          correct,
-          feedbackVi,
-        })
-      : await prisma.$transaction(async (tx) => {
-          const duplicate = await tx.personalizedLessonAttempt.findUnique({
-            where: {
-              lessonId_clientAttemptId: {
-                lessonId: lesson.id,
-                clientAttemptId: input.clientAttemptId,
-              },
-            },
-          });
-          if (duplicate) return { row: duplicate, idempotent: true };
-
-          const attempt = await tx.personalizedLessonAttempt.create({
-            data: {
-              lessonId: lesson.id,
-              userId: input.userId,
-              exerciseId: input.exerciseId,
-              clientAttemptId: input.clientAttemptId,
-              submittedAnswer: input.answer,
-              normalizedAnswer,
-              score,
-              correct,
-              feedbackVi,
-              gradingMethod: "SERVER_EXACT",
-              responseTimeMs: input.responseTimeMs,
-            },
-          });
-          await tx.adaptiveEvidence.create({
-            data: {
-              userId: input.userId,
-              sourceKind: "PERSONALIZED_LESSON_ATTEMPT",
-              sourceId: attempt.id,
-              skillKey: lesson.targetSkill,
-              score,
-              confidence: 1,
-              difficulty: lesson.difficulty,
-              gradingMethod: "SERVER_EXACT",
-              responseTimeMs: input.responseTimeMs,
-            },
-          });
-          await updateSkillMasteryInTransaction(
-            tx,
-            input.userId,
-            lesson.targetSkill,
-            score,
-            lesson.difficulty,
-          );
-          await updateCalibrationInTransaction(tx, input.userId);
-          return { row: attempt, idempotent: false };
-        });
+    const created = await persistPersonalizedLessonAttemptWithAtomicBatch({
+      input,
+      lesson,
+      normalizedAnswer,
+      score,
+      correct,
+      feedbackVi,
+    });
     return { attempt: toAttemptResponse(created.row, created.idempotent) };
   } catch (error) {
     if (!isUniqueConstraint(error)) throw error;
@@ -551,96 +500,13 @@ type AttemptPersistenceResult = {
   idempotent: boolean;
 };
 
-/**
- * Prisma's D1 adapter deliberately cannot provide an ACID callback
- * transaction. Keep the Node path below unchanged for SQLite/tests, but use
- * a native Worker batch whenever this request is executing against D1.
- */
-function shouldUseNativeD1Batch() {
-  if (getDatabaseRuntime() !== "cloudflare-d1") return false;
-  if (!getNativeD1Database()) {
-    throw new Error("Cloudflare D1 runtime is missing its native DB binding");
-  }
-  return true;
-}
-
 async function persistGeneratedPersonalizedLesson(
   input: GeneratedLessonPersistenceInput,
 ): Promise<StoredLessonRow> {
-  if (shouldUseNativeD1Batch()) {
-    return persistGeneratedPersonalizedLessonOnD1(input);
-  }
-
-  return prisma.$transaction(async (tx) => {
-    const vocabulary = await Promise.all(
-      input.draft.vocabulary.map((item) =>
-        tx.vocabularyItem.upsert({
-          where: { lemma: normalizeLemma(item.lemma) },
-          // AI must never silently rewrite shared/core lexical records.
-          update: {},
-          create: {
-            lemma: normalizeLemma(item.lemma),
-            displayText: item.displayText,
-            ipa: item.ipa ?? null,
-            meaningVi: item.meaningVi,
-            meaningEn: item.meaningEn ?? null,
-            partOfSpeech: item.partOfSpeech ?? null,
-            cefrLevel: item.cefrLevel,
-            exampleSentence: item.exampleSentence ?? null,
-          },
-          select: { id: true },
-        }),
-      ),
-    );
-    const stored = toStoredPersonalizedLesson(
-      input.draft,
-      vocabulary.map((item) => item.id),
-    );
-    const ready = await tx.personalizedLesson.update({
-      where: { id: input.lessonId },
-      data: {
-        status: "READY",
-        title: input.draft.title,
-        objectivesJson: JSON.stringify(input.draft.objectives),
-        contentJson: JSON.stringify(stored.content),
-        validatorJson: JSON.stringify(stored.validator),
-        provider: input.response.provider,
-        model: input.response.model,
-        promptVersion: PROMPT_VERSION,
-        readyAt: new Date(),
-        vocabulary: {
-          create: vocabulary.map((item, index) => ({
-            vocabularyItemId: item.id,
-            isTarget: input.draft.vocabulary[index]!.isTarget,
-            importance: input.draft.vocabulary[index]!.importance,
-          })),
-        },
-      },
-    });
-    await tx.aIInteraction.create({
-      data: {
-        userId: input.userId,
-        purpose: "personalized_lesson",
-        provider: input.response.provider,
-        model: input.response.model,
-        promptVersion: PROMPT_VERSION,
-        inputHash: input.sourceSnapshotHash,
-        validatedOutput: JSON.stringify({
-          lessonId: ready.id,
-          targetSkill: ready.targetSkill,
-          cefrLevel: ready.cefrLevel,
-          difficulty: ready.difficulty,
-        }),
-        latencyMs: null,
-        traceId: input.response.requestId,
-        success: true,
-      },
-    });
-    return ready;
-  });
+  return persistGeneratedPersonalizedLessonWithAtomicBatch(input);
 }
 
-async function persistGeneratedPersonalizedLessonOnD1(
+async function persistGeneratedPersonalizedLessonWithAtomicBatch(
   input: GeneratedLessonPersistenceInput,
 ): Promise<StoredLessonRow> {
   // These IDs become the persisted IDs for newly-created vocabulary. Existing
@@ -648,11 +514,11 @@ async function persistGeneratedPersonalizedLessonOnD1(
   // temporary content IDs before the lesson becomes READY.
   const vocabularyIds = input.draft.vocabulary.map(() => randomUUID());
   const stored = toStoredPersonalizedLesson(input.draft, vocabularyIds);
-  const committedAt = d1Timestamp(new Date());
+  const committedAt = libSqlTimestamp(new Date());
   const commitFence = randomUUID();
-  const statements: D1BatchStatement[] = [
+  const statements: LibSqlBatchStatement[] = [
     ...input.draft.vocabulary.map((item, index) =>
-      nativePersonalizedVocabularyUpsert({
+      atomicPersonalizedVocabularyUpsert({
         lessonId: input.lessonId,
         userId: input.userId,
       sourceSnapshotHash: input.sourceSnapshotHash,
@@ -661,14 +527,14 @@ async function persistGeneratedPersonalizedLessonOnD1(
         item,
       }),
     ),
-    nativePersonalizedLessonReadyUpdate({
+    atomicPersonalizedLessonReadyUpdate({
       input,
       stored,
       committedAt,
       commitFence,
     }),
     ...input.draft.vocabulary.map((item) =>
-      nativePersonalizedLessonVocabularyInsert({
+      atomicPersonalizedLessonVocabularyInsert({
         lessonId: input.lessonId,
         userId: input.userId,
         sourceSnapshotHash: input.sourceSnapshotHash,
@@ -678,7 +544,7 @@ async function persistGeneratedPersonalizedLessonOnD1(
         importance: item.importance,
       }),
     ),
-    nativePersonalizedLessonInteractionInsert({
+    atomicPersonalizedLessonInteractionInsert({
       input,
       commitFence,
     }),
@@ -695,31 +561,31 @@ async function persistGeneratedPersonalizedLessonOnD1(
   ];
   const readyStatementIndex = input.draft.vocabulary.length;
   const fenceClearStatementIndex = statements.length - 1;
-  const results = await executeNativeD1Batch(statements);
+  const results = await executeAtomicLibSqlBatch(statements);
   if (
-    results[readyStatementIndex]?.meta.changes !== 1 ||
-    results[fenceClearStatementIndex]?.meta.changes !== 1
+    results[readyStatementIndex]?.changes !== 1 ||
+    results[fenceClearStatementIndex]?.changes !== 1
   ) {
-    throw new Error("Personalized lesson D1 commit lost its generation fence");
+    throw new Error("Personalized lesson atomic batch lost its generation fence");
   }
 
   const ready = await prisma.personalizedLesson.findUnique({
     where: { id: input.lessonId },
   });
   if (!ready || ready.status !== "READY") {
-    throw new Error("Personalized lesson D1 commit could not be read back");
+    throw new Error("Personalized lesson atomic batch could not be read back");
   }
   return ready;
 }
 
-function nativePersonalizedVocabularyUpsert(input: {
+function atomicPersonalizedVocabularyUpsert(input: {
   lessonId: string;
   userId: string;
   sourceSnapshotHash: string;
   generationKey: string;
   vocabularyId: string;
   item: PersonalizedLessonDraft["vocabulary"][number];
-}): D1BatchStatement {
+}): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "VocabularyItem"
             ("id", "lemma", "displayText", "ipa", "meaningVi", "meaningEn", "partOfSpeech", "cefrLevel", "exampleSentence")
@@ -749,12 +615,12 @@ function nativePersonalizedVocabularyUpsert(input: {
   };
 }
 
-function nativePersonalizedLessonReadyUpdate(input: {
+function atomicPersonalizedLessonReadyUpdate(input: {
   input: GeneratedLessonPersistenceInput;
   stored: ReturnType<typeof toStoredPersonalizedLesson>;
-  committedAt: string;
+  committedAt: string | number;
   commitFence: string;
-}): D1BatchStatement {
+}): LibSqlBatchStatement {
   const contentIdAssignments = input.input.draft.vocabulary.map(
     (_item, index) =>
       `'$.vocabulary[${index}].id', (
@@ -795,7 +661,7 @@ function nativePersonalizedLessonReadyUpdate(input: {
   };
 }
 
-function nativePersonalizedLessonVocabularyInsert(input: {
+function atomicPersonalizedLessonVocabularyInsert(input: {
   lessonId: string;
   userId: string;
   sourceSnapshotHash: string;
@@ -803,7 +669,7 @@ function nativePersonalizedLessonVocabularyInsert(input: {
   lemma: string;
   isTarget: boolean;
   importance: number;
-}): D1BatchStatement {
+}): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "PersonalizedLessonVocabulary"
             ("personalizedLessonId", "vocabularyItemId", "isTarget", "importance")
@@ -820,7 +686,7 @@ function nativePersonalizedLessonVocabularyInsert(input: {
           DO UPDATE SET "isTarget" = excluded."isTarget", "importance" = excluded."importance"`,
     values: [
       input.lessonId,
-      d1Boolean(input.isTarget),
+      libSqlBoolean(input.isTarget),
       input.importance,
       input.lemma,
       input.lessonId,
@@ -831,10 +697,10 @@ function nativePersonalizedLessonVocabularyInsert(input: {
   };
 }
 
-function nativePersonalizedLessonInteractionInsert(input: {
+function atomicPersonalizedLessonInteractionInsert(input: {
   input: GeneratedLessonPersistenceInput;
   commitFence: string;
-}): D1BatchStatement {
+}): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "AIInteraction"
             ("id", "userId", "purpose", "model", "provider", "promptVersion", "inputHash", "validatedOutput", "latencyMs", "traceId", "success")
@@ -867,7 +733,7 @@ function nativePersonalizedLessonInteractionInsert(input: {
   };
 }
 
-async function persistPersonalizedLessonAttemptOnD1(input: {
+async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
   input: PersonalizedAttemptInput;
   lesson: OwnedAttemptLesson;
   normalizedAnswer: string;
@@ -878,7 +744,7 @@ async function persistPersonalizedLessonAttemptOnD1(input: {
   const attemptId = randomUUID();
   const evidenceId = randomUUID();
   const skillMasteryId = randomUUID();
-  const now = d1Timestamp(new Date());
+  const now = libSqlTimestamp(new Date());
   const initialMastery = updateMastery({
     oldMastery: MASTERY_INITIAL,
     attemptScore: input.score,
@@ -888,13 +754,13 @@ async function persistPersonalizedLessonAttemptOnD1(input: {
   }).newMastery;
   const performanceContribution =
     input.score * (1 / input.lesson.difficulty) * MASTERY_NEW_WEIGHT;
-  const results = await executeNativeD1Batch([
-    nativePersonalizedAttemptInsert({
+  const results = await executeAtomicLibSqlBatch([
+    atomicPersonalizedAttemptInsert({
       attemptId,
       ...input,
       createdAt: now,
     }),
-    nativePersonalizedEvidenceInsert({
+    atomicPersonalizedEvidenceInsert({
       evidenceId,
       attemptId,
       ...input,
@@ -940,14 +806,14 @@ async function persistPersonalizedLessonAttemptOnD1(input: {
         evidenceId,
       ],
     },
-    nativePersonalizedCalibrationUpdate({
+    atomicPersonalizedCalibrationUpdate({
       userId: input.input.userId,
       evidenceId,
       updatedAt: now,
     }),
   ]);
 
-  if (results[0]?.meta.changes === 1) {
+  if (results[0]?.changes === 1) {
     return {
       row: {
         id: attemptId,
@@ -971,7 +837,7 @@ async function persistPersonalizedLessonAttemptOnD1(input: {
   throw privateNotFound();
 }
 
-function nativePersonalizedAttemptInsert(input: {
+function atomicPersonalizedAttemptInsert(input: {
   attemptId: string;
   input: PersonalizedAttemptInput;
   lesson: OwnedAttemptLesson;
@@ -979,8 +845,8 @@ function nativePersonalizedAttemptInsert(input: {
   score: number;
   correct: boolean;
   feedbackVi: string;
-  createdAt: string;
-}): D1BatchStatement {
+  createdAt: string | number;
+}): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "PersonalizedLessonAttempt"
             ("id", "lessonId", "userId", "exerciseId", "clientAttemptId", "submittedAnswer", "normalizedAnswer", "score", "correct", "feedbackVi", "gradingMethod", "responseTimeMs", "createdAt")
@@ -1003,7 +869,7 @@ function nativePersonalizedAttemptInsert(input: {
       input.input.answer,
       input.normalizedAnswer,
       input.score,
-      d1Boolean(input.correct),
+      libSqlBoolean(input.correct),
       input.feedbackVi,
       input.input.responseTimeMs ?? null,
       input.createdAt,
@@ -1015,14 +881,14 @@ function nativePersonalizedAttemptInsert(input: {
   };
 }
 
-function nativePersonalizedEvidenceInsert(input: {
+function atomicPersonalizedEvidenceInsert(input: {
   evidenceId: string;
   attemptId: string;
   input: PersonalizedAttemptInput;
   lesson: OwnedAttemptLesson;
   score: number;
-  createdAt: string;
-}): D1BatchStatement {
+  createdAt: string | number;
+}): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "AdaptiveEvidence"
             ("id", "userId", "sourceKind", "sourceId", "skillKey", "score", "confidence", "difficulty", "gradingMethod", "responseTimeMs", "createdAt")
@@ -1044,11 +910,11 @@ function nativePersonalizedEvidenceInsert(input: {
   };
 }
 
-function nativePersonalizedCalibrationUpdate(input: {
+function atomicPersonalizedCalibrationUpdate(input: {
   userId: string;
   evidenceId: string;
-  updatedAt: string;
-}): D1BatchStatement {
+  updatedAt: string | number;
+}): LibSqlBatchStatement {
   return {
     sql: `WITH "recentEvidence" AS (
             SELECT "skillKey", "score", "confidence"
@@ -1250,75 +1116,6 @@ function parseLessonValidator(raw: string | null) {
   } catch {
     throw new Error("Invalid personalized lesson validator record");
   }
-}
-
-async function updateSkillMasteryInTransaction(
-  tx: Prisma.TransactionClient,
-  userId: string,
-  skillKey: string,
-  score: number,
-  difficulty: number,
-) {
-  const existing = await tx.skillMastery.findUnique({
-    where: { userId_skillKey: { userId, skillKey } },
-    select: { masteryScore: true },
-  });
-  const updated = updateMastery({
-    oldMastery: existing?.masteryScore ?? 0.5,
-    attemptScore: score,
-    hintCount: 0,
-    replayCount: 0,
-    difficulty,
-  });
-  await tx.skillMastery.upsert({
-    where: { userId_skillKey: { userId, skillKey } },
-    create: {
-      userId,
-      skillKey,
-      masteryScore: updated.newMastery,
-      evidenceCount: 1,
-    },
-    update: {
-      masteryScore: updated.newMastery,
-      evidenceCount: { increment: 1 },
-      lastUpdatedAt: new Date(),
-    },
-  });
-}
-
-async function updateCalibrationInTransaction(
-  tx: Prisma.TransactionClient,
-  userId: string,
-) {
-  const [profile, evidence] = await Promise.all([
-    tx.learnerProfile.findUnique({
-      where: { userId },
-      select: { estimatedCefrLevel: true, calibrationStatus: true },
-    }),
-    tx.adaptiveEvidence.findMany({
-      where: { userId },
-      orderBy: { createdAt: "desc" },
-      take: 24,
-      select: { skillKey: true, score: true, confidence: true },
-    }),
-  ]);
-  if (!profile) return;
-  const calibrated = assessCalibration({
-    currentLevel: profile.estimatedCefrLevel,
-    existingStatus: profile.calibrationStatus,
-    evidence,
-  });
-  await tx.learnerProfile.update({
-    where: { userId },
-    data: {
-      calibrationStatus: calibrated.status,
-      estimatedCefrLevel: calibrated.nextLevel,
-      ...(calibrated.status === "CALIBRATED" &&
-      profile.calibrationStatus !== "CALIBRATED"
-        ? { calibratedAt: new Date() }
-        : {}),
-    },
-  });
 }
 
 function toAttemptResponse(

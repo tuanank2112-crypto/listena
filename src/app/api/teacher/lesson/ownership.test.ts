@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseUnavailableError } from "@/lib/database-errors";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), course: vi.fn(), findLesson: vi.fn(), createLesson: vi.fn(), vocab: vi.fn(), link: vi.fn(),
@@ -50,5 +51,26 @@ describe("teacher content ownership", () => {
       expect(mocks.createLesson).not.toHaveBeenCalled();
       expect(mocks.vocab).not.toHaveBeenCalled();
     }
+  });
+
+  it("returns an opaque 503 for unavailable lesson persistence", async () => {
+    mocks.course.mockRejectedValue(new DatabaseUnavailableError());
+    const response = await POST(new Request("http://localhost/api/teacher/lesson", {
+      method: "POST", body: JSON.stringify(body), headers: { "Content-Type": "application/json" },
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
+  });
+
+  it("returns an opaque 503 for unavailable lesson reads", async () => {
+    mocks.findLesson.mockRejectedValue(new DatabaseUnavailableError());
+    const response = await GET(
+      new Request("http://localhost/api/teacher/lesson/lesson"),
+      { params: Promise.resolve({ lessonId: "lesson" }) },
+    );
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
   });
 });

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — Plan07 Vercel/Turso local candidate (not deployed)
+- Add an explicit Node runtime boundary: local development/E2E uses file-backed SQLite, while `APP_RUNTIME=vercel` requires complete server-only Turso settings and fails closed without a local fallback. The target Vercel module graph no longer depends on Worker D1, Prisma WASM, or OpenNext Cloudflare runtime APIs.
+- Replace D1-only multi-row persistence with a parameterized libSQL atomic-batch contract that preserves server-owned commit fences and idempotency for learning sessions, AI budgets, adaptive games and private lessons. Configuration/operational database failures return opaque typed `503` responses; driver causes, endpoints and credentials are not exposed.
+- Add a hosted migration-write fence: Vercel unsafe application API mutations remain disabled until exact `MIGRATION_WRITE_MODE=enabled`; Auth.js CSRF/session routes are narrowly excluded so login semantics remain intact.
+- Add a read-only D1-to-Turso verifier. The local verifier fixtures pass 7/7; its staging write/read/delete proof remains a separate approved operation after target identity is independently verified. No D1 export/import, Turso staging database, Vercel deployment, account/DNS change, public traffic cutover, hosted write, rollback drill or live Kira smoke is claimed.
+- Local acceptance: 284 unit tests across 66 files, type-check, lint with 0 errors / 34 pre-existing warnings, standard Next production build and isolated E2E 16/16 all pass. `current_version` remains 0.5.0 until a separately accepted release.
+
 ## Unreleased — KiraAI adapter and P65 deployed
 - Deploy KiraAI with non-secret configuration `AI_PROVIDER=kira`, `KIRAAI_MODEL=glm-5.3-flash-free`, and `KIRAAI_BASE_URL=https://kiraai.vn/api/v1` as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; the value of `KIRAAI_API_KEY` is not stored in this repository.
 - Add a native-D1 reservation/commit-fence boundary for P65 learning-session, private-lesson/attempt and adaptive-game graphs, with 40 rolling-24-hour AI reservations, a 30-second pending lease, and an applicable 12-second one-off cooldown.

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseConfigurationError } from "@/lib/database-errors";
 
 const mocks = vi.hoisted(() => ({
   auth: vi.fn(), timeline: vi.fn(), error: vi.fn(),
@@ -57,6 +58,17 @@ describe("GET /api/learner/progress", () => {
       listeningMastery: 0.78,
       vocabularyMastery: 0,
       spellingMastery: 0.5,
+    });
+  });
+
+  it("returns an opaque 503 when the database configuration is invalid", async () => {
+    mocks.profile.mockRejectedValue(new DatabaseConfigurationError());
+
+    const response = await GET();
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({
+      code: "DATABASE_CONFIGURATION_MISSING",
     });
   });
 });

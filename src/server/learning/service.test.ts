@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), recentQuestHistory: vi.fn(), transaction: vi.fn(),
   owned: vi.fn(), evaluate: vi.fn(), getMemory: vi.fn(), appendMemory: vi.fn(),
   start: vi.fn(), reserveAICall: vi.fn(), settleAICall: vi.fn(),
+  atomicBatch: vi.fn(), planMemory: vi.fn(), memoryRecord: vi.fn(), mastery: vi.fn(), evidenceCount: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("./repository", () => ({
@@ -29,11 +30,29 @@ vi.mock("@/server/ai/tutor-orchestrator", () => ({
 vi.mock("@/server/learner-memory/repository", () => ({
   getLearnerMemory: mocks.getMemory,
   appendEvidenceToMemory: mocks.appendMemory,
-  planLearnerMemoryEvidenceWrite: vi.fn(),
+  planLearnerMemoryEvidenceWrite: mocks.planMemory,
+  parseLearnerMemory: (record: {
+    id: string; userId: string; goalsJson: string; errorsJson: string; skillsJson: string; preferencesJson: string;
+  }) => ({
+    id: record.id, userId: record.userId, goals: JSON.parse(record.goalsJson),
+    recurringErrors: JSON.parse(record.errorsJson), provenSkills: JSON.parse(record.skillsJson),
+    preferences: JSON.parse(record.preferencesJson),
+  }),
 }));
 vi.mock("@/server/ai/request-budget", () => ({
   reserveUserAICall: mocks.reserveAICall,
   settleUserAICall: mocks.settleAICall,
+}));
+vi.mock("@/lib/prisma", () => ({
+  prisma: {
+    learnerMemory: { findUnique: mocks.memoryRecord },
+    learningEvidence: { count: mocks.evidenceCount },
+  },
+}));
+vi.mock("@/lib/libsql-batch", () => ({
+  libSqlBoolean: (value: boolean) => value ? 1 : 0,
+  libSqlTimestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
+  executeAtomicLibSqlBatch: mocks.atomicBatch,
 }));
 
 import { completeLearningSession, createLearningSession, submitLearningTurn } from "./service";
@@ -114,6 +133,128 @@ function makeTransaction() {
   };
 }
 
+type AtomicStatement = {
+  sql: string;
+  values?: Array<string | number | null>;
+};
+
+function asDate(value: string | number | null | undefined) {
+  return new Date(typeof value === "number" ? value : String(value));
+}
+
+async function executeAtomicTestBatch(statements: AtomicStatement[]) {
+  const changes = statements.map(() => 1);
+  const start = statements[0];
+  if (start?.sql.includes('INSERT INTO "LearningSession"')) {
+    const values = start.values ?? [];
+    record.id = String(values[0]);
+    record.mode = String(values[3]) as LearningSessionRecord["mode"];
+    record.goal = String(values[4]);
+    record.levelSnapshot = String(values[5]) as LearningSessionRecord["levelSnapshot"];
+    record.stateJson = String(values[6]);
+    record.startedAt = asDate(values[7]);
+    record.updatedAt = asDate(values[8]);
+    const opening = statements[1]?.values ?? [];
+    record.turns.push({
+      id: String(opening[0]), sequence: 1, clientTurnId: String(opening[2]),
+      actor: "AI", turnType: "PROMPT", contentJson: String(opening[3]),
+      skillTags: String(opening[4]), createdAt: asDate(opening[5]),
+    } as never);
+    return changes.map((count) => ({ changes: count }));
+  }
+
+  if (start?.sql.includes('UPDATE "LearnerProfile"') && statements[1]?.sql.includes('UPDATE "LearningSession"')) {
+    const profile = start.values ?? [];
+    const session = statements[1]?.values ?? [];
+    const updateLearningSession = tx.learningSession.updateMany as unknown as (args: {
+      where: { status: string }; data: Partial<LearningSessionRecord>;
+    }) => Promise<{ count: number }>;
+    const updateLearnerProfile = tx.learnerProfile.updateMany as unknown as (args: unknown) => Promise<{ count: number }>;
+    const sessionResult = await updateLearningSession({
+     where: { status: "ACTIVE" },
+      data: {
+        status: "COMPLETED", completedAt: asDate(session[0]), stateJson: String(session[1]),
+        summary: String(session[2]), updatedAt: asDate(session[3]),
+      },
+    });
+    if (sessionResult.count !== 1) return [{ changes: 0 }, { changes: 0 }];
+    const profileResult = await updateLearnerProfile({
+      where: { userId: String(profile[3]) },
+      data: { totalStudyMinutes: { increment: Number(profile[0]) }, lastActivityAt: asDate(profile[1]) },
+    });
+    return [{ changes: profileResult.count }, { changes: sessionResult.count }];
+  }
+
+  const learner = statements.find((statement) => statement.sql.includes("'LEARNER'"));
+  if (learner) {
+    const values = learner.values ?? [];
+    const learnerTurn = {
+      id: String(values[0]), sequence: record.turns.length + 1, clientTurnId: String(values[3]),
+      actor: "LEARNER", turnType: String(values[4]), contentJson: String(values[5]),
+      skillTags: String(values[6]), createdAt: asDate(values[7]),
+    };
+    record.turns.push(learnerTurn as never);
+    const ai = statements.find((statement) => statement.sql.includes("'AI'"));
+    if (ai) {
+      const aiValues = ai.values ?? [];
+      record.turns.push({
+        id: String(aiValues[0]), sequence: record.turns.length + 1, clientTurnId: String(aiValues[3]),
+        actor: "AI", turnType: String(aiValues[4]), contentJson: String(aiValues[5]),
+        skillTags: String(aiValues[6]), createdAt: asDate(aiValues[7]),
+      } as never);
+    }
+    const evidence = statements.find((statement) => statement.sql.includes('INSERT INTO "LearningEvidence"'));
+    if (evidence) {
+      const evidenceValues = evidence.values ?? [];
+      record.evidence.push({
+        id: String(evidenceValues[0]), turnId: String(evidenceValues[2]), skillKey: String(evidenceValues[3]),
+        evidenceType: String(evidenceValues[4]), score: Number(evidenceValues[5]), confidence: Number(evidenceValues[6]),
+        difficulty: 1, hintCount: Number(evidenceValues[7]), replayCount: Number(evidenceValues[8]),
+        responseTimeMs: evidenceValues[9] === null ? null : Number(evidenceValues[9]), createdAt: asDate(evidenceValues[10]),
+      } as never);
+    }
+    const mastery = statements.find((statement) => statement.sql.includes('INSERT INTO "SkillMastery"'));
+    if (mastery) {
+      const masteryValues = mastery.values ?? [];
+      const upsertSkillMastery = tx.skillMastery.upsert as unknown as (args: unknown) => Promise<unknown>;
+      await upsertSkillMastery({ create: { masteryScore: Number(masteryValues[3]) } });
+    }
+    for (const statement of statements) {
+      const values = statement.values ?? [];
+      if (statement.sql.includes('UPDATE "Intervention"')) {
+        const intervention = record.interventions.find((item) => item.id === values[2]);
+        if (intervention) Object.assign(intervention, { status: "COMPLETED", outcomeJson: String(values[0]), completedAt: asDate(values[1]) });
+      }
+      if (statement.sql.includes('INSERT INTO "Intervention"')) {
+        record.interventions.push({
+          id: String(values[0]), sessionId: String(values[1]), sourceTurnId: String(values[2]),
+          type: String(values[3]), prompt: String(values[4]), specJson: String(values[5]), validatorJson: String(values[6]),
+          status: "PENDING", outcomeJson: null, createdAt: asDate(values[7]), completedAt: null,
+        } as never);
+      }
+      if (statement.sql.includes('UPDATE "LearningSession"') && statement.sql.includes('SET "status" = \'COMPLETED\'')) {
+        const updateLearningSession = tx.learningSession.updateMany as unknown as (args: {
+          where: { status: string }; data: Partial<LearningSessionRecord>;
+        }) => Promise<{ count: number }>;
+        await updateLearningSession({
+          where: { status: "ACTIVE" },
+          data: { status: "COMPLETED", completedAt: asDate(values[0]), stateJson: String(values[1]), summary: String(values[2]), updatedAt: asDate(values[3]) },
+        });
+      } else if (statement.sql.includes('UPDATE "LearningSession"') && statement.sql.includes('SET "stateJson" = ?')) {
+        Object.assign(record, { stateJson: String(values[0]), updatedAt: asDate(values[1]) });
+      }
+      if (statement.sql.includes('UPDATE "LearnerProfile"')) {
+        const updateLearnerProfile = tx.learnerProfile.updateMany as unknown as (args: unknown) => Promise<{ count: number }>;
+        await updateLearnerProfile({
+          where: { userId: String(values[3] ?? values[0]) },
+          data: { totalStudyMinutes: { increment: Number(values[0]) }, lastActivityAt: asDate(values[1]) },
+        });
+      }
+    }
+  }
+  return changes.map((count) => ({ changes: count }));
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers();
@@ -132,6 +273,19 @@ beforeEach(() => {
   mocks.recentQuestHistory.mockResolvedValue([]);
   mocks.getMemory.mockResolvedValue(null);
   mocks.appendMemory.mockResolvedValue(null);
+  mocks.memoryRecord.mockResolvedValue(null);
+  mocks.evidenceCount.mockImplementation(async () => record.evidence.length);
+  mocks.planMemory.mockImplementation((_userId: string, _existing: unknown, evidence: {
+    id: string; skillKey: string; score: number;
+  }) => ({
+    create: {
+      userId, goalsJson: "[]", errorsJson: "[]",
+      skillsJson: JSON.stringify([{ skillKey: evidence.skillKey, masteryScore: evidence.score, evidenceCount: 1, lastEvidenceId: evidence.id }]),
+      preferencesJson: "{}",
+    },
+    update: { errorsJson: "[]", skillsJson: "[]" },
+  }));
+  mocks.atomicBatch.mockImplementation(executeAtomicTestBatch);
   mocks.reserveAICall.mockImplementation(async ({ userId: reservationUserId, purpose }: {
     userId: string; purpose: string;
   }) => ({ id: `reservation-${purpose}`, userId: reservationUserId, purpose }));
@@ -233,16 +387,14 @@ describe("session intervention persistence", () => {
     expect(record.evidence).toEqual([]);
   });
 
-  it("writes memory with the exact new evidence inside the turn transaction and skips it on retry", async () => {
+  it("writes memory with the exact new evidence in the atomic batch and skips it on retry", async () => {
     await submitLearningTurn(userId, sessionId, turnInput);
     await submitLearningTurn(userId, sessionId, turnInput);
 
-    expect(mocks.appendMemory).toHaveBeenCalledExactlyOnceWith(
-      tx,
-      userId,
-      expect.objectContaining({ id: "evidence-0", skillKey: "communication" }),
-    );
-    expect(tx.learningEvidence.create).toHaveBeenCalledOnce();
+    expect(mocks.atomicBatch).toHaveBeenCalledOnce();
+    const statements = mocks.atomicBatch.mock.calls[0]?.[0] as Array<{ sql: string; values: Array<unknown> }>;
+    expect(statements.some((statement) => statement.sql.includes('INSERT INTO "LearnerMemory"'))).toBe(true);
+    expect(record.evidence).toHaveLength(1);
   });
 
   it.each(["FILL_BLANK", "CHOICE"])("uses a correct short %s answer consistently across feedback, state, evidence and mastery", async (type) => {
@@ -285,7 +437,7 @@ describe("session intervention persistence", () => {
     expect(JSON.stringify(result.session)).not.toContain("acceptedAnswers");
     expect(retry).toEqual({ ...result, idempotent: true });
     expect(mocks.evaluate).toHaveBeenCalledOnce();
-    expect(tx.learningEvidence.create).toHaveBeenCalledOnce();
+    expect(record.evidence).toHaveLength(1);
     expect(tx.learnerProfile.updateMany).not.toHaveBeenCalled();
   });
 });

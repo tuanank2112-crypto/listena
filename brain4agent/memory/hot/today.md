@@ -1,5 +1,11 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Plan07 Vercel + Turso local candidate 2026-09-11 — local gates accepted, hosted gates open
+- Plan07 replaces the future target runtime with Next.js Node on Vercel plus Turso/libSQL, while retaining the existing Cloudflare Worker + D1 deployment as a rollback asset. `APP_RUNTIME=vercel` requires complete Turso configuration and fails closed; local/E2E keeps SQLite. Cloudflare D1/WASM/OpenNext runtime imports are not retained on the target application path.
+- Provider-neutral libSQL atomic batches preserve learning, game, personalized-lesson and AI-budget commit fences. Hosted unsafe API writes are fenced by `MIGRATION_WRITE_MODE=disabled` until a separately recorded enable; Auth.js remains the narrow CSRF/session exception. Database configuration/operational failures are opaque typed 503s, never a local fallback or driver/secret disclosure.
+- Local evidence: `npm test` 284/284 across 66 files, `npx tsc --noEmit`, `npm run lint` with 0 errors / 34 pre-existing warnings, standard `npm run build`, and isolated `npm run test:e2e` 16/16. The P73 migration verifier passed 7/7 local fixture tests and is deliberately read-only; fixture proof is not a D1 export/import, Turso staging write/read/delete, or hosted proof.
+- Not performed or claimed: Turso account/database setup, Vercel Preview/production deployment, D1 export/import/reset/seed/write, DNS or public-traffic cutover, hosted write enable, Cloudflare rollback drill, or a bounded live Kira smoke. Final D1 export and cutover still require explicit approval after staging acceptance.
+
 ## Plan06 KiraAI provider deployment 2026-09-10 — secret binding installed, smoke pending
 - Account owner selected KiraAI for the next Worker deployment: `AI_PROVIDER=kira`, model `glm-5.3-flash-free`, base URL `https://kiraai.vn/api/v1`, and secret name `KIRAAI_API_KEY`. The key value was not written to a repository file or log.
 - Kira documents OpenAI-compatible `POST /chat/completions`, not OpenAI `POST /responses`. The adapter must parse the completion JSON and run the existing server-side Zod validation; it cannot claim OpenAI Responses strict-schema or `store:false` behavior.

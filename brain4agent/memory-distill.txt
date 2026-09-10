@@ -1,10 +1,12 @@
 # ListenAI kernel — 0.5.0
-# CURRENT CHECKPOINT 2026-09-10: Plan06 P65/Kira code is deployed to https://listena-english.tuanank2112.workers.dev (Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`), followed by production secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` containing the opaque `KIRAAI_API_KEY` binding. Production D1 received additive migrations `0002`/`0003` and an idempotent core-curriculum import: 5 lessons, 116 vocabulary items, 20 segments and 54 exercises; the existing user was preserved. P65 local gates passed: 225 unit tests, type-check, lint 0 errors/34 existing warnings, Worker build and E2E 16/16; public health/login returned 200. Kira runs documented Chat Completions under `AI_PROVIDER=kira`, `KIRAAI_MODEL=glm-5.3-flash-free`, `KIRAAI_BASE_URL=https://kiraai.vn/api/v1`, not OpenAI Responses. The live-AI production gate remains deliberately OPEN until one bounded genuine smoke succeeds; secret content is never inspected. Read planning/06_2026-09-10_personalized-ai-learning/plan.md.
+# CURRENT CHECKPOINT 2026-09-11: Plan07 has a local-only Vercel Node + Turso candidate. Its explicit runtime boundary, provider-neutral libSQL atomic writes, hosted write fence, opaque database failures, and read-only migration verifier passed 284 unit tests across 66 files, type-check, lint (0 errors / 34 pre-existing warnings), a standard Next production build, isolated E2E 16/16, and P73 verifier fixtures 7/7. This is not a Turso staging import, Vercel deployment, D1 mutation, DNS/traffic cutover, or live Kira smoke. Cloudflare Worker + D1 remain the historical rollback asset; no secret content is inspected. Read planning/07_2026-09-10_vercel-turso-migration/plan.md.
+
+# PREVIOUS CHECKPOINT 2026-09-10: Plan06 P65/Kira code is deployed to https://listena-english.tuanank2112.workers.dev (Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`), followed by production secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` containing the opaque `KIRAAI_API_KEY` binding. Production D1 received additive migrations `0002`/`0003` and an idempotent core-curriculum import: 5 lessons, 116 vocabulary items, 20 segments and 54 exercises; the existing user was preserved. P65 local gates passed: 225 unit tests, type-check, lint 0 errors/34 existing warnings, Worker build and E2E 16/16; public health/login returned 200. Kira runs documented Chat Completions under `AI_PROVIDER=kira`, `KIRAAI_MODEL=glm-5.3-flash-free`, `KIRAAI_BASE_URL=https://kiraai.vn/api/v1`, not OpenAI Responses. The live-AI production gate remains deliberately OPEN until one bounded genuine smoke succeeds; secret content is never inspected.
 <agent_startup_protocol>
 0. Skill .xay-dung-nao-bo từ Fitc84/brain4agent.old: init_brain.js <repo> --check. Xem binding đường dẫn trong AGENTS.md; chỉ ghi khi cần nâng cấp.
 1. Đọc kernel → index.md → memory/hot/today.md và state.json → plan và docs module.
 2. Đối chiếu mã thật trước khi tin báo cáo lịch sử. Đọc docs Next cục bộ trước sửa framework.
-3. Không reset/seed DB người dùng; E2E dùng database tạm riêng và test-process-only Responses transport stub. Production runtime không có đường chọn mock AI.
+3. Không reset/seed DB người dùng; E2E dùng database tạm riêng và test-process-only Responses transport stub. Production runtime không có đường chọn mock AI. Plan07 không export/import/mutate D1 trước staging và phê duyệt cutover.
 4. Kết thúc: đồng bộ plan, docs, roadmap, changelog và hot memory theo .compact.
 </agent_startup_protocol>
 
@@ -15,8 +17,8 @@
 - Không coi chatbot phụ hay course-first là định hướng sản phẩm. Không suy hiệu quả học tập từ tests xanh.
 
 ## Kiến trúc
-- Next16.3.3 App Router, React19.2.8, TypeScript, Tailwind4, Auth.js5 Credentials/JWT, OpenNext Cloudflare adapter.
-- Prisma6 with libSQL local SQLite and request-scoped D1 in Cloudflare production; D1 schema uses additive `migrations/0001`–`0003`. Core curriculum is restored by the reviewed idempotent builder, never reset/seed.
+- Next16.3.3 App Router, React19.2.8, TypeScript, Tailwind4 and Auth.js5 Credentials/JWT. Plan07's target graph is Next Node on Vercel with Prisma/libSQL and Turso; it excludes Worker/D1/WASM imports.
+- Prisma6 uses local libSQL SQLite for local development/E2E and an explicit Turso mode only for `APP_RUNTIME=vercel`; a hosted partial configuration fails closed. The existing Cloudflare Worker+D1 deployment and additive `migrations/0001`–`0003` are historical rollback assets, not Plan07's active runtime path.
 - Session: server/learning → ai/tutor-orchestrator → selected live provider (Kira Chat Completions or OpenAI Responses) or typed unavailable error → transaction → DTO.
 - State, validator, evidence/mastery thuộc server; không đưa acceptedAnswers/correctIndex xuống client.
 - clientTurnId chống ghi trùng; auto/manual completion tăng thời gian một lần.
@@ -28,8 +30,8 @@
 - 2026-09-10: Plan04 closed local. Daily Quest now consumes bounded owned scenario history; completion needs server-owned evidence, distinguishes PARTIAL from COMPLETED; dashboard/progress adaptive meters resolve SkillMastery first. Keep legacy attempts/reviews/games outside unified evidence until a new source contract exists.
 - 2026-09-08 20:30: Plan03 closed local. Root stopped stale repo Next dev server PID 24896; E2E then launched normally. Auto-completion CTA can be PRACTICE by design when mastery <0.6; deterministic mock now honors successful BOSS shouldComplete/DEBRIEF and has regression test.
 - 2026-09-07 20:55: P13 eval không còn self-assert; run.ts gọi startMission/evaluateTutorTurn với DeterministicMockTutorProvider, kiểm phase + grounded IDs. Kết quả 15/15, grounded 4/15 đúng kỳ vọng.
-- Current plan: planning/06_2026-09-10_personalized-ai-learning/plan.md, target0.5.0 MINOR. Private AI lessons, server-owned adaptive games and additive curriculum recovery are deployed; the only live-AI exit gate is the user-owned Worker secret plus a real smoke.
+- Current plan: planning/07_2026-09-10_vercel-turso-migration/plan.md, target0.6.0 MINOR. The local candidate is accepted; Turso staging import, Vercel Preview, explicit hosted write enable, final export/cutover, and live Kira smoke remain unchecked.
 - User cho phép orchestrator điều phối model: Astra runtime, Sol UI, Luna utility; root contracts/integration.
 - Subagents bị usage limit giữa chừng; root tiếp quản, không coi code dở là đã nghiệm thu.
-- Baseline current: 204 unit tests; kết quả cuối đọc state.json và Plan06 TESTING-ACCEPTANCE.
-- Roadmap: live-provider smoke/quotas, pedagogical evaluation with learners, learner memory xuyên phiên, next action có evidence and optional audio coverage.
+- Baseline current: 284 unit tests across 66 files; type-check, lint 0 errors/34 pre-existing warnings, standard Next build, E2E 16/16, and P73 verifier fixtures 7/7. Kết quả cuối đọc state.json và Plan07 TESTING-ACCEPTANCE.
+- Roadmap: dedicated Turso staging import/proof, Vercel Preview with writes fenced, then explicitly approved write/cutover; only afterward a bounded Kira smoke, quotas, pedagogical evaluation with learners, learner memory xuyên phiên, next action có evidence and optional audio coverage.

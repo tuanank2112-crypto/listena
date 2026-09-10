@@ -67,8 +67,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     strategy: "jwt",
     maxAge: 30 * 24 * 60 * 60,
   },
-  // OpenNext invokes route handlers through the Worker runtime's internal URL.
-  // Cloudflare terminates the public HTTPS request before that hop.
+  // Deployments may invoke Auth.js behind an internal reverse-proxy URL while
+  // the browser uses the public HTTPS origin (including Vercel).
   trustHost: true,
-  secret: process.env.NEXTAUTH_SECRET,
+  // Align Auth.js handler signing with the Proxy's supported secret names so
+  // a Vercel deployment cannot issue a session the Proxy rejects.
+  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
 });

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { hash } from "bcryptjs";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import { RegisterSchema } from "@/server/validation/schemas";
 import logger from "@/lib/logger";
@@ -72,6 +73,9 @@ export async function POST(req: Request) {
       { status: 201 }
     );
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     logger.error({ err: error }, "Registration failed");
     return NextResponse.json(
       { error: "Đăng ký thất bại. Vui lòng thử lại sau." },

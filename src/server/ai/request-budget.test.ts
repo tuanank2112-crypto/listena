@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createClient } from "@libsql/client";
 
 const mocks = vi.hoisted(() => ({
-  nativeD1: vi.fn(),
+  atomicClient: vi.fn(),
   reservations: vi.fn(),
   create: vi.fn(),
   update: vi.fn(),
@@ -10,7 +10,8 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({
-  getNativeD1Database: mocks.nativeD1,
+  getAtomicLibSqlClient: mocks.atomicClient,
+  toLibSqlTimestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
   prisma: {
     aIInteraction: {
       findMany: mocks.reservations,
@@ -33,8 +34,8 @@ let database: ReturnType<typeof createClient>;
 
 beforeEach(async () => {
   vi.clearAllMocks();
-  mocks.nativeD1.mockReturnValue(undefined);
   database = createClient({ url: "file::memory:" });
+  mocks.atomicClient.mockReturnValue(database);
   await database.execute(`CREATE TABLE "AIInteraction" (
     "id" TEXT PRIMARY KEY, "userId" TEXT, "purpose" TEXT NOT NULL,
     "provider" TEXT, "model" TEXT, "inputHash" TEXT,
@@ -114,27 +115,7 @@ describe("evaluateAICallBudget", () => {
     expect(result).toMatchObject({ allowed: false, reason: "DAILY_LIMIT" });
   });
 
-  it("uses a single native-D1 conditional reservation so parallel calls cannot both reach Kira", async () => {
-    const binding = {
-      prepare(sql: string) {
-        return {
-          bind(...values: Array<string | number | null>) {
-            return { sql, values };
-          },
-        };
-      },
-      async batch(statements: Array<{ sql: string; values: Array<string | number | null> }>) {
-        const results = await database.batch(
-          statements.map((statement) => ({ sql: statement.sql, args: statement.values })),
-          "write",
-        );
-        return results.map((result) => ({
-          success: true,
-          meta: { changes: Number(result.rowsAffected) },
-        }));
-      },
-    };
-    mocks.nativeD1.mockReturnValue(binding);
+  it("uses a single conditional libSQL reservation so parallel calls cannot both reach Kira", async () => {
 
     const first = await reserveUserAICall({
       userId: "learner-1",

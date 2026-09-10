@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import { CreateLessonSchema } from "@/server/validation/schemas";
 import logger from "@/lib/logger";
@@ -99,6 +100,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ lesson }, { status: 201 });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Unknown error";
     logger.error({ error: message }, "Lesson creation failed");
     return NextResponse.json(
@@ -153,6 +157,9 @@ export async function PUT(req: Request) {
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Unknown error";
     logger.error({ error: message }, "Lesson update failed");
     return NextResponse.json({ error: "Cập nhật thất bại" }, { status: 500 });

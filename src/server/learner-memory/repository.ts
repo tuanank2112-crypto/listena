@@ -209,9 +209,9 @@ export async function appendEvidenceToMemory(
 }
 
 /**
- * Pure write plan shared with the Worker-native D1 batch path. Keeping this
- * transformation here prevents a D1 commit from drifting from the local
- * transactional learner-memory semantics.
+ * Pure write plan shared by the provider-neutral atomic batch path. Keeping
+ * the transformation here prevents the guarded commit from drifting from the
+ * local transactional learner-memory semantics.
  */
 export function planLearnerMemoryEvidenceWrite(
   userId: string,

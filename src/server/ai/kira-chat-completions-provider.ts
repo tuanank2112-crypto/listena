@@ -28,7 +28,7 @@ const KIRA_API_PATH = "/api/v1";
 const DEFAULT_MODEL = "glm-5.3-flash-free";
 // Free-tier upstreams can queue a valid generation longer than the 20-second
 // default used by the direct OpenAI provider. HTTP wall time does not consume
-// Workers CPU, while the cap keeps a stalled learner request bounded.
+// Serverless execution time, while the cap keeps a stalled learner request bounded.
 const DEFAULT_TIMEOUT_MS = 45_000;
 const MAX_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_TOKENS = 4_000;
@@ -129,7 +129,7 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
             ],
             max_tokens: maxOutputTokens,
           }),
-          // Workers does not implement `redirect: "error"`. `manual` keeps
+          // Some serverless fetch implementations do not implement `redirect: "error"`. `manual` keeps
           // the response local so the non-2xx branch below fails closed on
           // every redirect instead of forwarding this credential elsewhere.
           redirect: "manual",

@@ -1,11 +1,34 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan06_p65_kira_secret_binding_deployed_awaiting_real_smoke",
-  "active_plan": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
-  "checkpoint": "planning/06_2026-09-10_personalized-ai-learning/plan.md",
-  "current_verification": { "type_check": "PASS after P65/Kira changes via npx tsc --noEmit", "unit_tests": "225 passed across 56 files after P65/Kira changes", "lint": "0 errors / 34 pre-existing warnings after P65/Kira changes", "build": "PASS via OpenNext Worker build after P65/Kira changes", "e2e": "16/16 PASS on isolated fresh SQLite DB after P65/Kira changes", "d1": "remote additive migrations 0002/0003 and idempotent core import verified: 5 lessons, 116 vocabulary, 20 segments, 54 exercises; pre-existing user preserved", "cloudflare": "Worker ee5de83a-c2a9-45e3-996a-e624072bb250 deployed with Kira non-secret configuration; secret-change version d1347978-d0c6-4c66-bf44-01315783ec9b adds KIRAAI_API_KEY. Public /api/health and /login HTTP smoke PASS; secret content is opaque and Kira live smoke remains pending" },
+  "system_status": "plan07_local_vercel_turso_candidate_passed_hosted_staging_pending_cloudflare_rollback_retained",
+  "active_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
+  "checkpoint": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
+  "current_verification": {
+    "type_check": "PASS via npx tsc --noEmit after Plan07 P71/P72/P73 local candidate",
+    "unit_tests": "284 passed across 66 files after Plan07 local candidate",
+    "lint": "0 errors / 34 pre-existing warnings after Plan07 local candidate",
+    "build": "PASS via standard Next production build after Plan07 local candidate",
+    "e2e": "16/16 PASS on isolated fresh SQLite DB after Plan07 local candidate",
+    "migration_verifier": "7/7 local fixture tests passed for a deliberately read-only verifier; this does not prove an imported D1 history, staging write/read/delete, or hosted Turso target",
+    "turso_vercel": "No Turso staging database, Vercel Preview/deployment, account mutation, DNS/traffic cutover, or hosted write was performed",
+    "d1": "No Plan07 D1 export, import, reset, seed, write, or dual-write was performed; historical additive migrations 0002/0003 and core import remain rollback history",
+    "kira": "No bounded genuine Kira smoke was performed through the Plan07 target; secret values remain opaque"
+  },
   "last_verification": {
+    "timestamp": "2026-09-11T00:37:29+07:00",
+    "scenarios_passed": [
+      "type-check",
+      "unit-tests-284-across-66-files",
+      "lint-0-errors-34-existing-warnings",
+      "standard-Next-production-build",
+      "E2E-16-Plan07-regression-suite",
+      "P73-migration-verifier-local-fixtures-7-of-7"
+    ],
+    "benchmark_accuracy": "Plan07 local code candidate only; no fixture/test result substitutes for an imported staging database, fresh hosted auth, explicit hosted write enable, Vercel deployment, or real-provider smoke",
+    "grade": "Plan07 local candidate accepted; Turso staging, Vercel Preview, cutover, rollback and live-provider gates pending"
+  },
+  "previous_verification": {
     "timestamp": "2026-09-10T19:38:15+07:00",
     "scenarios_passed": [
       "type-check",

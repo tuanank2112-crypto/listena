@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import logger from "@/lib/logger";
 import { AdaptiveGameError, AdaptiveGameRateLimitError } from "./errors";
 
 export function adaptiveGameErrorResponse(error: unknown) {
+  const databaseResponse = databaseErrorResponse(error);
+  if (databaseResponse) return databaseResponse;
+
   if (error instanceof AdaptiveGameRateLimitError) {
     return NextResponse.json(
       {

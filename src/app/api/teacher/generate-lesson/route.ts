@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { createAIProviderFromEnv } from "@/server/ai/provider";
 import { isAIProviderError } from "@/server/ai/errors";
 import {
@@ -11,6 +12,9 @@ import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/s
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 import type { CefrLevel, ExerciseType } from "@prisma/client";
+
+export const runtime = "nodejs";
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
@@ -175,6 +179,9 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ lesson }, { status: 201 });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     if (isAIProviderError(error)) {
       return NextResponse.json(
         {

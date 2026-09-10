@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 import { resolveDisplayMastery } from "@/server/learning/mastery-display";
@@ -63,6 +64,9 @@ export async function GET() {
       })),
     });
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Có lỗi xảy ra";
     logger.error({ error: message }, "Failed to fetch progress");
     return NextResponse.json({ error: "Có lỗi xảy ra" }, { status: 500 });

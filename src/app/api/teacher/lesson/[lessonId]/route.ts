@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
 
@@ -35,6 +36,9 @@ export async function GET(
 
     return NextResponse.json(lesson);
   } catch (error) {
+    const databaseResponse = databaseErrorResponse(error);
+    if (databaseResponse) return databaseResponse;
+
     const message = error instanceof Error ? error.message : "Unknown error";
     logger.error({ error: message }, "Failed to fetch lesson");
     return NextResponse.json({ error: "Có lỗi xảy ra" }, { status: 500 });

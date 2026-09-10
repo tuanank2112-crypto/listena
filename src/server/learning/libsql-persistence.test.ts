@@ -15,10 +15,10 @@ const mocks = vi.hoisted(() => ({
   getMemory: vi.fn(),
   appendMemory: vi.fn(),
   planMemory: vi.fn(),
-  nativeD1: vi.fn(),
-  nativeBatch: vi.fn(),
+  atomicBatch: vi.fn(),
   mastery: vi.fn(),
   evidenceCount: vi.fn(),
+  memoryRecord: vi.fn(),
 }));
 
 vi.mock("server-only", () => ({}));
@@ -40,6 +40,21 @@ vi.mock("@/server/learner-memory/repository", () => ({
   getLearnerMemory: mocks.getMemory,
   appendEvidenceToMemory: mocks.appendMemory,
   planLearnerMemoryEvidenceWrite: mocks.planMemory,
+  parseLearnerMemory: (record: {
+    id: string;
+    userId: string;
+    goalsJson: string;
+    errorsJson: string;
+    skillsJson: string;
+    preferencesJson: string;
+  }) => ({
+    id: record.id,
+    userId: record.userId,
+    goals: JSON.parse(record.goalsJson),
+    recurringErrors: JSON.parse(record.errorsJson),
+    provenSkills: JSON.parse(record.skillsJson),
+    preferences: JSON.parse(record.preferencesJson),
+  }),
 }));
 vi.mock("@/server/ai/request-budget", () => ({
   reserveUserAICall: vi.fn(async ({ userId, purpose }: { userId: string; purpose: string }) => ({
@@ -50,19 +65,19 @@ vi.mock("@/server/ai/request-budget", () => ({
   settleUserAICall: vi.fn(async () => undefined),
 }));
 vi.mock("@/lib/prisma", () => ({
-  getNativeD1Database: mocks.nativeD1,
   prisma: {
     skillMastery: { findUnique: mocks.mastery },
     learningEvidence: { count: mocks.evidenceCount },
+    learnerMemory: { findUnique: mocks.memoryRecord },
   },
 }));
-vi.mock("@/lib/d1-batch", () => ({
-  d1Boolean: (value: boolean) => value ? 1 : 0,
-  d1Timestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
-  executeNativeD1Batch: mocks.nativeBatch,
+vi.mock("@/lib/libsql-batch", () => ({
+  libSqlBoolean: (value: boolean) => value ? 1 : 0,
+  libSqlTimestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
+  executeAtomicLibSqlBatch: mocks.atomicBatch,
 }));
 
-import { submitLearningTurn } from "./service";
+import { recordLearningEvent, submitLearningTurn } from "./service";
 
 const userId = "learner-1";
 const sessionId = "session-1";
@@ -170,16 +185,44 @@ beforeEach(async () => {
   mocks.getMemory.mockResolvedValue(null);
   mocks.mastery.mockResolvedValue(null);
   mocks.evidenceCount.mockResolvedValue(1);
-  mocks.planMemory.mockImplementation((_id: string, _existing: unknown, evidence: { id: string; skillKey: string; score: number }) => ({
-    create: {
-      userId,
-      goalsJson: "[]",
-      errorsJson: "[]",
-      skillsJson: JSON.stringify([{ skillKey: evidence.skillKey, masteryScore: evidence.score, evidenceCount: 1, lastEvidenceId: evidence.id }]),
-      preferencesJson: "{}",
-    },
-    update: { errorsJson: "[]", skillsJson: "[]" },
-  }));
+  mocks.memoryRecord.mockImplementation(async () => {
+    const result = await database.execute({
+      sql: 'SELECT "id", "userId", "goalsJson", "errorsJson", "skillsJson", "preferencesJson" FROM "LearnerMemory" WHERE "userId" = ?',
+      args: [userId],
+    });
+    return result.rows[0] ?? null;
+  });
+  mocks.planMemory.mockImplementation((
+    _id: string,
+    existing: {
+      goals: unknown[];
+      recurringErrors: unknown[];
+      provenSkills: Array<{ skillKey: string; masteryScore: number; evidenceCount: number; lastEvidenceId?: string }>;
+      preferences: Record<string, unknown>;
+    } | null,
+    evidence: { id: string; skillKey: string; score: number },
+  ) => {
+    const priorSkills = existing?.provenSkills ?? [];
+    const currentSkill = priorSkills.find((skill) => skill.skillKey === evidence.skillKey);
+    const provenSkills = currentSkill
+      ? priorSkills.map((skill) => skill.skillKey === evidence.skillKey
+        ? { ...skill, masteryScore: Math.max(skill.masteryScore, evidence.score), evidenceCount: skill.evidenceCount + 1, lastEvidenceId: evidence.id }
+        : skill)
+      : [...priorSkills, { skillKey: evidence.skillKey, masteryScore: evidence.score, evidenceCount: 1, lastEvidenceId: evidence.id }];
+    return {
+      create: {
+        userId,
+        goalsJson: JSON.stringify(existing?.goals ?? []),
+        errorsJson: JSON.stringify(existing?.recurringErrors ?? []),
+        skillsJson: JSON.stringify(provenSkills),
+        preferencesJson: JSON.stringify(existing?.preferences ?? {}),
+      },
+      update: {
+        errorsJson: JSON.stringify(existing?.recurringErrors ?? []),
+        skillsJson: JSON.stringify(provenSkills),
+      },
+    };
+  });
   mocks.evaluate.mockResolvedValue({
     output: { ...createEvaluateTurnFallback({ state, learnerMessage: "suitcase", template }), shouldComplete: false },
     meta: { provider: "test", model: "test", promptVersion: "test", groundedKnowledgeIds: [] },
@@ -189,13 +232,12 @@ beforeEach(async () => {
     state,
     meta: { provider: "test", model: "test", promptVersion: "test", groundedKnowledgeIds: [] },
   });
-  mocks.nativeD1.mockReturnValue({});
-  mocks.nativeBatch.mockImplementation(async (statements: Array<{ sql: string; values?: Array<string | number | null> }>) => {
+  mocks.atomicBatch.mockImplementation(async (statements: Array<{ sql: string; values?: Array<string | number | null> }>) => {
     const results = await database.batch(
       statements.map((statement) => ({ sql: statement.sql, args: statement.values ?? [] })),
       "write",
     );
-    return results.map((result) => ({ success: true, meta: { changes: Number(result.rowsAffected) } }));
+    return results.map((result) => ({ changes: Number(result.rowsAffected) }));
   });
 });
 
@@ -203,7 +245,7 @@ afterEach(async () => {
   await database?.close();
 });
 
-describe("native D1 learning-session persistence", () => {
+describe("atomic libSQL learning-session persistence", () => {
   it("executes the state-CAS turn graph atomically and stale replay cannot add evidence", async () => {
     await submitLearningTurn(userId, sessionId, {
       clientTurnId: "turn-1",
@@ -212,7 +254,7 @@ describe("native D1 learning-session persistence", () => {
       replayCount: 0,
     });
 
-    const statements = mocks.nativeBatch.mock.calls[0]?.[0] as Array<{
+    const statements = mocks.atomicBatch.mock.calls[0]?.[0] as Array<{
       sql: string;
       values: Array<string | number | null>;
     }>;
@@ -241,7 +283,7 @@ describe("native D1 learning-session persistence", () => {
       hintCount: 0,
       replayCount: 0,
     })).rejects.toMatchObject({ code: "SESSION_CONFLICT", status: 409 });
-    const staleStatements = mocks.nativeBatch.mock.calls[1]?.[0] as Array<{
+    const staleStatements = mocks.atomicBatch.mock.calls[1]?.[0] as Array<{
       sql: string;
       values: Array<string | number | null>;
     }>;
@@ -251,5 +293,126 @@ describe("native D1 learning-session persistence", () => {
       args: [],
     });
     expect(afterReplay.rows[0]).toMatchObject({ count: 1 });
+  });
+
+  it("derives turn sequences from the database when a stale event snapshot precedes a turn", async () => {
+    // The repository mock intentionally remains stale after the event. This
+    // reproduces an event and AI turn resolving from the same old snapshot.
+    await recordLearningEvent(userId, sessionId, {
+      type: "HINT",
+      clientEventId: "event-1",
+    });
+
+    await expect(submitLearningTurn(userId, sessionId, {
+      clientTurnId: "turn-after-event",
+      content: "suitcase",
+      hintCount: 0,
+      replayCount: 0,
+    })).resolves.toBeDefined();
+
+    const statements = mocks.atomicBatch.mock.calls[1]?.[0] as Array<{ sql: string }>;
+    expect(statements[0]?.sql).toContain('MAX("sequence") + 1');
+    expect(statements[1]?.sql).toContain('SELECT "sequence" + 1');
+
+    const turns = await database.execute({
+      sql: 'SELECT "sequence", "actor" FROM "LearningTurn" ORDER BY "sequence" ASC',
+      args: [],
+    });
+    expect(turns.rows.map((row) => ({
+      sequence: Number(row.sequence),
+      actor: String(row.actor),
+    }))).toEqual([
+     { sequence: 1, actor: "SYSTEM" },
+     { sequence: 2, actor: "LEARNER" },
+     { sequence: 3, actor: "AI" },
+    ]);
+  });
+
+  it("retries a stale learner-memory fence so two sessions retain both mastery and memory evidence", async () => {
+    const secondSessionId = "session-2";
+    await database.execute({
+      sql: `INSERT INTO "LearningSession"
+        ("id", "userId", "mode", "status", "goal", "levelSnapshot", "stateJson", "startedAt", "updatedAt")
+        VALUES (?, ?, 'MISSION', 'ACTIVE', ?, 'A2', ?, ?, ?)`,
+      args: [
+        secondSessionId,
+        userId,
+        state.learnerGoal,
+        JSON.stringify(state),
+        "2026-09-10T10:00:00.000+00:00",
+        "2026-09-10T10:00:00.000+00:00",
+      ],
+    });
+
+    const firstSnapshot = await mocks.snapshot(userId, sessionId);
+    const secondSnapshot = { ...firstSnapshot, id: secondSessionId, turns: [] };
+    mocks.snapshot.mockImplementation(async (_userId: string, id: string) => (
+      structuredClone(id === secondSessionId ? secondSnapshot : firstSnapshot)
+    ));
+    mocks.record.mockImplementation(async (_userId: string, id: string) => (
+      id === secondSessionId ? secondSnapshot : firstSnapshot
+    ));
+
+    let memoryReads = 0;
+    let releaseFirstRead: (() => void) | undefined;
+    mocks.memoryRecord.mockImplementation(async () => {
+      memoryReads += 1;
+      if (memoryReads === 1) {
+        await new Promise<void>((resolve) => { releaseFirstRead = resolve; });
+        return null;
+      }
+      if (memoryReads === 2) {
+        releaseFirstRead?.();
+        return null;
+      }
+      const row = await database.execute({
+        sql: 'SELECT "id", "userId", "goalsJson", "errorsJson", "skillsJson", "preferencesJson" FROM "LearnerMemory" WHERE "userId" = ?',
+        args: [userId],
+      });
+      return row.rows[0] ?? null;
+    });
+
+    await expect(Promise.all([
+      submitLearningTurn(userId, sessionId, {
+        clientTurnId: "session-1-turn",
+        content: "suitcase",
+        hintCount: 0,
+        replayCount: 0,
+      }),
+      submitLearningTurn(userId, secondSessionId, {
+        clientTurnId: "session-2-turn",
+        content: "suitcase",
+        hintCount: 0,
+        replayCount: 0,
+      }),
+    ])).resolves.toHaveLength(2);
+
+    const [mastery, memory] = await Promise.all([
+      database.execute({
+        sql: 'SELECT "masteryScore", "evidenceCount" FROM "SkillMastery" WHERE "userId" = ? AND "skillKey" = ?',
+        args: [userId, "communication"],
+      }),
+      database.execute({
+        sql: 'SELECT "skillsJson" FROM "LearnerMemory" WHERE "userId" = ?',
+        args: [userId],
+      }),
+    ]);
+    const generated = await mocks.evaluate.mock.results[0]?.value as {
+      output: { score: number; confidence: number };
+    };
+    const rate = 0.18 * generated.output.confidence;
+    const afterOne = 0.5 + (generated.output.score - 0.5) * rate;
+    const afterTwo = afterOne + (generated.output.score - afterOne) * rate;
+    expect(mastery.rows[0]).toMatchObject({ evidenceCount: 2 });
+    expect(Number(mastery.rows[0]?.masteryScore)).toBeCloseTo(afterTwo);
+    const skills = JSON.parse(String(memory.rows[0]?.skillsJson)) as Array<{
+      skillKey: string;
+      evidenceCount: number;
+    }>;
+    expect(skills).toContainEqual(expect.objectContaining({
+      skillKey: "communication",
+      evidenceCount: 2,
+    }));
+    expect(mocks.atomicBatch).toHaveBeenCalledTimes(3);
   });
 });

@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
+import { databaseErrorResponse } from "@/lib/database-error-response";
 import { isAIProviderError } from "@/server/ai/errors";
 import { PersonalizedLearningError } from "@/server/personalized-learning/service";
 
 export function personalizedLearningErrorResponse(error: unknown) {
+  const databaseResponse = databaseErrorResponse(error);
+  if (databaseResponse) return databaseResponse;
+
   if (isAIProviderError(error)) {
     return NextResponse.json(
       {

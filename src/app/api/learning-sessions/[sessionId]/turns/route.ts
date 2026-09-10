@@ -9,6 +9,9 @@ import {
   learningSessionErrorResponse,
 } from "@/app/api/learning-sessions/http";
 
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 const SessionIdSchema = z.string().uuid();
 
 export async function POST(

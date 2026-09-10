@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { DatabaseUnavailableError } from "@/lib/database-errors";
 
 const mocks = vi.hoisted(() => ({
   findUnique: vi.fn(),
@@ -53,5 +54,21 @@ describe("POST /api/register", () => {
       data: expect.objectContaining({ role: "LEARNER" }),
     }));
     expect(mocks.createSkill).toHaveBeenCalledTimes(6);
+  });
+
+  it("returns an opaque 503 when persistence is unavailable", async () => {
+    mocks.findUnique.mockRejectedValue(new DatabaseUnavailableError());
+
+    const response = await POST(new Request("http://localhost/api/register", {
+      method: "POST",
+      body: JSON.stringify({
+        name: "Lan",
+        email: "lan@example.com",
+        password: "safe-pass",
+      }),
+    }));
+
+    expect(response.status).toBe(503);
+    await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
   });
 });

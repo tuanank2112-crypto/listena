@@ -15,10 +15,7 @@ const mocks = vi.hoisted(() => ({
   interactions: vi.fn(),
   provider: vi.fn(),
   generateJson: vi.fn(),
-  transaction: vi.fn(),
-  databaseRuntime: vi.fn(),
-  nativeD1: vi.fn(),
-  executeD1Batch: vi.fn(),
+  executeAtomicBatch: vi.fn(),
   reserveAICall: vi.fn(),
   settleAICall: vi.fn(),
 }));
@@ -40,15 +37,12 @@ vi.mock("@/lib/prisma", () => ({
     adaptiveEvidence: { findMany: mocks.evidence },
     personalizedLessonAttempt: { findUnique: mocks.findUniqueAttempt },
     aIInteraction: { findMany: mocks.interactions },
-    $transaction: mocks.transaction,
   },
-  getDatabaseRuntime: mocks.databaseRuntime,
-  getNativeD1Database: mocks.nativeD1,
 }));
-vi.mock("@/lib/d1-batch", () => ({
-  d1Boolean: (value: boolean) => (value ? 1 : 0),
-  d1Timestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
-  executeNativeD1Batch: mocks.executeD1Batch,
+vi.mock("@/lib/libsql-batch", () => ({
+  libSqlBoolean: (value: boolean) => (value ? 1 : 0),
+  libSqlTimestamp: (value: Date) => value.toISOString().replace("Z", "+00:00"),
+  executeAtomicLibSqlBatch: mocks.executeAtomicBatch,
 }));
 vi.mock("@/server/ai/openai-responses-provider", () => ({
   createConfiguredStructuredAIProvider: mocks.provider,
@@ -271,8 +265,6 @@ function readyAttemptLesson() {
 describe("personalized lesson ownership and reuse", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mocks.databaseRuntime.mockReturnValue("node-sqlite");
-    mocks.nativeD1.mockReturnValue(undefined);
     mocks.reserveAICall.mockResolvedValue({
       id: "reservation-1",
       userId: "learner-1",
@@ -340,9 +332,7 @@ describe("personalized lesson ownership and reuse", () => {
     expect(error.code).toBe("PRIVATE_NOT_FOUND");
   });
 
-  it("uses one fenced native D1 batch for the validated lesson and provenance", async () => {
-    mocks.databaseRuntime.mockReturnValue("cloudflare-d1");
-    mocks.nativeD1.mockReturnValue({});
+  it("uses one fenced atomic libSQL batch for the validated lesson and provenance", async () => {
     mocks.findUniqueLesson
       .mockResolvedValueOnce(generatingLesson())
       .mockResolvedValueOnce(readyLesson());
@@ -358,17 +348,14 @@ describe("personalized lesson ownership and reuse", () => {
       model: "glm-5.3-flash-free",
       requestId: "request-1",
     });
-    mocks.executeD1Batch.mockImplementation(
+    mocks.executeAtomicBatch.mockImplementation(
       async (statements: Array<{ sql: string }>) =>
         statements.map((statement) => ({
-          success: true,
-          meta: {
-            changes:
+          changes:
               statement.sql.includes("SET \"status\" = 'READY'") ||
               statement.sql.includes('SET "failureCode" = NULL')
                 ? 1
                 : 0,
-          },
         })),
     );
 
@@ -391,8 +378,7 @@ describe("personalized lesson ownership and reuse", () => {
         model: "glm-5.3-flash-free",
       }),
     );
-    expect(mocks.transaction).not.toHaveBeenCalled();
-    const statements = mocks.executeD1Batch.mock.calls[0]![0] as Array<{
+    const statements = mocks.executeAtomicBatch.mock.calls[0]![0] as Array<{
       sql: string;
     }>;
     expect(
@@ -442,14 +428,12 @@ describe("personalized lesson ownership and reuse", () => {
     );
   });
 
-  it("atomically gates the D1 attempt, evidence, mastery and calibration writes", async () => {
-    mocks.databaseRuntime.mockReturnValue("cloudflare-d1");
-    mocks.nativeD1.mockReturnValue({});
+  it("atomically gates the libSQL attempt, evidence, mastery and calibration writes", async () => {
     mocks.findFirstLesson.mockResolvedValue(readyAttemptLesson());
     mocks.findUniqueAttempt.mockResolvedValue(null);
-    mocks.executeD1Batch.mockImplementation(
+    mocks.executeAtomicBatch.mockImplementation(
       async (statements: Array<unknown>) =>
-        statements.map(() => ({ success: true, meta: { changes: 1 } })),
+        statements.map(() => ({ changes: 1 })),
     );
 
     const result = await submitPersonalizedLessonAttempt({
@@ -466,8 +450,7 @@ describe("personalized lesson ownership and reuse", () => {
       correct: true,
       idempotent: false,
     });
-    expect(mocks.transaction).not.toHaveBeenCalled();
-    const statements = mocks.executeD1Batch.mock.calls[0]![0] as Array<{
+    const statements = mocks.executeAtomicBatch.mock.calls[0]![0] as Array<{
       sql: string;
     }>;
     expect(statements[0]?.sql).toContain(
@@ -490,9 +473,7 @@ describe("personalized lesson ownership and reuse", () => {
     ).toBe(true);
   });
 
-  it("returns the original attempt when a D1 conditional insert loses the client ID race", async () => {
-    mocks.databaseRuntime.mockReturnValue("cloudflare-d1");
-    mocks.nativeD1.mockReturnValue({});
+  it("returns the original attempt when an atomic conditional insert loses the client ID race", async () => {
     mocks.findFirstLesson.mockResolvedValue(readyAttemptLesson());
     mocks.findUniqueAttempt.mockResolvedValueOnce(null).mockResolvedValueOnce({
       id: "existing-attempt",
@@ -500,9 +481,9 @@ describe("personalized lesson ownership and reuse", () => {
       correct: false,
       feedbackVi: "Hãy thử lại.",
     });
-    mocks.executeD1Batch.mockImplementation(
+    mocks.executeAtomicBatch.mockImplementation(
       async (statements: Array<unknown>) =>
-        statements.map(() => ({ success: true, meta: { changes: 0 } })),
+        statements.map(() => ({ changes: 0 })),
     );
 
     const result = await submitPersonalizedLessonAttempt({
@@ -520,7 +501,7 @@ describe("personalized lesson ownership and reuse", () => {
       feedbackVi: "Hãy thử lại.",
       idempotent: true,
     });
-    const statements = mocks.executeD1Batch.mock.calls[0]![0] as Array<{
+    const statements = mocks.executeAtomicBatch.mock.calls[0]![0] as Array<{
       sql: string;
     }>;
     expect(statements[0]?.sql).toContain(
