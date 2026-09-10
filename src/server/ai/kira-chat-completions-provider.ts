@@ -233,9 +233,10 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
         });
       }
 
+      const normalizedOutput = normalizeJsonOutput(outputText);
       let output: T;
       try {
-        output = JSON.parse(outputText) as T;
+        output = JSON.parse(normalizedOutput.text) as T;
       } catch {
         logProviderFailure({
           provider: this.providerName,
@@ -244,6 +245,9 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
           latencyMs: Date.now() - startedAt,
           requestId: requestId ?? getPayloadId(payload),
           inputHash,
+          finishReason: getFinishReason(payload),
+          outputFormat: normalizedOutput.format,
+          outputLength: outputText.length,
         });
         throw new AIUnavailableError({
           reason: "invalid_json",
@@ -314,6 +318,20 @@ function extractOutputText(payload: ChatCompletionsPayload) {
   return typeof content === "string" && content.trim() ? content.trim() : undefined;
 }
 
+/**
+ * Kira's Chat Completions-compatible models occasionally obey an otherwise
+ * valid JSON instruction by returning a complete `json` Markdown fence. We
+ * accept only a single whole-message fence, then keep JSON.parse and each
+ * caller's Zod schema as the authoritative validation boundary. Prose before
+ * or after JSON is deliberately not recovered.
+ */
+function normalizeJsonOutput(output: string) {
+  const trimmed = output.trim();
+  const fenced = /^```(?:json)?\s*\n?([\s\S]*?)\n?```$/i.exec(trimmed);
+  if (!fenced) return { text: trimmed, format: "raw" as const };
+  return { text: fenced[1]!.trim(), format: "json_fence" as const };
+}
+
 function getFinishReason(payload: ChatCompletionsPayload) {
   const finishReason = payload.choices?.[0]?.finish_reason;
   return typeof finishReason === "string" ? finishReason : undefined;
@@ -365,6 +383,9 @@ function logProviderFailure(input: {
   latencyMs: number;
   requestId?: string;
   inputHash: string;
+  finishReason?: string;
+  outputFormat?: "raw" | "json_fence";
+  outputLength?: number;
 }) {
   logger.warn(input, "Kira chat completions request unavailable");
 }

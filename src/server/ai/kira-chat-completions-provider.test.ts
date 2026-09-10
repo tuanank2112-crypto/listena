@@ -191,6 +191,37 @@ describe("KiraChatCompletionsProvider", () => {
     await expect(pending).resolves.toMatchObject({ output: { answer: "OK" } });
   });
 
+  it("accepts one complete JSON Markdown fence, then leaves schema validation to callers", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            choices: [
+              {
+                finish_reason: "stop",
+                message: { content: "```json\n{\"answer\":\"OK\"}\n```" },
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+
+    await expect(
+      provider.generateJson<{ answer: string }>({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).resolves.toMatchObject({ output: { answer: "OK" } });
+  });
+
   it("fails closed on non-JSON Chat Completions text", async () => {
     vi.stubGlobal(
       "fetch",
