@@ -47,7 +47,7 @@
 - [ ] Rehearse D1 to Turso staging import and verify fingerprints.
 - [ ] Deploy Vercel Preview and pass auth, persistence, private lesson, and AI smoke gates.
 - [ ] Obtain explicit approval for final D1 export window and public traffic cutover.
-- [ ] Synchronize implementation/runbook knowledge and commit/push the local staging candidate.
+- [x] Synchronize implementation/runbook knowledge and commit/push the local staging candidate (`a868a6d`).
 - [ ] Cut over once after its separately approved final-export and public-traffic window; retain Cloudflare rollback.
 
 ## Spec router
