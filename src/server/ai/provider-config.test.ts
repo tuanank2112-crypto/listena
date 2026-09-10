@@ -1,6 +1,9 @@
 import { createHash } from "node:crypto";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AIUnavailableError } from "@/server/ai/errors";
+import {
+  createConfiguredOpenAIResponsesProvider,
+} from "./openai-responses-provider";
 import { createAIProviderFromEnv } from "./provider";
 
 describe("createAIProviderFromEnv", () => {
@@ -57,5 +60,51 @@ describe("createAIProviderFromEnv", () => {
 
   it("does not select a mock provider when live configuration is absent", () => {
     expect(() => createAIProviderFromEnv({})).toThrow(AIUnavailableError);
+  });
+
+  it("selects Kira Chat Completions for every structured caller through the compatibility factory", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "chatcmpl_kira_123",
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  summaryVi: "Ổn",
+                  errors: [],
+                  recommendedActions: [],
+                }),
+              },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const provider = createConfiguredOpenAIResponsesProvider({
+      AI_PROVIDER: "kira",
+      KIRAAI_API_KEY: "test-kira-key",
+      KIRAAI_MODEL: "glm-5.3-flash-free",
+      KIRAAI_BASE_URL: "https://kiraai.vn/api/v1",
+    });
+    expect(provider).toMatchObject({
+      providerName: "kira",
+      modelName: "glm-5.3-flash-free",
+    });
+
+    await provider?.generateJson({
+      purpose: "error_analysis",
+      systemPrompt: "Test prompt",
+      input: {},
+      schemaName: "error_analysis",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      maxOutputTokens: 1,
+    });
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://kiraai.vn/api/v1/chat/completions");
   });
 });

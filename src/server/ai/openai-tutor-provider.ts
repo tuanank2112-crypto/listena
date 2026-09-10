@@ -1,9 +1,11 @@
 import "server-only";
 
 import {
-  createConfiguredOpenAIResponsesProvider,
+  createConfiguredStructuredAIProvider,
   OpenAIResponsesProvider,
   type JsonSchema,
+  type StructuredAIProvider,
+  type StructuredAIProviderEnvironment,
 } from "@/server/ai/openai-responses-provider";
 import type {
   TutorProviderRequest,
@@ -23,23 +25,26 @@ interface OpenAICompatibleTutorProviderConfig {
  * Callers turn an absent provider into a typed AI_UNAVAILABLE error; they must
  * never substitute deterministic copy for a learner-facing response.
  */
-export function createConfiguredTutorProvider() {
-  const provider = createConfiguredOpenAIResponsesProvider();
+export function createConfiguredTutorProvider(
+  env?: StructuredAIProviderEnvironment,
+) {
+  const provider = createConfiguredStructuredAIProvider(env);
   return provider ? new OpenAICompatibleTutorProvider(provider) : undefined;
 }
 
 export class OpenAICompatibleTutorProvider implements TutorTurnProvider {
-  readonly providerName = "openai";
+  readonly providerName: StructuredAIProvider["providerName"];
   readonly modelName: string;
-  private readonly provider: OpenAIResponsesProvider;
+  private readonly provider: StructuredAIProvider;
 
   constructor(
-    config: OpenAICompatibleTutorProviderConfig | OpenAIResponsesProvider,
+    config: OpenAICompatibleTutorProviderConfig | StructuredAIProvider,
   ) {
     this.provider =
-      config instanceof OpenAIResponsesProvider
+      isStructuredAIProvider(config)
         ? config
         : new OpenAIResponsesProvider(config);
+    this.providerName = this.provider.providerName;
     this.modelName = this.provider.modelName;
   }
 
@@ -56,6 +61,12 @@ export class OpenAICompatibleTutorProvider implements TutorTurnProvider {
       maxOutputTokens: 1_200,
     });
   }
+}
+
+function isStructuredAIProvider(
+  value: OpenAICompatibleTutorProviderConfig | StructuredAIProvider,
+): value is StructuredAIProvider {
+  return typeof (value as StructuredAIProvider).generateJson === "function";
 }
 
 /**

@@ -19,6 +19,7 @@ const {
   upsertSkillMastery: vi.fn(),
   upsertVocabularyMastery: vi.fn(),
 }));
+vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({ prisma: { exercise: { findUnique: findExercise } } }));
 vi.mock("@/core/assessment/engine", () => ({ assessDictation: assess, assessOpenResponse: assess }));
 vi.mock("@/server/repos/attempt", () => ({ attemptRepo: { create: createAttempt } }));

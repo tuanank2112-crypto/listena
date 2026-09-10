@@ -7,9 +7,9 @@
   "vars": {
     "AUTH_URL": "https://listena-english.tuanank2112.workers.dev",
     "NEXTAUTH_URL": "https://listena-english.tuanank2112.workers.dev",
-    "AI_PROVIDER": "openai",
-    "OPENAI_MODEL": "gpt-4o-mini",
-    "OPENAI_BASE_URL": "https://api.openai.com/v1"
+    "AI_PROVIDER": "kira",
+    "KIRAAI_MODEL": "glm-5.3-flash-free",
+    "KIRAAI_BASE_URL": "https://kiraai.vn/api/v1"
   },
   "assets": {
     "directory": ".open-next/assets",

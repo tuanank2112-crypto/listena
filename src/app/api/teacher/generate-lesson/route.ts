@@ -1,7 +1,12 @@
+import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { createAIProviderFromEnv } from "@/server/ai/provider";
 import { isAIProviderError } from "@/server/ai/errors";
+import {
+  reserveUserAICall,
+  settleUserAICall,
+} from "@/server/ai/request-budget";
 import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/schemas";
 import { prisma } from "@/lib/prisma";
 import logger from "@/lib/logger";
@@ -26,21 +31,68 @@ export async function POST(req: Request) {
 
     // Generate lesson draft with AI
     const aiProvider = createAIProviderFromEnv();
-
-    const draft = await aiProvider.generateLesson({
-      ...parsed.data,
-      safetyIdentifier: session.user.id,
+    const reservation = await reserveUserAICall({
+      userId: session.user.id,
+      purpose: "lesson_generation",
+      provider: aiProvider.providerName,
+      model: aiProvider.modelName,
     });
+    let draft;
+    try {
+      draft = await aiProvider.generateLesson({
+        ...parsed.data,
+        safetyIdentifier: session.user.id,
+      });
+    } catch (error) {
+      await settleUserAICall(reservation, {
+        success: false,
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
+        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+      });
+      throw error;
+    }
 
     // Validate AI output
     const validated = AILessonDraftSchema.safeParse(draft);
     if (!validated.success) {
+      await settleUserAICall(reservation, {
+        success: false,
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
+        failureReason: "schema_validation_failed",
+      });
       logger.warn({ validationError: validated.error.format() }, "AI lesson draft validation failed");
       return NextResponse.json(
         { error: "AI tạo nội dung không hợp lệ, vui lòng thử lại" },
         { status: 422 }
       );
     }
+
+    await settleUserAICall(reservation, {
+      success: true,
+      provider: aiProvider.providerName,
+      model: aiProvider.modelName,
+    });
+    await prisma.aIInteraction.create({
+      data: {
+        userId: session.user.id,
+        purpose: "lesson_generation",
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
+        promptVersion: "live-lesson-generation-1.0",
+        inputHash: createHash("sha256")
+          .update(JSON.stringify(parsed.data))
+          .digest("hex"),
+        validatedOutput: JSON.stringify({
+          title: validated.data.title,
+          cefrLevel: parsed.data.cefrLevel,
+          segmentCount: validated.data.segments.length,
+          exerciseCount: validated.data.exercises.length,
+        }),
+        success: true,
+      },
+    });
 
     // Find or create default course
     let course = await prisma.course.findFirst({

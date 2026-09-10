@@ -1,10 +1,15 @@
 # Changelog
 
+## Unreleased — KiraAI adapter and P65 deployed
+- Deploy KiraAI with non-secret configuration `AI_PROVIDER=kira`, `KIRAAI_MODEL=glm-5.3-flash-free`, and `KIRAAI_BASE_URL=https://kiraai.vn/api/v1` as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; the value of `KIRAAI_API_KEY` is not stored in this repository.
+- Add a native-D1 reservation/commit-fence boundary for P65 learning-session, private-lesson/attempt and adaptive-game graphs, with 40 rolling-24-hour AI reservations, a 30-second pending lease, and an applicable 12-second one-off cooldown.
+- Document the protocol boundary: Kira uses Chat Completions with server-side JSON/Zod validation, whereas OpenAI remains an optional Responses transport with its strict-schema/store controls. No Kira secret installation or live-AI success is claimed by this entry.
+
 ## 0.5.0 — 2026-09-10 (Cloudflare deployment; live-provider key pending)
 - Restore the tracked core curriculum to production D1 via an additive, idempotent import: 5 lessons, 116 vocabulary items, 20 segments and 54 exercises. Existing user data was preserved; the system curriculum owner cannot log in.
 - Add owner-private, persisted personalized lessons backed by a real OpenAI Responses structured-output boundary. The browser never receives validators or correct answers; missing/invalid upstream configuration returns a typed unavailable response rather than mock content.
 - Add calibration/evidence and familiar Quiz/Match/Spell games that use server-owned adaptive selection, hidden validators, exactly-once answer writes and per-learner resource guards (10 seconds / 12 fresh runs per 24 hours).
-- Deploy Worker `8d50494f-773f-46bb-9910-23c4474d9b4d`. Verified 204 unit tests, type-check, lint 0 errors/36 warnings, Worker build, E2E 16/16 and public root/login HTTP smoke. `OPENAI_API_KEY` is not configured in production yet, so a genuine-provider smoke and live-AI claim remain deliberately pending.
+- Historical pre-Kira deployment: Worker `8d50494f-773f-46bb-9910-23c4474d9b4d`. Verified 204 unit tests, type-check, lint 0 errors/36 warnings, Worker build, E2E 16/16 and public root/login HTTP smoke. `OPENAI_API_KEY` was not configured in that historical deployment; the current selected provider is KiraAI.
 
 ## 0.4.0 — 2026-09-10 (Cloudflare Workers + D1 public release)
 - Deploy OpenNext Next 16.3.3 app to public Cloudflare Worker and bind production D1 as `DB`; schema is checked-in `migrations/0001_initial_schema.sql` (56 commands).

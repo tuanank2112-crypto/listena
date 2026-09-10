@@ -15,8 +15,11 @@ process.env.OPENAI_API_KEY = `e2e-not-a-secret-${randomUUID()}`;
 process.env.OPENAI_MODEL = "e2e-responses-test-stub";
 process.env.OPENAI_BASE_URL = "https://api.openai.com/v1";
 process.env.NEXTAUTH_SECRET = "listena-isolated-e2e-secret";
-process.env.AUTH_URL = "http://127.0.0.1:3100";
-process.env.NEXTAUTH_URL = process.env.AUTH_URL;
+// Wrangler's generated production binding type preserves the deployed URL as
+// a literal, while this isolated Node test server must use localhost. Reflect
+// avoids weakening the production binding declaration just for Playwright.
+Reflect.set(process.env, "AUTH_URL", "http://127.0.0.1:3100");
+Reflect.set(process.env, "NEXTAUTH_URL", "http://127.0.0.1:3100");
 process.env.AUTH_TRUST_HOST = "true";
 
 export default defineConfig({
@@ -32,6 +35,21 @@ export default defineConfig({
   webServer: {
     command:
       "node --require ./e2e/openai-responses-test-stub.cjs ./node_modules/next/dist/bin/next dev --port 3100",
+    // Pass the isolated database and auth/provider settings explicitly to the
+    // spawned Next process. Next also loads `.env`; inherited values must win
+    // so browser auth and direct Prisma assertions address the same fixture.
+    env: {
+      ...process.env,
+      DATABASE_URL: process.env.DATABASE_URL!,
+      AI_PROVIDER: process.env.AI_PROVIDER!,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
+      OPENAI_MODEL: process.env.OPENAI_MODEL!,
+      OPENAI_BASE_URL: process.env.OPENAI_BASE_URL!,
+      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET!,
+      AUTH_URL: "http://127.0.0.1:3100",
+      NEXTAUTH_URL: "http://127.0.0.1:3100",
+      AUTH_TRUST_HOST: "true",
+    },
     url: "http://127.0.0.1:3100",
     timeout: 120000,
     reuseExistingServer: false,

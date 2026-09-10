@@ -10,8 +10,12 @@ import { z } from "zod";
 import logger from "@/lib/logger";
 import { AIUnavailableError } from "@/server/ai/errors";
 import {
-  OpenAIResponsesProvider,
+  createConfiguredStructuredAIProvider,
+  createStructuredAIProvider,
+  type AIProviderName,
   type JsonSchema,
+  type StructuredAIProvider,
+  type StructuredAIProviderEnvironment,
 } from "@/server/ai/openai-responses-provider";
 import type { AIFeedbackResponse, AILessonDraft } from "../validation/schemas";
 import {
@@ -20,18 +24,13 @@ import {
 } from "../validation/schemas";
 
 export interface AIProviderConfig {
-  provider?: "openai";
+  provider?: AIProviderName;
   apiKey?: string;
   model?: string;
   baseUrl?: string;
 }
 
-type AIProviderEnvironment = {
-  AI_PROVIDER?: string;
-  OPENAI_API_KEY?: string;
-  OPENAI_MODEL?: string;
-  OPENAI_BASE_URL?: string;
-};
+type AIProviderEnvironment = StructuredAIProviderEnvironment;
 
 export type AIFeedbackErrorType =
   AIFeedbackResponse["errors"][number]["errorType"];
@@ -64,7 +63,7 @@ export interface AILessonGenerationParams {
 }
 
 export interface AIProvider {
-  readonly providerName: "openai";
+  readonly providerName: AIProviderName;
   readonly modelName: string;
   analyzeErrors(params: AIErrorAnalysisParams): Promise<AIFeedbackResponse>;
   generateLesson(params: AILessonGenerationParams): Promise<AILessonDraft>;
@@ -80,13 +79,34 @@ const TutoringFeedbackSchema = z.object({
   tip: z.string().trim().min(1).max(500),
 });
 
+/**
+ * Historical export name retained for callers. It wraps any configured live
+ * structured provider rather than assuming every provider speaks Responses.
+ */
 export class OpenAIProvider implements AIProvider {
-  readonly providerName = "openai" as const;
+  readonly providerName: AIProviderName;
   readonly modelName: string;
-  private readonly provider: OpenAIResponsesProvider;
+  private readonly provider: StructuredAIProvider;
 
-  constructor(config: { apiKey: string; model?: string; baseUrl?: string }) {
-    this.provider = new OpenAIResponsesProvider(config);
+  constructor(
+    config:
+      | {
+          provider?: AIProviderName;
+          apiKey: string;
+          model?: string;
+          baseUrl?: string;
+        }
+      | StructuredAIProvider,
+  ) {
+    this.provider = isStructuredAIProvider(config)
+      ? config
+      : createStructuredAIProvider({
+          provider: config.provider ?? "openai",
+          apiKey: config.apiKey,
+          model: config.model,
+          baseUrl: config.baseUrl,
+        });
+    this.providerName = this.provider.providerName;
     this.modelName = this.provider.modelName;
   }
 
@@ -175,7 +195,7 @@ export class OpenAIProvider implements AIProvider {
           model: response.model,
           requestId: response.requestId,
         },
-        "OpenAI Responses output did not satisfy server validation",
+        "Live AI output did not satisfy server validation",
       );
       throw new AIUnavailableError({
         reason: "schema_validation_failed",
@@ -189,10 +209,11 @@ export class OpenAIProvider implements AIProvider {
 }
 
 export function createAIProvider(config: AIProviderConfig): AIProvider {
-  if (config.provider !== "openai" || !config.apiKey) {
+  if (!config.provider || !config.apiKey) {
     throw new AIUnavailableError({ reason: "provider_not_configured" });
   }
   return new OpenAIProvider({
+    provider: config.provider,
     apiKey: config.apiKey,
     model: config.model,
     baseUrl: config.baseUrl,
@@ -205,14 +226,29 @@ export function createAIProviderFromEnv(
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    KIRAAI_API_KEY: process.env.KIRAAI_API_KEY,
+    KIRAAI_MODEL: process.env.KIRAAI_MODEL,
+    KIRAAI_BASE_URL: process.env.KIRAAI_BASE_URL,
   },
 ): AIProvider {
-  return createAIProvider({
-    provider: env.AI_PROVIDER === "openai" ? "openai" : undefined,
-    apiKey: env.OPENAI_API_KEY,
-    model: env.OPENAI_MODEL,
-    baseUrl: env.OPENAI_BASE_URL,
-  });
+  const provider = createConfiguredStructuredAIProvider(env);
+  if (!provider) {
+    throw new AIUnavailableError({ reason: "provider_not_configured" });
+  }
+  return new OpenAIProvider(provider);
+}
+
+function isStructuredAIProvider(
+  value:
+    | {
+        provider?: AIProviderName;
+        apiKey: string;
+        model?: string;
+        baseUrl?: string;
+      }
+    | StructuredAIProvider,
+): value is StructuredAIProvider {
+  return typeof (value as StructuredAIProvider).generateJson === "function";
 }
 
 const AIFeedbackJsonSchema: JsonSchema = {

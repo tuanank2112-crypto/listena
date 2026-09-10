@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   searchKnowledge: vi.fn(),
 }));
 
+vi.mock("server-only", () => ({}));
 vi.mock("@/server/auth/config", () => ({ auth: mocks.auth }));
 vi.mock("@/lib/prisma", () => ({
   prisma: {
@@ -21,7 +22,7 @@ vi.mock("@/server/dataset/catalog", () => ({
   searchKnowledge: mocks.searchKnowledge,
 }));
 vi.mock("@/server/ai/openai-responses-provider", () => ({
-  createConfiguredOpenAIResponsesProvider: mocks.createProvider,
+  createConfiguredStructuredAIProvider: mocks.createProvider,
 }));
 
 import { POST } from "./route";

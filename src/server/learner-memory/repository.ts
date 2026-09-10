@@ -194,17 +194,44 @@ export async function appendEvidenceToMemory(
   userId: string,
   evidence: MemoryEvidence,
 ): Promise<LearnerMemory> {
-  const normalizedEvidence = normalizeEvidence(evidence);
   const existing = await tx.learnerMemory.findUnique({ where: { userId } });
-  const memory = existing ? parseLearnerMemory(existing) : emptyMemory(userId);
-  const provenSkills = updateSkill(memory.provenSkills, normalizedEvidence);
-  const recurringErrors = updateErrors(memory.recurringErrors, normalizedEvidence);
+  const write = planLearnerMemoryEvidenceWrite(
+    userId,
+    existing ? parseLearnerMemory(existing) : null,
+    evidence,
+  );
   const saved = await tx.learnerMemory.upsert({
     where: { userId },
-    create: serializeNewMemory(userId, memory.goals, recurringErrors, provenSkills, memory.preferences),
-    update: serializeEvidenceUpdate(recurringErrors, provenSkills),
+    create: write.create,
+    update: write.update,
   });
   return parseLearnerMemory(saved);
+}
+
+/**
+ * Pure write plan shared with the Worker-native D1 batch path. Keeping this
+ * transformation here prevents a D1 commit from drifting from the local
+ * transactional learner-memory semantics.
+ */
+export function planLearnerMemoryEvidenceWrite(
+  userId: string,
+  existing: LearnerMemory | null,
+  evidence: MemoryEvidence,
+) {
+  const normalizedEvidence = normalizeEvidence(evidence);
+  const memory = existing ?? emptyMemory(userId);
+  const provenSkills = updateSkill(memory.provenSkills, normalizedEvidence);
+  const recurringErrors = updateErrors(memory.recurringErrors, normalizedEvidence);
+  return {
+    create: serializeNewMemory(
+      userId,
+      memory.goals,
+      recurringErrors,
+      provenSkills,
+      memory.preferences,
+    ),
+    update: serializeEvidenceUpdate(recurringErrors, provenSkills),
+  };
 }
 
 function updateSkill(skills: LearnerMemorySkill[], evidence: Required<Pick<MemoryEvidence, "id" | "skillKey" | "score">> & Pick<MemoryEvidence, "errorType">): LearnerMemorySkill[] {

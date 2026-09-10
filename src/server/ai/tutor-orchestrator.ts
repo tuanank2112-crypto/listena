@@ -248,7 +248,11 @@ function enforceNoAnswerLeak(output: TutorTurnOutput): TutorTurnOutput {
 async function createDefaultTutorProvider(): Promise<
   TutorTurnProvider | undefined
 > {
-  if (process.env.AI_PROVIDER !== "openai") return undefined;
+  const providerName = process.env.AI_PROVIDER?.trim().toLowerCase();
+  const hasConfiguredKey =
+    (providerName === "openai" && Boolean(process.env.OPENAI_API_KEY)) ||
+    (providerName === "kira" && Boolean(process.env.KIRAAI_API_KEY));
+  if (!hasConfiguredKey) return undefined;
   const { createConfiguredTutorProvider } =
     await import("@/server/ai/openai-tutor-provider");
   return createConfiguredTutorProvider();

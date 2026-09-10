@@ -7,6 +7,10 @@ import { updateMastery } from "@/core/learner-model/mastery";
 import { processReview } from "@/core/srs/sm2";
 import { createAIProviderFromEnv } from "@/server/ai/provider";
 import { isAIProviderError } from "@/server/ai/errors";
+import {
+  reserveUserAICall,
+  settleUserAICall,
+} from "@/server/ai/request-budget";
 import type { AIFeedbackResponse } from "@/server/validation/schemas";
 import { attemptRepo } from "@/server/repos/attempt";
 import { learnerRepo } from "@/server/repos/learner";
@@ -150,23 +154,45 @@ export async function submitAttempt(params: SubmitAttemptParams) {
   if (isOpenResponse) {
     try {
       const aiProvider = createAIProviderFromEnv();
-      aiFeedback = await aiProvider.analyzeErrors({
-        transcript: exercise.lesson.transcript,
-        submittedAnswer: params.submittedAnswer,
-        wordDiffs: assessment.wordDiffs.map((d) => ({
-          type: d.type,
-          expected: d.expected,
-          actual: d.actual,
-        })),
-        cefrLevel: exercise.lesson.cefrLevel,
-        errorTypes: assessment.errors.map((e) => e.type),
-        safetyIdentifier: params.userId,
+      const reservation = await reserveUserAICall({
+        userId: params.userId,
+        purpose: "error_analysis",
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
+      });
+      try {
+        aiFeedback = await aiProvider.analyzeErrors({
+          transcript: exercise.lesson.transcript,
+          submittedAnswer: params.submittedAnswer,
+          wordDiffs: assessment.wordDiffs.map((d) => ({
+            type: d.type,
+            expected: d.expected,
+            actual: d.actual,
+          })),
+          cefrLevel: exercise.lesson.cefrLevel,
+          errorTypes: assessment.errors.map((e) => e.type),
+          safetyIdentifier: params.userId,
+        });
+      } catch (error) {
+        await settleUserAICall(reservation, {
+          success: false,
+          provider: aiProvider.providerName,
+          model: aiProvider.modelName,
+          failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+        });
+        throw error;
+      }
+      await settleUserAICall(reservation, {
+        success: true,
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
       });
       aiFeedbackProvider = aiProvider;
       aiFeedbackStatus = "available";
     } catch (error) {
       aiFeedbackStatus =
-        isAIProviderError(error) && error.code === "AI_RATE_LIMITED"
+        isAIProviderError(error)
+        && (error.code === "AI_RATE_LIMITED" || error.code === "AI_REQUEST_LIMIT")
           ? "rate_limited"
           : "unavailable";
       logger.warn(

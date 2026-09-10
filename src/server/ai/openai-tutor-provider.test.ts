@@ -3,7 +3,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-import { OpenAICompatibleTutorProvider } from "@/server/ai/openai-tutor-provider";
+import {
+  createConfiguredTutorProvider,
+  OpenAICompatibleTutorProvider,
+} from "@/server/ai/openai-tutor-provider";
 import { OpenAIResponsesProvider } from "@/server/ai/openai-responses-provider";
 
 const validTutorOutput = {
@@ -94,6 +97,48 @@ describe("OpenAICompatibleTutorProvider", () => {
     expect(body.text.format.schema.additionalProperties).toBe(false);
     expect(JSON.stringify(body)).not.toContain("test-key");
     expect(JSON.stringify(body)).not.toContain("learner-42");
+  });
+
+  it("selects Kira Chat Completions for mission and session tutor flows", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "chatcmpl_kira_123",
+          choices: [
+            {
+              message: { content: JSON.stringify(validTutorOutput) },
+            },
+          ],
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = createConfiguredTutorProvider({
+      AI_PROVIDER: "kira",
+      KIRAAI_API_KEY: "test-kira-key",
+      KIRAAI_MODEL: "glm-5.3-flash-free",
+      KIRAAI_BASE_URL: "https://kiraai.vn/api/v1",
+    });
+
+    expect(provider).toMatchObject({
+      providerName: "kira",
+      modelName: "glm-5.3-flash-free",
+    });
+    const result = await provider?.generate({
+      purpose: "start_mission",
+      systemPrompt: "Tutor system prompt",
+      input: {},
+      safetyIdentifier: "learner-42",
+    });
+
+    expect(result).toMatchObject({
+      provider: "kira",
+      model: "glm-5.3-flash-free",
+      output: validTutorOutput,
+    });
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("https://kiraai.vn/api/v1/chat/completions");
   });
 
   it("maps an upstream 429 to a bounded typed retry response", async () => {

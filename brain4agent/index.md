@@ -5,7 +5,7 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/06_2026-09-10_personalized-ai-learning | [Plan 06](../planning/06_2026-09-10_personalized-ai-learning/plan.md) — private AI lessons, adaptive server-authoritative games and additive D1 curriculum recovery; deployed, awaiting user-owned live-provider secret smoke |
+| Kế hoạch hiện tại | planning/06_2026-09-10_personalized-ai-learning | [Plan 06](../planning/06_2026-09-10_personalized-ai-learning/plan.md) — private AI lessons, adaptive server-authoritative games and additive D1 curriculum recovery; Kira Chat Completions code is deployed, awaiting only a fresh hosted secret and genuine smoke |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |
@@ -17,7 +17,7 @@
 - src/app: landing/login/register; learner dashboard/games/session/lessons/flashcards/progress/attempt; teacher dashboard/courses/lessons; API.
 - src/features/learning-session: client types/reducer, start button, intervention renderer, request IDs.
 - src/components: AppShell, providers. src/lib và src/types: Prisma singleton/log/utilities/types.
-- src/server: auth, validation, live OpenAI Responses provider/grounding, personalized-learning, adaptive-games, learning persistence, legacy services/repos, dataset catalog.
+- src/server: auth, validation, live Kira Chat Completions / OpenAI Responses provider boundary, grounding, personalized-learning, adaptive-games, learning persistence, legacy services/repos, dataset catalog.
 - src/core: assessment/text, games/scoring, learner model, recommendation, SM-2, TTS.
 - prisma: schema/3 additive migrations/demo seed. Seed có xóa dữ liệu: chỉ chạy trên DB mới hoặc E2E riêng.
 - dataset: JSON giáo trình và raw source; scripts: import, regeneration, legacy prebuild.

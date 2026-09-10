@@ -16,7 +16,8 @@ export type AIProviderFailureReason =
   | "invalid_input"
   | "invalid_response"
   | "invalid_json"
-  | "schema_validation_failed";
+  | "schema_validation_failed"
+  | "app_request_limited";
 
 export interface AIProviderErrorOptions {
   reason: AIProviderFailureReason;
@@ -27,12 +28,11 @@ export interface AIProviderErrorOptions {
 }
 
 export class AIProviderError extends Error {
-  readonly status = 503;
-
   constructor(
-    readonly code: "AI_UNAVAILABLE" | "AI_RATE_LIMITED",
+    readonly code: "AI_UNAVAILABLE" | "AI_RATE_LIMITED" | "AI_REQUEST_LIMIT",
     message: string,
     readonly details: AIProviderErrorOptions,
+    readonly status = 503,
   ) {
     super(message);
     this.name = "AIProviderError";
@@ -58,6 +58,31 @@ export class AIRateLimitedError extends AIProviderError {
       options,
     );
     this.name = "AIRateLimitedError";
+  }
+}
+
+/**
+ * A local, durable per-user guard. This is distinct from an upstream 429:
+ * the caller may safely surface the bounded wait as HTTP 429 without exposing
+ * any provider response or credential metadata.
+ */
+export class AIRequestBudgetError extends AIProviderError {
+  constructor(input: {
+    reason: "ACTIVE" | "COOLDOWN" | "DAILY_LIMIT";
+    retryAfterSeconds: number;
+  }) {
+    super(
+      "AI_REQUEST_LIMIT",
+      input.reason === "DAILY_LIMIT"
+        ? "Bạn đã dùng hết lượt AI trong 24 giờ. Hãy học các bài hiện có rồi thử lại sau."
+        : "Bạn vừa gửi một yêu cầu AI. Vui lòng chờ một chút trước khi tiếp tục.",
+      {
+        reason: "app_request_limited",
+        retryAfterSeconds: input.retryAfterSeconds,
+      },
+      429,
+    );
+    this.name = "AIRequestBudgetError";
   }
 }
 

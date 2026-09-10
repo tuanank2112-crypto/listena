@@ -10,7 +10,7 @@ Prisma uses local libSQL SQLite and request-scoped Cloudflare D1 in production. 
 - PersonalizedLesson/PersonalizedLessonVocabulary/PersonalizedLessonAttempt are owner-private artifacts. AdaptiveGameRun/AdaptiveGameRound hold server-only validators; AdaptiveEvidence feeds mastery/calibration.
 
 ## AI-native loop
-Dashboard finds the owner's newest ACTIVE session or creates a Daily Quest. Repositories supply bounded profile/weak-skill/due-vocabulary context → orchestrator/retrieval/live provider or typed unavailable error → server validation → transaction persists turns/outcome/evidence/mastery → public DTO → reducer/UI. Personalized generation follows the same privacy boundary and persists a source snapshot hash/provenance.
+Dashboard finds the owner's newest ACTIVE session or creates a Daily Quest. Repositories supply bounded profile/weak-skill/due-vocabulary context → orchestrator/retrieval/live provider or typed unavailable error → server validation → runtime-specific atomic boundary (native D1 batch in Worker or local transaction) persists turns/outcome/evidence/mastery → public DTO → reducer/UI. Personalized generation follows the same privacy boundary and persists a source snapshot hash/provenance.
 
 Intervention validator decides output before state/evidence. Completion auto/manual uses ACTIVE→COMPLETED and increases minutes once in a transaction. Unique clientTurnId/sequence prevents duplicate writes. Adaptive-game and personalized-lesson answer IDs are also idempotent and their correct answers never reach the browser.
 

@@ -1,10 +1,15 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Plan06 KiraAI provider deployment 2026-09-10 — pending fresh secret and smoke
+- Account owner selected KiraAI for the next Worker deployment: `AI_PROVIDER=kira`, model `glm-5.3-flash-free`, base URL `https://kiraai.vn/api/v1`, and secret name `KIRAAI_API_KEY`. The key value was not written to a repository file or log.
+- Kira documents OpenAI-compatible `POST /chat/completions`, not OpenAI `POST /responses`. The adapter must parse the completion JSON and run the existing server-side Zod validation; it cannot claim OpenAI Responses strict-schema or `store:false` behavior.
+- P65/Kira code is public as Worker `ee5de83a-c2a9-45e3-996a-e624072bb250`; public `/api/health` and `/login` returned HTTP 200 with the Kira key absent. No genuine Kira lesson has been claimed yet.
+
 ## Plan06 deployment 2026-09-10 — personalized AI and adaptive games
 - Worker `listena-english` version `8d50494f-773f-46bb-9910-23c4474d9b4d` is public at https://listena-english.tuanank2112.workers.dev. Remote D1 received only additive migrations `0002_personalized_ai_learning.sql` and `0003_personalized_generation_guards.sql`, then the reviewed idempotent core import. Postflight: original user preserved; 1 non-loginable system curriculum owner; 5 lessons, 116 vocabulary, 20 segments and 54 exercises.
 - Personalized lessons are private owner-bound artifacts generated through a real server-side OpenAI Responses boundary (`POST /responses`, strict JSON schema, `store:false`, ≤20 s deadline). No runtime mock/fallback is selectable. Missing/invalid provider configuration returns typed unavailable status without inventing lesson/tutor copy.
 - Games retain Quiz/Match/Spell forms but the server owns candidate selection, hidden validators, scoring, evidence and mastery. New runs are limited to one per 10 seconds and 12 per rolling 24 hours; answer retry is idempotent.
-- Gates: `npm test` 204/204, type-check PASS, lint 0 errors/36 warnings, Worker build PASS, E2E 16/16 using a test-process-only Responses transport stub. `OPENAI_API_KEY` is intentionally not present in production; owner must install it as Worker secret then perform the one real-provider smoke before calling AI live.
+- Historical pre-Kira gates: `npm test` 204/204, type-check PASS, lint 0 errors/36 warnings, Worker build PASS, E2E 16/16 using a test-process-only Responses transport stub. The current Kira deployment requires a fresh owner-entered `KIRAAI_API_KEY`, not the historical `OPENAI_API_KEY`, before the one real-provider smoke.
 
 ## Final verification 2026-09-10 — Plan05 Cloudflare Worker + D1 public
 - User chọn Cloudflare Workers + D1. Vinext check đạt 16/18 nhưng `next-auth` bị chặn; giữ Auth.js và dùng OpenNext. Next nâng 16.3.1 → 16.3.3.

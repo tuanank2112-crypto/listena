@@ -7,7 +7,11 @@ import logger from "@/lib/logger";
 import { getDatasetUnit, searchKnowledge } from "@/server/dataset/catalog";
 import { AIUnavailableError, isAIProviderError } from "@/server/ai/errors";
 import {
-  createConfiguredOpenAIResponsesProvider,
+  reserveUserAICall,
+  settleUserAICall,
+} from "@/server/ai/request-budget";
+import {
+  createConfiguredStructuredAIProvider,
   type JsonSchema,
 } from "@/server/ai/openai-responses-provider";
 
@@ -44,37 +48,61 @@ async function generateAIAnswer(params: {
   sources: TutorSource[];
   safetyIdentifier: string;
 }) {
-  const provider = createConfiguredOpenAIResponsesProvider();
+  const provider = createConfiguredStructuredAIProvider();
   if (!provider) {
     throw new AIUnavailableError({ reason: "provider_not_configured" });
   }
 
-  const response = await provider.generateJson<unknown>({
-    purpose: "lesson_tutor",
-    systemPrompt: [
-      "Bạn là gia sư tiếng Anh cho người Việt ở trình độ được cung cấp.",
-      "Chỉ dùng ngữ cảnh đã xác minh của máy chủ; không bịa kiến thức ngoài nguồn.",
-      "Giải thích ngắn gọn bằng tiếng Việt, giữ ví dụ tiếng Anh và kết thúc bằng một bài tập nhỏ.",
-      "Nếu ngữ cảnh không đủ, nói rõ điều đó.",
-    ].join(" "),
-    input: {
-      lesson: params.lessonTitle,
-      cefrLevel: params.cefrLevel,
-      question: params.question,
-      verifiedContext: params.sources.map((source) => ({
-        title: source.title,
-        type: source.type,
-        text: source.text,
-      })),
-    },
-    schemaName: "lesson_tutor_answer",
-    schema: TutorAnswerJsonSchema,
-    safetyIdentifier: params.safetyIdentifier,
-    maxOutputTokens: 700,
+  const reservation = await reserveUserAICall({
+    userId: params.safetyIdentifier,
+    purpose: "dataset_tutor",
+    provider: provider.providerName,
+    model: provider.modelName,
   });
+  let response;
+  try {
+    response = await provider.generateJson<unknown>({
+      purpose: "lesson_tutor",
+      systemPrompt: [
+        "Bạn là gia sư tiếng Anh cho người Việt ở trình độ được cung cấp.",
+        "Chỉ dùng ngữ cảnh đã xác minh của máy chủ; không bịa kiến thức ngoài nguồn.",
+        "Giải thích ngắn gọn bằng tiếng Việt, giữ ví dụ tiếng Anh và kết thúc bằng một bài tập nhỏ.",
+        "Nếu ngữ cảnh không đủ, nói rõ điều đó.",
+      ].join(" "),
+      input: {
+        lesson: params.lessonTitle,
+        cefrLevel: params.cefrLevel,
+        question: params.question,
+        verifiedContext: params.sources.map((source) => ({
+          title: source.title,
+          type: source.type,
+          text: source.text,
+        })),
+      },
+      schemaName: "lesson_tutor_answer",
+      schema: TutorAnswerJsonSchema,
+      safetyIdentifier: params.safetyIdentifier,
+      maxOutputTokens: 700,
+    });
+  } catch (error) {
+    await settleUserAICall(reservation, {
+      success: false,
+      provider: provider.providerName,
+      model: provider.modelName,
+      failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+    });
+    throw error;
+  }
 
   const parsed = TutorAnswerSchema.safeParse(response.output);
   if (!parsed.success) {
+    await settleUserAICall(reservation, {
+      success: false,
+      provider: response.provider,
+      model: response.model,
+      requestId: response.requestId,
+      failureReason: "schema_validation_failed",
+    });
     throw new AIUnavailableError({
       reason: "schema_validation_failed",
       provider: response.provider,
@@ -82,6 +110,13 @@ async function generateAIAnswer(params: {
       requestId: response.requestId,
     });
   }
+
+  await settleUserAICall(reservation, {
+    success: true,
+    provider: response.provider,
+    model: response.model,
+    requestId: response.requestId,
+  });
 
   return { ...parsed.data, ...response };
 }

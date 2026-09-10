@@ -9,7 +9,7 @@ import { createEvaluateTurnFallback, createStartMissionFallback } from "@/server
 const mocks = vi.hoisted(() => ({
   snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), recentQuestHistory: vi.fn(), transaction: vi.fn(),
   owned: vi.fn(), evaluate: vi.fn(), getMemory: vi.fn(), appendMemory: vi.fn(),
-  start: vi.fn(),
+  start: vi.fn(), reserveAICall: vi.fn(), settleAICall: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("./repository", () => ({
@@ -29,6 +29,11 @@ vi.mock("@/server/ai/tutor-orchestrator", () => ({
 vi.mock("@/server/learner-memory/repository", () => ({
   getLearnerMemory: mocks.getMemory,
   appendEvidenceToMemory: mocks.appendMemory,
+  planLearnerMemoryEvidenceWrite: vi.fn(),
+}));
+vi.mock("@/server/ai/request-budget", () => ({
+  reserveUserAICall: mocks.reserveAICall,
+  settleUserAICall: mocks.settleAICall,
 }));
 
 import { completeLearningSession, createLearningSession, submitLearningTurn } from "./service";
@@ -127,6 +132,10 @@ beforeEach(() => {
   mocks.recentQuestHistory.mockResolvedValue([]);
   mocks.getMemory.mockResolvedValue(null);
   mocks.appendMemory.mockResolvedValue(null);
+  mocks.reserveAICall.mockImplementation(async ({ userId: reservationUserId, purpose }: {
+    userId: string; purpose: string;
+  }) => ({ id: `reservation-${purpose}`, userId: reservationUserId, purpose }));
+  mocks.settleAICall.mockResolvedValue(undefined);
   mocks.transaction.mockImplementation(async (work: (client: Prisma.TransactionClient) => unknown) => work(tx as unknown as Prisma.TransactionClient));
   mocks.evaluate.mockImplementation(async ({ state, learnerMessage }) => ({
     output: createEvaluateTurnFallback({ state, learnerMessage, template }),

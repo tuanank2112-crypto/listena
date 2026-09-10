@@ -4,6 +4,14 @@ import { PrismaD1 } from "@prisma/adapter-d1";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import path from "node:path";
 
+/** Structural type keeps Node builds independent of Worker-only globals. */
+export type NativeD1Database = {
+  prepare(query: string): {
+    bind(...values: unknown[]): unknown;
+  };
+  batch(statements: unknown[]): Promise<unknown[]>;
+};
+
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
@@ -19,6 +27,17 @@ export function getDatabaseRuntime(): "node-sqlite" | "cloudflare-d1" {
   } catch {
     return "node-sqlite";
   }
+}
+
+/**
+ * Returns the native D1 binding only in the Worker runtime. Prisma's D1
+ * adapter deliberately does not expose ACID transactions, so multi-record
+ * commits use this binding's atomic `batch()` API at the few boundaries that
+ * require all-or-nothing persistence.
+ */
+export function getNativeD1Database(): NativeD1Database | undefined {
+  if (getDatabaseRuntime() !== "cloudflare-d1") return undefined;
+  return getCloudflareContext().env.DB as unknown as NativeD1Database;
 }
 
 function getNodePrisma(): PrismaClient {
@@ -51,9 +70,9 @@ function getNodePrisma(): PrismaClient {
  */
 function resolvePrismaClient(): PrismaClient {
   if (getDatabaseRuntime() !== "cloudflare-d1") return getNodePrisma();
-  const database = getCloudflareContext().env.DB;
+  const database = getNativeD1Database();
   if (!database) throw new Error("Cloudflare D1 binding DB is required");
-  return new WorkerPrismaClient({ adapter: new PrismaD1(database) }) as unknown as PrismaClient;
+  return new WorkerPrismaClient({ adapter: new PrismaD1(database as never) }) as unknown as PrismaClient;
 }
 
 export const prisma = new Proxy({} as PrismaClient, {

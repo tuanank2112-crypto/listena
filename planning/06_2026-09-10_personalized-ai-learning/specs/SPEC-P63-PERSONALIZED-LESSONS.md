@@ -31,7 +31,7 @@ New and existing profiles start/continue `UNASSESSED` until at least 8 high-conf
 | invalid draft or answer | reject and return safe 503/400, never partially expose it |
 | existing matching ready lesson | return it with `reused:true` |
 | duplicate attempt ID | return original result without duplicate evidence/mastery |
-| active/cooldown/daily generation guard | 429 `PERSONALIZATION_LIMIT` with `Retry-After`; reuse/saved lessons remain available |
+| active generation / persisted-lesson cooldown-daily guard / shared AI reservation | 429 `AI_RATE_LIMITED` for an active generation, `PERSONALIZATION_LIMIT` for the legacy persisted-lesson guard, or `AI_REQUEST_LIMIT` for the shared reservation; all include `Retry-After`, and reuse/saved lessons remain available |
 
 ## Forbidden zone
 
