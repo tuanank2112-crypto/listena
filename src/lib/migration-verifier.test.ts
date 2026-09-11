@@ -233,6 +233,36 @@ describe("Plan 07 offline migration verifier", () => {
     }
   });
 
+  it("excludes only the known D1 migration metadata table", async () => {
+    const sourceClient = createClient({ url: sourceUrl });
+    const target = await targetClient();
+    try {
+      await Promise.all([
+        sourceClient.execute(
+          `CREATE TABLE IF NOT EXISTS "d1_migrations" ("name" TEXT PRIMARY KEY)`,
+        ),
+        target.execute(
+          `CREATE TABLE IF NOT EXISTS "d1_migrations" ("name" TEXT PRIMARY KEY)`,
+        ),
+      ]);
+
+      const report = await verifyMigration({
+        source: { url: sourceUrl },
+        target: { url: targetUrl },
+      });
+
+      expect(report.status).toBe("passed");
+      expect(report.source.applicationTables).toMatchObject({
+        expectedCount: 27,
+        actual: expect.not.arrayContaining(["d1_migrations"]),
+        matchesExpected: true,
+      });
+    } finally {
+      sourceClient.close();
+      target.close();
+    }
+  });
+
   it("is unconditionally read-only and rejects legacy probe activation", () => {
     const parsed = parseMigrationVerifierCli([], {
       MIGRATION_SOURCE_DATABASE_URL: "file:./source.db",

@@ -48,6 +48,13 @@ const APPLICATION_TABLES = [
   "AdaptiveEvidence",
 ] as const;
 
+// Cloudflare D1 records applied migrations in this engine-owned table. It is
+// not application data and it may not exist in a database created directly by
+// Prisma/libSQL, so it cannot be part of the exact 27-table product contract.
+// Keep this allow-list deliberately narrow: every other non-SQLite table is a
+// blocking surprise and remains visible to the verifier.
+const IGNORED_INFRASTRUCTURE_TABLES = new Set(["d1_migrations"]);
+
 const EXPECTED_NAMED_INDEXES = [
   "User_email_key",
   "LearnerMemory_userId_key",
@@ -446,7 +453,10 @@ async function readApplicationTableNames(client: Client) {
   `);
   return result.rows
     .map((row) => stringValue(row, "name"))
-    .filter((name): name is string => name !== null);
+    .filter(
+      (name): name is string =>
+        name !== null && !IGNORED_INFRASTRUCTURE_TABLES.has(name),
+    );
 }
 
 async function readSchema(client: Client, tables: string[]) {

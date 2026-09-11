@@ -18,7 +18,7 @@ The local prisma/migrations lineage is for local development and code generation
 
 ## Exact imported-schema contract
 
-The imported snapshot contains exactly these 27 application tables; SQLite internal tables are outside this inventory.
+The imported snapshot contains exactly these 27 application tables; SQLite internal tables are outside this inventory. Cloudflare D1's engine-owned `d1_migrations` table is also outside the inventory: it records migration metadata rather than product data and might be absent from a database created directly through Prisma/libSQL. This is an exact named exception; every other non-SQLite table MUST remain a blocking surprise-table mismatch.
 
 | # | Table | # | Table | # | Table |
 |---:|---|---:|---|---:|---|
