@@ -1,7 +1,7 @@
 # Plan 07 — Vercel and Turso migration
 
 - STT: 07
-- Status: IN PROGRESS — Turso staging import and integrity proof are complete; Vercel Preview is configured for the candidate branch and awaits deployed-host evidence. No DNS or public-traffic mutation has occurred.
+- Status: IN PROGRESS — Turso staging import and integrity proof are complete; bounded Vercel Preview evidence is recorded on an isolated Turso clone. The full hosted ownership/retry suite, final D1 export, Production acceptance, DNS/public-traffic cutover, and reconciliation-aware rollback remain open.
 - Started: 2026-09-10 (Asia/Saigon)
 - Target: 0.6.0 MINOR
 - Acceptance environments: local Node/SQLite, Turso staging, Vercel Preview, then public Vercel production
@@ -18,7 +18,10 @@
 - 2026-09-11: Credentials login no longer mounts `SessionProvider` on the public login/register pages. This removes a first-load Auth.js CSRF-cookie race without disabling CSRF or changing the Auth.js route behavior.
 - 2026-09-12: A dedicated Tokyo Turso staging database, `listena-staging-20260911`, was created in group `listena-staging` and received a one-way import of the approved D1 snapshot. Its snapshot hash is `C67346700E55D355F2087EBC6A0FB3D461F68B773B8BF5FA9297FCC1D0007557`; no D1 mutation, DNS change, or traffic change occurred.
 - 2026-09-12: The staging target passed the redacted read-only migration verifier before and after a disposable remote `AIInteraction` write/read/delete probe: 27 application tables, 45 foreign keys, 48 migration-defined indexes, timestamp/core-curriculum fingerprints, and integrity checks match the source. The final fresh-client absence check and verifier prove the probe left no residue.
-- 2026-09-12: Vercel project `n-listen-ai/listena` was connected to `tuanank2112-crypto/listena`. The candidate branch alone has `APP_RUNTIME=vercel`, disabled write mode, and staging-only Turso/auth configuration; no Preview deployment has yet been accepted and no Production secret or database was changed.
+- 2026-09-12: Vercel project `n-listen-ai/listena` was connected to `tuanank2112-crypto/listena`. The candidate branch alone has `APP_RUNTIME=vercel`, staging-only Turso/auth configuration, and a fresh target auth secret; no Production secret or database was changed.
+- 2026-09-12: An initial hosted build exposed that an empty `LOG_LEVEL` is not a valid Pino level. Commit `587641a` normalizes blank or malformed hosted values to `info`; the resulting Preview deployment `7YaMdWP6FqZ9w4G15B7XABP35hgR` built Ready from that exact commit.
+- 2026-09-12: The temporary enabled Preview proof used only the disposable clone `listena-preview-20260912`, never the canonical imported staging database. A synthetic registration established a fresh target session and dashboard, then one correct adaptive-game answer persisted a keyed server-scored round and linked evidence. Direct read-only checks found one user profile, six mastery rows, one run/eight rounds, one answered keyed correct round, and one linked server-validator evidence row; `integrity_check` and `quick_check` returned `ok` with zero foreign-key violations.
+- 2026-09-12: The Tutor UI returned its controlled `AI_UNAVAILABLE` message when the hosted Kira provider was unavailable; no successful provider result, provider key value, or live cost claim is made. The Preview write fence was restored to `disabled` and deployment `ENR7GSojzpCt3ucxnNVus51eZ6AT` built Ready. A new synthetic registration was rejected with `MIGRATION_WRITE_DISABLED`, and its matching clone-user count stayed zero before and after. Production/D1/DNS/public traffic remained unchanged.
 
 ## Superseded decisions
 
@@ -48,7 +51,8 @@
 - [x] Implement and test the read-only P73 source/target verifier; the separately approved staging write/read/delete proof remains a hosted gate.
 - [x] Obtain user-owned Turso and Vercel accounts / staging credentials without recording secrets.
 - [x] Rehearse D1 to Turso staging import and verify fingerprints.
-- [ ] Deploy Vercel Preview and pass auth, persistence, private lesson, and AI smoke gates.
+- [x] Deploy the candidate Vercel Preview and record Node build, fresh registration/authentication, bounded game persistence/evidence, typed Tutor-unavailable behavior, and the final disabled write-fence proof on an isolated clone.
+- [ ] Complete the remaining enabled-Preview suite: a true hosted duplicate-retry/idempotency proof and private-resource owner-isolation proof, using only a disposable clone; leave the branch Preview disabled between test windows.
 - [ ] Obtain explicit approval for final D1 export window and public traffic cutover.
 - [x] Synchronize implementation/runbook knowledge and commit/push the local staging candidate (`d80e51d`).
 - [ ] Cut over once after its separately approved final-export and public-traffic window; retain Cloudflare rollback.

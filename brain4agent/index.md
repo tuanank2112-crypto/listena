@@ -5,7 +5,7 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/07_2026-09-10_vercel-turso-migration | [Plan 07](../planning/07_2026-09-10_vercel-turso-migration/plan.md) — local-only Vercel Node + Turso candidate has passed its local gates; staging import, Preview, hosted writes, cutover and live Kira smoke remain unchecked |
+| Kế hoạch hiện tại | planning/07_2026-09-10_vercel-turso-migration | [Plan 07](../planning/07_2026-09-10_vercel-turso-migration/plan.md) — canonical Turso staging and bounded Vercel Preview evidence are recorded; full hosted ownership/retry, final export/cutover, Production and successful live Kira remain unchecked |
 | Rà soát | toàn repository | [Audit](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |
 | Audio | core/tts; components/providers; tts-service | [ADR](../docs/adr/0001-tts-engine.md) |

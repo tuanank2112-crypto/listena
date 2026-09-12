@@ -69,3 +69,11 @@ Prove the Node/Turso application on Vercel Preview before any public traffic cha
 - Preview build logs are green, the artifact uses Node, and disabled-mode mutation tests leave its staging fingerprint unchanged.
 - Enabled Preview proves fresh-session login, server-authoritative persistence, idempotency, private ownership, restart-safe reads, and bounded AI behavior on an isolated staging database.
 - Production has a separate fresh-final-snapshot target, passes disabled acceptance, and has a separately recorded approval before writes or traffic are enabled.
+
+## Evidence record — 2026-09-12
+
+- Candidate commit `587641a` built Ready on Vercel Preview. The first hosted build found an empty `LOG_LEVEL` issue; the committed logger normalization fixed that runtime-only configuration case without loosening any database contract.
+- Preview was branch-scoped to `codex/vercel-turso-migration`. Its temporary enabled proof used disposable clone `listena-preview-20260912`, not the canonical imported staging database or any Production target. A synthetic account established a fresh target session/dashboard, and a correct adaptive-game answer persisted a server-scored, keyed round with linked evidence. A direct fresh clone read confirmed the resulting profile, mastery, game, round, and evidence counts.
+- The Tutor UI completed the required bounded provider outcome with its typed unavailable message. No successful Kira completion, secret inspection, or cost/latency assertion is implied.
+- The branch Preview was returned to `MIGRATION_WRITE_MODE=disabled` and redeployed Ready as `ENR7GSojzpCt3ucxnNVus51eZ6AT`. A synthetic registration was rejected with the migration fence message; its matching clone row count remained zero before and after, and clone integrity/FK checks remained clean.
+- This is not a complete enabled-Preview exit: actual hosted duplicate-retry/idempotency and private-resource owner-isolation evidence remain required. The deployment is protected, so no public health-endpoint claim is made. Production/D1/DNS/traffic remain outside this evidence record.

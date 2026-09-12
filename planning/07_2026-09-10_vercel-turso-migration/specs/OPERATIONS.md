@@ -73,3 +73,4 @@ The fresh Vercel auth secret means a Vercel session cannot be assumed valid on C
 - Record non-sensitive Turso database identifiers and the fresh-production-versus-staging distinction.
 - Record redacted P73 source/target fingerprints, migration-file hashes, maintenance-fence start/end, and export identity.
 - Record fresh-auth-session behavior and smoke timestamps/outcomes without messages, passwords, prompts, tokens, or secret fragments.
+- 2026-09-12 Preview execution record: candidate commit `587641a` used only disposable clone `listena-preview-20260912` for a bounded enabled write proof, then Preview was restored to disabled on deployment `ENR7GSojzpCt3ucxnNVus51eZ6AT`. Synthetic registration/game evidence and the final blocked-registration check are recorded in TESTING-ACCEPTANCE; Production Turso, D1, DNS, and public traffic were not changed.

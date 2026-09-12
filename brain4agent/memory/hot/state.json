@@ -1,32 +1,36 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan07_local_vercel_turso_candidate_passed_hosted_staging_pending_cloudflare_rollback_retained",
+  "system_status": "plan07_turso_staging_verified_vercel_preview_bounded_evidence_partial_hosted_gates_open_cloudflare_rollback_retained",
   "active_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
   "checkpoint": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
   "current_verification": {
-    "type_check": "PASS via npx tsc --noEmit after Plan07 P71/P72/P73 local candidate",
-    "unit_tests": "284 passed across 66 files after Plan07 local candidate",
-    "lint": "0 errors / 34 pre-existing warnings after Plan07 local candidate",
-    "build": "PASS via standard Next production build after Plan07 local candidate",
-    "e2e": "16/16 PASS on isolated fresh SQLite DB after Plan07 local candidate",
-    "migration_verifier": "7/7 local fixture tests passed for a deliberately read-only verifier; this does not prove an imported D1 history, staging write/read/delete, or hosted Turso target",
-    "turso_vercel": "No Turso staging database, Vercel Preview/deployment, account mutation, DNS/traffic cutover, or hosted write was performed",
-    "d1": "No Plan07 D1 export, import, reset, seed, write, or dual-write was performed; historical additive migrations 0002/0003 and core import remain rollback history",
-    "kira": "No bounded genuine Kira smoke was performed through the Plan07 target; secret values remain opaque"
+    "type_check": "PASS via npx tsc --noEmit on 2026-09-12",
+    "unit_tests": "293 passed across 67 files on 2026-09-12",
+    "lint": "0 errors / 34 pre-existing warnings on 2026-09-12",
+    "build": "PASS via standard Next production build on 2026-09-12",
+    "e2e": "16/16 PASS on an isolated fresh SQLite DB on 2026-09-12",
+    "migration_verifier": "Canonical staging import listena-staging-20260911 matched the approved D1 snapshot on schema/index/FK/timestamp/core-curriculum evidence; the verifier is deliberately read-only",
+    "turso_vercel": "Vercel Preview commit 587641a built Ready. A disposable clone-only enabled window proved registration/dashboard, one server-scored adaptive-game evidence write and direct readback; final Preview is redeployed disabled after a blocked-registration/no-row-persistence check. Full hosted retry/owner-isolation evidence remains open",
+    "d1": "Plan07 performed a one-way approved snapshot import into canonical Turso staging without mutating/resetting/seeding/dual-writing D1. Final D1 export, Production target, cutover, and rollback remain open",
+    "kira": "Target Tutor UI returned its typed unavailable behavior; no successful live Kira/provider call, secret value, cost, or latency claim is made"
   },
   "last_verification": {
-    "timestamp": "2026-09-11T00:37:29+07:00",
+    "timestamp": "2026-09-12T18:10:14+07:00",
     "scenarios_passed": [
       "type-check",
-      "unit-tests-284-across-66-files",
+      "unit-tests-293-across-67-files",
       "lint-0-errors-34-existing-warnings",
       "standard-Next-production-build",
       "E2E-16-Plan07-regression-suite",
-      "P73-migration-verifier-local-fixtures-7-of-7"
+      "P73-canonical-Turso-staging-import-and-integrity-proof",
+      "Vercel-Preview-587641a-ready",
+      "Preview-registration-game-evidence-readback-on-disposable-clone",
+      "Preview-Tutor-typed-unavailable",
+      "Preview-disabled-write-fence-no-row-persistence"
     ],
-    "benchmark_accuracy": "Plan07 local code candidate only; no fixture/test result substitutes for an imported staging database, fresh hosted auth, explicit hosted write enable, Vercel deployment, or real-provider smoke",
-    "grade": "Plan07 local candidate accepted; Turso staging, Vercel Preview, cutover, rollback and live-provider gates pending"
+    "benchmark_accuracy": "Plan07 has canonical imported staging and bounded protected-Preview evidence. It does not substitute for hosted duplicate retry, private-owner isolation, final D1 export, Production acceptance/cutover/rollback, or successful live-provider behavior",
+    "grade": "Plan07 local + Turso staging + bounded Vercel Preview proof accepted; full Preview and all Production/cutover/rollback/live-success gates remain pending"
   },
   "previous_verification": {
     "timestamp": "2026-09-10T19:38:15+07:00",
