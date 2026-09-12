@@ -32,8 +32,8 @@
 
 ## Exit gates
 
-- ✅ local — `npm test` 284/284 across 66 files, `npx tsc --noEmit`, `npm run lint` (0 errors / 34 pre-existing warnings), `npm run build`, and isolated `npm run test:e2e` 16/16 passed on 2026-09-11 after P71/P72. The P73 verifier's 7/7 local fixture tests prove its read-only boundary; this is not an imported-history, staging write/read/delete, or hosted proof.
-- ⬜ Turso staging — import, semantic schema, 48-index, foreign-key/integrity, timestamp, and generic atomicity proof pass on a dedicated staging database.
+- ✅ local — `npm test` 286/286 across 66 files, `npx tsc --noEmit`, `npm run lint` (0 errors / 34 pre-existing warnings), `npm run build`, and isolated `npm run test:e2e` 16/16 passed on 2026-09-11 after P71/P72. The P73 verifier's 8/8 local fixture tests prove its read-only boundary; this is not an imported-history, staging write/read/delete, or hosted proof.
+- ✅ Turso staging — the 2026-09-12 import into `listena-staging-20260911` matched the D1 snapshot `C67346700E55D355F2087EBC6A0FB3D461F68B773B8BF5FA9297FCC1D0007557`: 27 application tables, 45 foreign keys, 48 named indexes, semantic/timestamp/core-curriculum fingerprints, `foreign_key_check`, and `integrity_check`. A separate Prisma/raw-libSQL remote write/read/delete probe passed, with a fresh-client absence check and a final read-only verifier pass proving no residue.
 - ⬜ Vercel Preview disabled — APP_RUNTIME=vercel, Node build, fresh login/read paths, and mutation fence pass with an unchanged staging fingerprint.
 - ⬜ Vercel Preview enabled — a recorded explicit write enable proves bounded persistence, ownership, idempotency, and AI behavior on staging.
 - ⬜ server disabled — user approves final export/cutover; a newly generated final snapshot target, Vercel production Node/read/auth gates, and write fence pass while production remains disabled.
