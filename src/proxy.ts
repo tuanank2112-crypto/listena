@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { requireAuthSecret } from "@/lib/auth-secret";
 import { resolveMigrationWriteMode } from "@/lib/migration-write-gate";
 
 const publicPaths = [
@@ -65,9 +66,10 @@ export async function proxy(req: NextRequest) {
 
   // Match Auth.js URL precedence, including HTTPS behind a reverse proxy.
   const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? req.url;
+  const authSecret = requireAuthSecret();
   const token = await getToken({
     req,
-    secret: process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET,
+    secret: authSecret,
     secureCookie: new URL(authUrl).protocol === "https:",
   });
 

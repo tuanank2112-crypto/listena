@@ -11,6 +11,7 @@ import {
   createLessonCoachTemplate,
   createMissionState,
   getMissionTemplate,
+  isMissionScenarioKey,
   LESSON_COACH_SCENARIO_KEY,
 } from "@/server/ai/mission-templates";
 import {
@@ -42,6 +43,8 @@ export interface StartMissionInput {
   learnerContext?: LearnerTutorContext;
   lessonContext?: LessonTutorContext;
   recentScenarioKeys?: string[];
+  /** Server-derived scope from the learner's declared daily time budget. */
+  maxTurns?: number;
 }
 
 export interface EvaluateTutorTurnInput {
@@ -83,6 +86,9 @@ export async function startMission(
   options: TutorRuntimeOptions = {},
 ): Promise<StartMissionResult> {
   const now = options.now ?? new Date();
+  const plannedScenarioKey = isMissionScenarioKey(input.scenarioKey)
+    ? input.scenarioKey
+    : undefined;
   const dailyQuest =
     input.mode === "DAILY_QUEST"
       ? planDailyQuest({
@@ -92,16 +98,18 @@ export async function startMission(
           dueVocabulary: input.learnerContext?.dueVocabulary,
           preferredTopics: input.learnerContext?.preferredTopics,
           recentScenarioKeys: input.recentScenarioKeys,
+          scenarioKey: plannedScenarioKey,
         })
       : undefined;
   const template =
     input.mode === "LESSON_COACH"
       ? createLessonCoachTemplate(input.lessonContext)
-      : getMissionTemplate(dailyQuest?.scenarioKey ?? input.scenarioKey);
+      : getMissionTemplate(dailyQuest?.scenarioKey ?? plannedScenarioKey);
   const state = MissionStateSchema.parse(
     createMissionState(template, {
       goal: input.goal ?? dailyQuest?.goal,
       targetVocabulary: [...(dailyQuest?.targetVocabulary ?? []), ...(input.lessonContext?.targetVocabulary ?? [])],
+      maxTurns: input.maxTurns,
     }),
   );
   const groundedContext = buildGroundedTutorContext({

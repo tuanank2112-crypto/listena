@@ -1,8 +1,11 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
+import { requireAuthSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+
+const authSecret = requireAuthSecret();
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -70,7 +73,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   // Deployments may invoke Auth.js behind an internal reverse-proxy URL while
   // the browser uses the public HTTPS origin (including Vercel).
   trustHost: true,
-  // Align Auth.js handler signing with the Proxy's supported secret names so
-  // a Vercel deployment cannot issue a session the Proxy rejects.
-  secret: process.env.AUTH_SECRET ?? process.env.NEXTAUTH_SECRET,
+  // Kept in one resolver with Proxy so a deployment cannot issue a session
+  // that its request boundary rejects.
+  secret: authSecret,
 });

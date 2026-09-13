@@ -1,3 +1,5 @@
+import type { LearningDecision } from "@/server/learning/decision";
+
 export type LearningSessionMode = "LESSON_COACH" | "MISSION" | "DAILY_QUEST";
 export type LearningSessionStatus = "ACTIVE" | "COMPLETED" | "ABANDONED";
 export type CefrLevel = "A1" | "A2" | "B1" | "B2" | "C1" | "C2";
@@ -107,7 +109,12 @@ export interface PublicLearningSession {
 
 export interface LearningSessionEnvelope {
   session?: PublicLearningSession;
-  nextAction?: NextAction | null;
+  /**
+   * The server-owned p08 planner result. Keep the legacy NextAction contract
+   * above while old consumers migrate; new session/debrief responses use this
+   * richer, evidence-labelled decision.
+   */
+  nextAction?: LearningDecision | null;
   error?: string;
 }
 

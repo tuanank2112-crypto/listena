@@ -6,7 +6,7 @@ import { LearningSessionError } from "@/server/learning/errors";
 
 export function invalidRequest(error: string, details?: unknown) {
   return NextResponse.json(
-    { error, code: "INVALID_REQUEST", ...(details ? { details } : {}) },
+    { error, code: "INVALID_INPUT", ...(details ? { details } : {}) },
     { status: 400 },
   );
 }
@@ -34,8 +34,17 @@ export function learningSessionErrorResponse(error: unknown) {
   }
   if (error instanceof LearningSessionError) {
     return NextResponse.json(
-      { error: error.message, code: error.code },
-      { status: error.status },
+      {
+        error: error.message,
+        code: error.code,
+        ...(error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
+      },
+      {
+        status: error.status,
+        headers: error.retryAfterSeconds
+          ? { "Retry-After": String(error.retryAfterSeconds) }
+          : undefined,
+      },
     );
   }
 

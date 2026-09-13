@@ -22,9 +22,10 @@ export async function POST(request: NextRequest) {
       return invalidRequest("Invalid learning session", parsed.error.flatten());
     }
 
+    const result = await createLearningSession(session.user.id, parsed.data);
     return NextResponse.json(
-      await createLearningSession(session.user.id, parsed.data),
-      { status: 201 },
+      { session: result.session },
+      { status: result.idempotent ? 200 : 201 },
     );
   } catch (error) {
     if (error instanceof SyntaxError) return invalidRequest("Invalid JSON body");

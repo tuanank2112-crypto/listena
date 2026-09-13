@@ -13,9 +13,73 @@ async function login(page: Page) {
   return db.user.findUniqueOrThrow({ where: { email: "learner@example.com" } });
 }
 
+async function applicationTableFingerprint() {
+  const tables = await db.$queryRawUnsafe<Array<{ name: string }>>(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name ASC",
+  );
+  const entries = await Promise.all(tables.map(async ({ name }) => {
+    const quotedName = `"${name.replaceAll('"', '""')}"`;
+    const result = await db.$queryRawUnsafe<Array<{ count: number | bigint }>>(
+      `SELECT COUNT(*) AS "count" FROM ${quotedName}`,
+    );
+    return [name, String(result[0]?.count ?? 0)] as const;
+  }));
+  return Object.fromEntries(entries);
+}
+
+test("GET recommendations is read-only across the application schema", async ({ page }) => {
+  await login(page);
+  const before = await applicationTableFingerprint();
+
+  const response = await page.request.get("/api/recommendation");
+
+  expect(response.ok()).toBe(true);
+  await expect(response.json()).resolves.toMatchObject({ recommendations: expect.any(Array) });
+  expect(await applicationTableFingerprint()).toEqual(before);
+});
+
+test("a session-start key creates one owned graph, replays it, and rejects a changed body", async ({ page }) => {
+  const user = await login(page);
+  const clientStartId = randomUUID();
+  const request = {
+    clientStartId,
+    mode: "MISSION",
+    scenarioKey: "lost-luggage",
+  };
+
+  const created = await page.request.post("/api/learning-sessions", { data: request });
+  expect(created.status()).toBe(201);
+  const createdPayload = await created.json() as { session: { id: string } };
+
+  const replayed = await page.request.post("/api/learning-sessions", { data: request });
+  expect(replayed.status()).toBe(200);
+  const replayedPayload = await replayed.json() as { session: { id: string } };
+  expect(replayedPayload.session.id).toBe(createdPayload.session.id);
+
+  expect(await db.learningSession.count({ where: { id: createdPayload.session.id, userId: user.id } })).toBe(1);
+  expect(await db.learningSessionStartRequest.count({
+    where: { userId: user.id, clientStartId },
+  })).toBe(1);
+
+  const changed = await page.request.post("/api/learning-sessions", {
+    data: { ...request, scenarioKey: "cafe-order" },
+  });
+  expect(changed.status()).toBe(409);
+  await expect(changed.json()).resolves.toMatchObject({ code: "IDEMPOTENCY_CONFLICT" });
+  expect(await db.learningSession.count({ where: { userId: user.id } })).toBe(1);
+
+  // This shared seeded learner is used by later regression fixtures. Clean up
+  // deliberately so the suite validates the product invariant of one active
+  // primary session instead of relying on the old duplicate-session behavior.
+  await db.learningSession.update({
+    where: { id: createdPayload.session.id },
+    data: { status: "ABANDONED", completedAt: new Date() },
+  });
+});
+
 test("AI comeback resets, persists server grading, and completion is counted once", async ({ page }) => {
   const user = await login(page);
-  const create = await page.request.post("/api/learning-sessions", { data: { mode: "MISSION", scenarioKey: "lost-luggage" } });
+  const create = await page.request.post("/api/learning-sessions", { data: { clientStartId: randomUUID(), mode: "MISSION", scenarioKey: "lost-luggage" } });
   expect(create.status()).toBe(201);
   const { session } = await create.json();
   await page.goto("/learner/dashboard");

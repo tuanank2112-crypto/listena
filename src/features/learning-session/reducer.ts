@@ -1,4 +1,5 @@
-import type { NextAction, PublicLearningSession, TurnSubmission } from "./types";
+import type { LearningDecision } from "@/server/learning/decision";
+import type { PublicLearningSession, TurnSubmission } from "./types";
 
 export type PlayerPhase = "loading" | "ready" | "submitting" | "completing" | "completed" | "fatal-error";
 
@@ -11,21 +12,21 @@ export interface LearningSessionPlayerState {
   replayCount: number;
   turnStartedAt: number;
   pendingSubmission: TurnSubmission | null;
-  nextAction: NextAction | null;
+  nextAction: LearningDecision | null;
 }
 
 export type LearningSessionPlayerAction =
   | { type: "LOAD_START" }
-  | { type: "LOAD_SUCCESS"; session: PublicLearningSession; nextAction: NextAction | null; now: number }
+  | { type: "LOAD_SUCCESS"; session: PublicLearningSession; nextAction: LearningDecision | null; now: number }
   | { type: "LOAD_FAILURE"; error: string }
   | { type: "SET_DRAFT"; value: string }
   | { type: "COUNT_HINT" }
   | { type: "COUNT_REPLAY" }
   | { type: "SUBMIT_START"; submission: TurnSubmission }
-  | { type: "SUBMIT_SUCCESS"; session: PublicLearningSession; nextAction: NextAction | null; now: number }
+  | { type: "SUBMIT_SUCCESS"; session: PublicLearningSession; nextAction: LearningDecision | null; now: number }
   | { type: "SUBMIT_FAILURE"; error: string }
   | { type: "COMPLETE_START" }
-  | { type: "COMPLETE_SUCCESS"; session: PublicLearningSession; nextAction: NextAction | null }
+  | { type: "COMPLETE_SUCCESS"; session: PublicLearningSession; nextAction: LearningDecision | null }
   | { type: "COMPLETE_FAILURE"; error: string }
   | { type: "CLEAR_ERROR" };
 

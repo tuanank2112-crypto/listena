@@ -28,7 +28,7 @@ async function createAndLoginLearner(page: Page) {
 test("a committed turn links one memory increment to its exact evidence and retry is idempotent", async ({ page }) => {
   const user = await createAndLoginLearner(page);
   const create = await page.request.post("/api/learning-sessions", {
-    data: { mode: "MISSION", scenarioKey: "lost-luggage" },
+    data: { clientStartId: randomUUID(), mode: "MISSION", scenarioKey: "lost-luggage" },
   });
   expect(create.status()).toBe(201);
   const { session } = await create.json();
@@ -56,7 +56,7 @@ test("a committed turn links one memory increment to its exact evidence and retr
 test("a learner-memory write failure rolls back the turn, evidence, and mastery", async ({ page }) => {
   const user = await createAndLoginLearner(page);
   const create = await page.request.post("/api/learning-sessions", {
-    data: { mode: "MISSION", scenarioKey: "lost-luggage" },
+    data: { clientStartId: randomUUID(), mode: "MISSION", scenarioKey: "lost-luggage" },
   });
   expect(create.status()).toBe(201);
   const { session } = await create.json();

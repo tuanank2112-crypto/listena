@@ -1,13 +1,15 @@
 # Plan 07 — Vercel and Turso migration
 
 - STT: 07
-- Status: IN PROGRESS — Turso staging import and integrity proof are complete; bounded Vercel Preview evidence is recorded on an isolated Turso clone. The full hosted ownership/retry suite, final D1 export, Production acceptance, DNS/public-traffic cutover, and reconciliation-aware rollback remain open.
+- Status: IN PROGRESS — Turso staging import and integrity proof are complete; bounded Vercel Preview evidence is recorded on an isolated Turso clone. Plan08 source reliability/learning-loop work is locally implemented and accepted, but does not advance any hosted gate here. The full hosted ownership/retry suite, final D1 export, Production acceptance, DNS/public-traffic cutover, and reconciliation-aware rollback remain open.
 - Started: 2026-09-10 (Asia/Saigon)
 - Target: 0.6.0 MINOR
 - Acceptance environments: local Node/SQLite, Turso staging, Vercel Preview, then public Vercel production
 
 ## Decision log
 
+- 2026-09-13 implementation follow-up: Plan08 P80–P85 completed its local implementation and acceptance: 387/387 tests across 78 files, type-check, lint exit 0 with 34 pre-existing warnings, standard Next build, Prisma validate/generate, fresh-SQLite E2E 20/20, and offline quality 30/30 cases plus 12/12 dataset checks. P81 now proves recommendation GET no-mutation with an all-table fingerprint. This is source/local evidence only: it does not close Preview/Production ownership-retry, final export/cutover/rollback, successful live-provider, or pilot gates; no release/version bump. Deferred nonblocking P2: a Coach reservation can be consumed if its lesson unpublishes after provider output before the atomic target commit; that commit rejects the target and persists no stale learning graph.
+- 2026-09-13 review addendum: source review found GET /api/recommendation performs upserts while proxy fences only unsafe HTTP methods. Historical rejected-registration evidence remains valid for that request but does not establish all-application read-only behavior. Plan08 P81 must remove GET side effects and prove all-table disabled-window fingerprints before full hosted acceptance; no fix, gate closure or deployment occurred in the review turn. See ../../docs/PROJECT_REVIEW_2026-09-13.md.
 - 2026-09-10: The user requires a non-commercial, low-cost production replacement for Cloudflare that serves requests without a personal machine running continuously. The chosen candidate is Vercel Hobby plus Turso Free, subject to staging gates; it is not an uptime SLA.
 - 2026-09-10: Turso is selected over a PostgreSQL service because ListenAI's canonical schema and current Prisma data model are SQLite. This avoids a dialect/data-model rewrite, but does not permit an unreviewed D1 copy.
 - 2026-09-10: Vercel must use the Next.js Node runtime. Worker-specific OpenNext, D1 binding, Prisma WASM, and Worker transaction assumptions cannot be retained on the Vercel request path.
@@ -25,6 +27,7 @@
 
 ## Superseded decisions
 
+- The 2026-09-13 review addendum's statement that Plan08 P81 "must" remove GET side effects and that no source fix occurred is superseded only by the local implementation decision above. Its warning remains applicable to hosted acceptance until the equivalent disposable-Preview proof is recorded.
 - Plan05/06's Cloudflare Workers plus D1 runtime is superseded as the target production architecture, not erased as a rollback deployment or historical record.
 - The historical requirement that multi-row server commits use native D1 DB.batch is superseded by a provider-neutral libSQL atomic batch contract. The all-or-nothing and conditional-claim guarantees are not superseded.
 - A database URL alone is no longer sufficient for hosted production. Turso requires a separate URL and opaque authentication token, and missing partial configuration must fail closed.
@@ -52,6 +55,7 @@
 - [x] Obtain user-owned Turso and Vercel accounts / staging credentials without recording secrets.
 - [x] Rehearse D1 to Turso staging import and verify fingerprints.
 - [x] Deploy the candidate Vercel Preview and record Node build, fresh registration/authentication, bounded game persistence/evidence, typed Tutor-unavailable behavior, and the final disabled write-fence proof on an isolated clone.
+- [x] Record Plan08 source reliability/learning-loop local acceptance without treating it as Vercel/Turso hosted acceptance.
 - [ ] Complete the remaining enabled-Preview suite: a true hosted duplicate-retry/idempotency proof and private-resource owner-isolation proof, using only a disposable clone; leave the branch Preview disabled between test windows.
 - [ ] Obtain explicit approval for final D1 export window and public traffic cutover.
 - [x] Synchronize implementation/runbook knowledge and commit/push the local staging candidate (`d80e51d`).

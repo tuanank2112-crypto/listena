@@ -21,7 +21,7 @@ async function createAndLoginLearner(page: Page) {
 
 async function createMission(page: Page) {
   const response = await page.request.post("/api/learning-sessions", {
-    data: { mode: "MISSION", scenarioKey: "lost-luggage" },
+    data: { clientStartId: randomUUID(), mode: "MISSION", scenarioKey: "lost-luggage" },
   });
   expect(response.status()).toBe(201);
   const payload = await response.json() as { session: { id: string } };
@@ -46,7 +46,40 @@ async function expectSessionCtaStartsOwnedSession(page: Page, userId: string, pr
     where: { id: nextSessionId, userId, mode },
     select: { id: true },
   })).toEqual({ id: nextSessionId });
+  return nextSessionId;
 }
+
+test("learner intent remains keyboard-usable without mobile horizontal overflow", async ({ page }, testInfo) => {
+  const user = await createAndLoginLearner(page);
+  await db.learnerProfile.create({ data: { userId: user.id } });
+
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/learner/dashboard");
+  const goal = page.getByLabel("Bạn muốn tự tin hơn về điều gì?");
+  await expect(goal).toBeVisible();
+  await goal.focus();
+  await expect(goal).toBeFocused();
+  await expect(page.getByRole("button", { name: "Lưu mục tiêu học" })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("learner-intent-mobile.png"), fullPage: true });
+
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await expect(goal).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: testInfo.outputPath("learner-intent-desktop.png"), fullPage: true });
+});
+
+test("Games sends the daily Quest surface through the shared next-action planner", async ({ page }) => {
+  const user = await createAndLoginLearner(page);
+  await db.learnerProfile.create({ data: { userId: user.id } });
+
+  await page.goto("/learner/games");
+  const dailyQuestLink = page.getByRole("link", { name: "Xem nhiệm vụ hôm nay" });
+  await expect(dailyQuestLink).toHaveAttribute("href", "/learner/dashboard");
+  await expect(page.getByRole("button", { name: "Nhận nhiệm vụ hôm nay" })).toHaveCount(0);
+  await dailyQuestLink.click();
+  await expect(page).toHaveURL(/\/learner\/dashboard$/);
+});
 
 test("an untouched Mission cannot be completed or claim study time", async ({ page }) => {
   const user = await createAndLoginLearner(page);
@@ -71,7 +104,7 @@ test("an untouched Mission cannot be completed or claim study time", async ({ pa
   })).toEqual(before);
 });
 
-test("manual completion retains a grounded next action after reload and starts an owned Mission", async ({ page }, testInfo) => {
+test("manual completion retains the shared planner decision after reload and starts an owned Daily Quest", async ({ page }, testInfo) => {
   const user = await createAndLoginLearner(page);
   const sessionId = await createMission(page);
   await db.learningEvidence.create({
@@ -80,7 +113,8 @@ test("manual completion retains a grounded next action after reload and starts a
 
   const complete = await page.request.post(`/api/learning-sessions/${sessionId}/complete`);
   expect(complete.ok()).toBe(true);
-  expect((await complete.json()).nextAction).toMatchObject({ kind: "MISSION" });
+  const completed = await complete.json() as { nextAction: { kind: string; scenarioKey?: string } | null };
+  expect(completed.nextAction).toMatchObject({ kind: "QUEST" });
 
   await page.goto(`/learner/session/${sessionId}`);
   await expect(page.getByRole("heading", { name: "Bạn đã dừng phiên luyện tập." })).toBeVisible();
@@ -90,11 +124,13 @@ test("manual completion retains a grounded next action after reload and starts a
   await page.reload();
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("manual-debrief.png"), fullPage: true });
-  await expectSessionCtaStartsOwnedSession(page, user.id, sessionId, "Vào Mission tiếp theo", "MISSION");
+  const questId = await expectSessionCtaStartsOwnedSession(page, user.id, sessionId, "Bắt đầu Daily Quest", "DAILY_QUEST");
+  const quest = await db.learningSession.findUniqueOrThrow({ where: { id: questId } });
+  expect(JSON.parse(quest.stateJson)).toMatchObject({ scenarioKey: completed.nextAction?.scenarioKey });
 });
 
-test("automatic completion returns a next action that survives reload and starts an owned Mission", async ({ page }, testInfo) => {
-  const user = await createAndLoginLearner(page);
+test("automatic completion returns the shared planner decision that survives reload", async ({ page }, testInfo) => {
+  await createAndLoginLearner(page);
   const sessionId = await createMission(page);
   const session = await db.learningSession.findUniqueOrThrow({ where: { id: sessionId } });
   await db.learningSession.update({
@@ -106,20 +142,19 @@ test("automatic completion returns a next action that survives reload and starts
     data: { clientTurnId: randomUUID(), content: "I lost my black suitcase." },
   });
   expect(response.ok()).toBe(true);
-  const payload = await response.json() as { session: { status: string }; nextAction: { kind: "COACH" | "MISSION" | "QUEST" | "PRACTICE"; goal: string } | null };
+  const payload = await response.json() as { session: { status: string }; nextAction: { kind: "CALIBRATE" | "COACH" | "MISSION" | "QUEST" | "PRACTICE" | "REVIEW"; goal?: string; reasonVi?: string } | null };
   expect(payload.session.status).toBe("COMPLETED");
   expect(payload.nextAction?.kind).toBeTruthy();
-  expect(payload.nextAction?.goal).toBeTruthy();
+  expect(payload.nextAction?.reasonVi).toBeTruthy();
 
   await page.goto(`/learner/session/${sessionId}`);
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();
   await page.reload();
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("automatic-debrief.png"), fullPage: true });
-  await expectSessionCtaStartsOwnedSession(page, user.id, sessionId, "Luyện lại phần này", "MISSION");
 });
 
-test("a due-word Quest carries its recommended word into the new session", async ({ page }) => {
+test("a due word routes the learner to server-owned review before a new Mission", async ({ page }) => {
   const user = await createAndLoginLearner(page);
   const sessionId = await createMission(page);
   const vocabulary = await db.vocabularyItem.findFirstOrThrow({
@@ -140,17 +175,13 @@ test("a due-word Quest carries its recommended word into the new session", async
   });
 
   const complete = await page.request.post(`/api/learning-sessions/${sessionId}/complete`);
-  const completed = await complete.json() as { nextAction: { kind: string; targetId: string } | null };
-  expect(completed.nextAction).toMatchObject({ kind: "QUEST" });
+  const completed = await complete.json() as { nextAction: { kind: string } | null };
+  expect(completed.nextAction).toMatchObject({ kind: "REVIEW" });
 
   await page.goto(`/learner/session/${sessionId}`);
-  await page.getByRole("button", { name: "Bắt đầu Daily Quest" }).click();
-  const questId = await waitForNewSession(page, sessionId);
-  const quest = await db.learningSession.findUniqueOrThrow({ where: { id: questId } });
-  const state = JSON.parse(quest.stateJson) as { targetVocabulary: string[] };
-  expect(quest.userId).toBe(user.id);
-  expect(quest.mode).toBe("DAILY_QUEST");
-  expect(state.targetVocabulary).toContain(vocabulary.displayText);
+  await page.getByRole("link", { name: "Ôn từ đến hạn" }).click();
+  await expect(page).toHaveURL(/\/learner\/flashcards$/);
+  expect(await db.learningSession.count({ where: { userId: user.id, mode: "DAILY_QUEST" } })).toBe(0);
 });
 
 test("a Coach CTA starts the recommended published lesson for its owner", async ({ page }) => {
@@ -181,6 +212,13 @@ test("a recurring owned error starts a corrective Practice Mission with its cust
   const earlierSessionId = await createMission(page);
   const earlierEvidence = await db.learningEvidence.create({
     data: { sessionId: earlierSessionId, skillKey: "grammar", evidenceType: "E2E", score: 0.3, confidence: 1 },
+  });
+  // The planner must resume an unfinished session before remediating it. This
+  // fixture models a historical error, not a second active Mission competing
+  // with the current one.
+  await db.learningSession.update({
+    where: { id: earlierSessionId },
+    data: { status: "COMPLETED", completedAt: new Date() },
   });
   await db.learnerMemory.create({
     data: {

@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased — Plan08 local implementation and acceptance (2026-09-13; hosted/live/pilot open)
+- Complete the local AI-native self-learning improvement package: P81 removes read-side recommendation persistence, makes account/session-start boundaries atomic and durable, aligns auth-secret resolution, and proves the disabled-read surface with an all-table E2E fingerprint; P82 adds learner intent plus honest mastery/count presentation; P83 routes dashboard/session/game actions through one bounded, evidence-aware planner; P84 adds versioned offline quality cases; P85 records independent local acceptance.
+- Local evidence: 387/387 tests across 78 files, type-check PASS, lint exit 0 with 34 pre-existing warnings, standard Next production build PASS, Prisma validate/generate PASS, isolated fresh-SQLite E2E 20/20, and offline quality evaluation 30/30 cases with 12/12 dataset checks.
+- This entry does not release or deploy anything: Plan07 remains active; Vercel/Turso Preview and Production, final D1 export/cutover/rollback, successful live-provider behavior, and consented learner pilot remain open. `current_version` remains 0.5.0.
+- Deferred nonblocking P2: a Coach reservation can be consumed when its lesson becomes unpublished after provider output but before the atomic published-target commit. The commit safely rejects the stale target and writes no stale learning graph; track the bounded quota waste separately.
+
+## Historical planning-only — AI-native review 2026-09-13 (superseded for local implementation status)
+- Added evidence-backed project review (8 source findings) and Plan08 multi-file specs: contracts, runtime reliability, learner intent/calibration truth, shared planner, orchestration ownership, operations and environment-specific acceptance.
+- Reaffirmed user direction: AI-native self-directed English learning; existing Mission/Coach/Quest, server grading, memory/calibration remain foundations, not rewrite targets.
+- Fresh verification:293/293 tests across67 files + type-check pass. No application fixes, migration, deployment, live-provider success or learning-efficacy result in this review. Plan07 remains active; new GET-side-effect finding qualifies previous bounded write-fence evidence.
+
 ## Unreleased — Plan07 Vercel/Turso staging + bounded Preview evidence (not cut over)
 - Add an explicit Node runtime boundary: local development/E2E uses file-backed SQLite, while `APP_RUNTIME=vercel` requires complete server-only Turso settings and fails closed without a local fallback. The target Vercel module graph no longer depends on Worker D1, Prisma WASM, or OpenNext Cloudflare runtime APIs.
 - Replace D1-only multi-row persistence with a parameterized libSQL atomic-batch contract that preserves server-owned commit fences and idempotency for learning sessions, AI budgets, adaptive games and private lessons. Configuration/operational database failures return opaque typed `503` responses; driver causes, endpoints and credentials are not exposed.

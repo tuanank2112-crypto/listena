@@ -74,6 +74,16 @@ enum LearningSessionStatus {
   ABANDONED
 }
 
+// A durable client-owned key for creating a learning session. This is
+// intentionally separate from per-turn clientTurnId so a lost response can
+// replay the committed session without starting another AI mission.
+enum LearningSessionStartRequestStatus {
+  PENDING
+  COMMITTED
+  FAILED
+  UNKNOWN
+}
+
 enum LearningTurnActor {
   LEARNER
   AI
@@ -141,6 +151,7 @@ model User {
   recommendations            Recommendation[]
   aiInteractions             AIInteraction[]
   learningSessions           LearningSession[]
+  learningSessionStartRequests LearningSessionStartRequest[]
   personalizedLessons        PersonalizedLesson[]
   personalizedLessonAttempts PersonalizedLessonAttempt[]
   adaptiveGameRuns           AdaptiveGameRun[]
@@ -477,9 +488,36 @@ model LearningSession {
   evidence       LearningEvidence[]
   interventions  Intervention[]
   aiInteractions AIInteraction[]
+  startRequests  LearningSessionStartRequest[]
 
   @@index([userId, status, updatedAt])
   @@index([lessonId, status])
+}
+
+// Retained request records make session creation replayable after an
+// ambiguous browser/network outcome. A request may only be committed with a
+// session; the database-level check for that invariant lives in the additive
+// SQLite migration because Prisma schema syntax cannot express it.
+model LearningSessionStartRequest {
+  id            String                            @id @default(uuid())
+  userId        String
+  clientStartId String
+  payloadHash   String
+  status        LearningSessionStartRequestStatus @default(PENDING)
+  sessionId     String?
+  errorCode     String?
+  errorRetryAfterSeconds Int?
+  createdAt     DateTime                          @default(now())
+  updatedAt     DateTime                          @updatedAt
+
+  user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // A committed replay record must retain its session reference. Deletion is
+  // deliberately rejected until a future tombstone/retention design exists.
+  session LearningSession? @relation(fields: [sessionId], references: [id], onDelete: Restrict)
+
+  @@unique([userId, clientStartId])
+  @@index([status, updatedAt])
+  @@index([sessionId])
 }
 
 model LearningTurn {

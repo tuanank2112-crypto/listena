@@ -28,6 +28,10 @@ export const PedagogicalActSchema = z.enum([
 ]);
 
 export const CreateLearningSessionSchema = z.object({
+  // This UUID belongs to one explicit learner action. It is intentionally not
+  // derived from clientTurnId because session creation has its own replay
+  // boundary and may involve an upstream AI call.
+  clientStartId: z.string().uuid(),
   lessonId: z.string().uuid().optional(),
   mode: LearningSessionModeSchema,
   goal: z.string().trim().min(3).max(240).optional(),

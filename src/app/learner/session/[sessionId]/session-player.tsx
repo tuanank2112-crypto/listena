@@ -25,6 +25,7 @@ import { speak } from "@/core/tts/speech";
 import { InterventionRenderer } from "@/features/learning-session/intervention-renderer";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import { makeClientId } from "@/features/learning-session/client-id";
+import type { LearningDecision } from "@/server/learning/decision";
 import {
   createInitialPlayerState,
   learningSessionPlayerReducer,
@@ -37,7 +38,6 @@ import {
   type PublicLearningSession,
   type CompletionOutcome,
   type LearningSessionEnvelope,
-  type NextAction,
   type SessionPhase,
   type SessionTurn,
   type TurnSubmission,
@@ -59,7 +59,7 @@ interface TurnEnvelope {
   learnerTurn?: SessionTurn;
   aiTurn?: SessionTurn;
   intervention?: PublicIntervention | null;
-  nextAction?: NextAction | null;
+  nextAction?: LearningDecision | null;
   error?: string;
 }
 
@@ -237,7 +237,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   }
 
   if (player.phase === "completed" || session.status === "COMPLETED") {
-    return <Debrief session={session} nextAction={player.nextAction} />;
+    return <Debrief session={session} nextAction={player.nextAction} onTargetUnavailable={() => void loadSession()} />;
   }
 
   const mission = session.state;
@@ -451,7 +451,15 @@ function MissionSidebar({ session, learnerTurns, onComplete, completing }: { ses
   );
 }
 
-function Debrief({ session, nextAction }: { session: PublicLearningSession; nextAction: NextAction | null }) {
+function Debrief({
+  session,
+  nextAction,
+  onTargetUnavailable,
+}: {
+  session: PublicLearningSession;
+  nextAction: LearningDecision | null;
+  onTargetUnavailable: () => void;
+}) {
   const state = session.state;
   const completionOutcome = resolveCompletionOutcome(session);
   const isPartial = completionOutcome === "PARTIAL";
@@ -485,7 +493,7 @@ function Debrief({ session, nextAction }: { session: PublicLearningSession; next
             ].map((item) => <div key={item.label} className="rounded-2xl bg-[#f4efe5] p-4"><p className="text-2xl font-black text-[#176b55]">{item.value}</p><p className="mt-1 text-[10px] font-black uppercase tracking-[.1em] text-[#7b857f]">{item.label}</p></div>)}
           </div>
 
-          {nextAction && <NextActionCard action={nextAction} />}
+          {nextAction && <NextActionCard action={nextAction} onTargetUnavailable={onTargetUnavailable} />}
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
             <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">{isPartial ? "Luyện tiếp" : "Tiếp tục học"} <ArrowRight className="h-4 w-4" /></Link>
@@ -497,36 +505,65 @@ function Debrief({ session, nextAction }: { session: PublicLearningSession; next
   );
 }
 
-function NextActionCard({ action }: { action: NextAction }) {
-  const label = action.kind === "COACH"
-    ? "Học cùng Coach"
-    : action.kind === "QUEST"
-      ? "Bắt đầu Daily Quest"
-      : action.kind === "MISSION"
-        ? "Vào Mission tiếp theo"
-        : "Luyện lại phần này";
+function NextActionCard({
+  action,
+  onTargetUnavailable,
+}: {
+  action: LearningDecision;
+  onTargetUnavailable: () => void;
+}) {
+  const label = action.kind === "RESUME"
+    ? "Tiếp tục phiên đang mở"
+    : action.kind === "CALIBRATE"
+      ? "Bắt đầu nhiệm vụ khởi động"
+      : action.kind === "COACH"
+        ? "Học cùng Coach"
+        : action.kind === "QUEST"
+          ? "Bắt đầu Daily Quest"
+          : action.kind === "MISSION"
+            ? "Vào Mission tiếp theo"
+            : action.kind === "REVIEW"
+              ? "Ôn từ đến hạn"
+              : action.kind === "PRACTICE"
+                ? "Luyện lại phần này"
+                : "Về trang hôm nay";
 
   return (
     <section className="mt-7 rounded-[26px] border border-[#ecd48b] bg-[#fff1bd] p-5">
       <p className="text-[11px] font-black uppercase tracking-[.16em] text-[#9b6b13]">Bước tiếp theo</p>
-      <p className="mt-2 text-sm font-bold leading-6 text-[#675119]">{action.reason}</p>
+      <p className="mt-2 text-sm font-bold leading-6 text-[#675119]">{action.reasonVi}</p>
       <div className="mt-4">
-        {action.kind === "COACH" && action.targetId && (
-          <StartSessionButton mode="LESSON_COACH" lessonId={action.targetId} label={label} />
+        {action.kind === "RESUME" && action.targetId && (
+          <Link href={`/learner/session/${action.targetId}`} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#18332d] px-5 text-sm font-black text-white">
+            {label} <ArrowRight className="h-4 w-4 text-[#f7d779]" />
+          </Link>
         )}
-        {action.kind === "QUEST" && action.targetId && (
-          <StartSessionButton mode="DAILY_QUEST" lessonId={action.targetId} label={label} />
+        {action.kind === "COACH" && action.targetId && (
+          <StartSessionButton mode="LESSON_COACH" lessonId={action.targetId} label={label} onTargetUnavailable={onTargetUnavailable} />
+        )}
+        {(action.kind === "CALIBRATE" || action.kind === "QUEST") && (
+          <StartSessionButton mode="DAILY_QUEST" goal={action.goal} scenarioKey={action.scenarioKey} label={label} onTargetUnavailable={onTargetUnavailable} />
         )}
         {action.kind === "MISSION" && action.scenarioKey && (
-          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} label={label} />
+          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} label={label} onTargetUnavailable={onTargetUnavailable} />
         )}
         {action.kind === "PRACTICE" && action.scenarioKey && (
-          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} goal={action.goal} label={label} />
+          <StartSessionButton mode="MISSION" scenarioKey={action.scenarioKey} goal={action.goal} label={label} onTargetUnavailable={onTargetUnavailable} />
+        )}
+        {action.kind === "REVIEW" && (
+          <Link href="/learner/flashcards" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#18332d] px-5 text-sm font-black text-white">
+            {label} <ArrowRight className="h-4 w-4 text-[#f7d779]" />
+          </Link>
+        )}
+        {action.kind === "EMPTY" && (
+          <Link href="/learner/dashboard" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#18332d] px-5 text-sm font-black text-white">
+            {label} <ArrowRight className="h-4 w-4 text-[#f7d779]" />
+          </Link>
         )}
         {((action.kind === "PRACTICE" && !action.scenarioKey) ||
           (action.kind === "COACH" && !action.targetId) ||
-          (action.kind === "QUEST" && !action.targetId) ||
-          (action.kind === "MISSION" && !action.scenarioKey)) && (
+          (action.kind === "MISSION" && !action.scenarioKey) ||
+          (action.kind === "RESUME" && !action.targetId)) && (
           <Link href="/learner/games" className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#18332d] px-5 text-sm font-black text-white">
             {label} <ArrowRight className="h-4 w-4 text-[#f7d779]" />
           </Link>

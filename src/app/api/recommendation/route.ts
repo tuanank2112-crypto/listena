@@ -73,29 +73,9 @@ export async function GET() {
 
     const recommendations = rankRecommendations(candidates, context, 5);
 
-    // Save recommendations
-    for (const rec of recommendations) {
-      await prisma.recommendation.upsert({
-        where: {
-          userId_lessonId: { userId, lessonId: rec.lessonId },
-        },
-        update: {
-          score: rec.score,
-          reason: rec.reasons[0] ?? "Bài học phù hợp",
-          status: "PENDING",
-          generatedAt: new Date(),
-        },
-        create: {
-          userId,
-          lessonId: rec.lessonId,
-          score: rec.score,
-          reason: rec.reasons[0] ?? "Bài học phù hợp",
-          status: "PENDING",
-        },
-      });
-    }
-
-    logger.info({ userId, recommendations: recommendations.length }, "Recommendations generated");
+    // This endpoint is deliberately read/compute-only. A GET must remain
+    // harmless during a fenced migration and when the framework re-renders.
+    logger.info({ userId, recommendations: recommendations.length }, "Recommendations computed");
 
     return NextResponse.json({ recommendations });
   } catch (error) {

@@ -3,6 +3,7 @@ import { MissionStateSchema } from "@/server/validation/learning-session";
 import {
   createMissionState,
   getMissionTemplate,
+  isMissionScenarioKey,
   MISSION_TEMPLATES,
 } from "@/server/ai/mission-templates";
 
@@ -25,5 +26,10 @@ describe("mission templates", () => {
 
   it("uses a safe default for an unknown scenario", () => {
     expect(getMissionTemplate("not-a-real-mission").key).toBe("lost-luggage");
+  });
+
+  it.each(["toString", "constructor", "__proto__"])("rejects inherited object key %s", (key) => {
+    expect(isMissionScenarioKey(key)).toBe(false);
+    expect(getMissionTemplate(key).key).toBe("lost-luggage");
   });
 });

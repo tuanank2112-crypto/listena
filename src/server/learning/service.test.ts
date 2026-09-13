@@ -3,14 +3,15 @@ import type { Prisma } from "@prisma/client";
 import type { LearningSessionRecord, LearningSessionSnapshot } from "./repository";
 import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
 import { planDailyQuest } from "@/server/ai/daily-quest";
+import { createHash } from "node:crypto";
 import { AIUnavailableError } from "@/server/ai/errors";
 import { createEvaluateTurnFallback, createStartMissionFallback } from "@/server/ai/tutor-fallback";
 
 const mocks = vi.hoisted(() => ({
-  snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), recentQuestHistory: vi.fn(), transaction: vi.fn(),
+  snapshot: vi.fn(), record: vi.fn(), learner: vi.fn(), lessonForStart: vi.fn(), activeSession: vi.fn(), recentQuestHistory: vi.fn(), transaction: vi.fn(),
   owned: vi.fn(), evaluate: vi.fn(), getMemory: vi.fn(), appendMemory: vi.fn(),
   start: vi.fn(), reserveAICall: vi.fn(), settleAICall: vi.fn(),
-  atomicBatch: vi.fn(), planMemory: vi.fn(), memoryRecord: vi.fn(), mastery: vi.fn(), evidenceCount: vi.fn(),
+  atomicBatch: vi.fn(), planMemory: vi.fn(), memoryRecord: vi.fn(), mastery: vi.fn(), evidenceCount: vi.fn(), startRequest: vi.fn(), pendingStart: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("./repository", () => ({
@@ -18,7 +19,11 @@ vi.mock("./repository", () => ({
     findOwnedSnapshot = mocks.snapshot;
     findOwned = mocks.record;
     findLearnerContext = mocks.learner;
+    findLessonForStart = mocks.lessonForStart;
+    findActiveSession = mocks.activeSession;
     findRecentDailyQuestScenarioKeys = mocks.recentQuestHistory;
+    findStartRequest = mocks.startRequest;
+    findPendingStartRequest = mocks.pendingStart;
     transaction = mocks.transaction;
   },
   findOwnedSessionInTransaction: mocks.owned,
@@ -270,10 +275,14 @@ beforeEach(() => {
   mocks.snapshot.mockImplementation(async () => structuredClone(record) as unknown as LearningSessionSnapshot);
   mocks.owned.mockImplementation(async () => ({ ...record }));
   mocks.learner.mockResolvedValue({ learnerProfile: null, skillMastery: [], dueVocabulary: [] });
+  mocks.lessonForStart.mockResolvedValue(null);
+  mocks.activeSession.mockResolvedValue(null);
   mocks.recentQuestHistory.mockResolvedValue([]);
   mocks.getMemory.mockResolvedValue(null);
   mocks.appendMemory.mockResolvedValue(null);
   mocks.memoryRecord.mockResolvedValue(null);
+  mocks.startRequest.mockResolvedValue(null);
+  mocks.pendingStart.mockResolvedValue(null);
   mocks.evidenceCount.mockImplementation(async () => record.evidence.length);
   mocks.planMemory.mockImplementation((_userId: string, _existing: unknown, evidence: {
     id: string; skillKey: string; score: number;
@@ -304,6 +313,7 @@ beforeEach(() => {
           dueVocabulary: input.learnerContext?.dueVocabulary,
           preferredTopics: input.learnerContext?.preferredTopics,
           recentScenarioKeys: input.recentScenarioKeys,
+          scenarioKey: input.scenarioKey,
         })
       : null;
     const startTemplate = getMissionTemplate(quest?.scenarioKey ?? input.scenarioKey);
@@ -311,6 +321,7 @@ beforeEach(() => {
       state: createMissionState(startTemplate, {
         goal: input.goal ?? quest?.goal,
         targetVocabulary: quest?.targetVocabulary,
+        maxTurns: input.maxTurns,
       }),
       opening: createStartMissionFallback(startTemplate),
       meta: { provider: "test", promptVersion: "test", groundedKnowledgeIds: [] },
@@ -334,14 +345,268 @@ function addEvidence() {
   });
 }
 
+function startPayloadHash(input: {
+  lessonId?: string;
+  mode: "LESSON_COACH" | "MISSION" | "DAILY_QUEST";
+  goal?: string;
+  scenarioKey?: string;
+}) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      lessonId: input.lessonId ?? null,
+      mode: input.mode,
+      goal: input.goal ?? null,
+      scenarioKey: input.scenarioKey ?? null,
+    }))
+    .digest("hex");
+}
+
+function savedStartRequest(input: {
+  clientStartId: string;
+  lessonId?: string;
+  mode: "LESSON_COACH" | "MISSION" | "DAILY_QUEST";
+  goal?: string;
+  scenarioKey?: string;
+}, overrides: Record<string, unknown> = {}) {
+  return {
+    id: "start-request-1",
+    userId,
+    clientStartId: input.clientStartId,
+    payloadHash: startPayloadHash(input),
+    status: "PENDING",
+    sessionId: null,
+    errorCode: null,
+    errorRetryAfterSeconds: null,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+}
+
+describe("session start idempotency ledger", () => {
+  const input = {
+    clientStartId: "00000000-0000-4000-8000-000000000101",
+    mode: "MISSION" as const,
+    scenarioKey: "cafe-order",
+  };
+
+  it("replays a committed owned session before mutable context or provider work", async () => {
+    record.id = "already-committed";
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input, {
+      status: "COMMITTED",
+      sessionId: record.id,
+    }));
+
+    const result = await createLearningSession(userId, input);
+
+    expect(result).toMatchObject({ idempotent: true, session: { id: record.id } });
+    expect(mocks.learner).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("rejects a changed body for an existing key before any provider or write", async () => {
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input, { payloadHash: "other-payload" }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "IDEMPOTENCY_CONFLICT",
+      status: 409,
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("returns an idempotency conflict before validating a changed replay body", async () => {
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input));
+
+    await expect(createLearningSession(userId, {
+      clientStartId: input.clientStartId,
+      mode: "LESSON_COACH",
+    })).rejects.toMatchObject({ code: "IDEMPOTENCY_CONFLICT", status: 409 });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("keeps a fresh pending request behind a bounded retry response", async () => {
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "START_IN_PROGRESS",
+      status: 409,
+      retryAfterSeconds: 2,
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+  });
+
+  it("does not reserve a second AI call while another primary start owns the user lease", async () => {
+    mocks.atomicBatch.mockResolvedValue([{ changes: 0 }]);
+    mocks.pendingStart.mockResolvedValue(savedStartRequest({
+      clientStartId: "00000000-0000-4000-8000-000000000199",
+      mode: "MISSION",
+      scenarioKey: "lost-luggage",
+    }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "START_IN_PROGRESS",
+      status: 409,
+      retryAfterSeconds: 2,
+    });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    const claim = mocks.atomicBatch.mock.calls[0]?.[0]?.[0] as AtomicStatement;
+    expect(claim.sql).toContain('WHERE "userId" = ? AND "status" = \'PENDING\'');
+  });
+
+  it("marks an expired foreign lease unknown without silently starting another provider call", async () => {
+    mocks.atomicBatch.mockImplementation(async (statements: AtomicStatement[]) => {
+      const first = statements[0];
+      if (first?.sql.includes('INSERT INTO "LearningSessionStartRequest"')) {
+        return [{ changes: 0 }];
+      }
+      if (first?.sql.includes("SET \"status\" = 'UNKNOWN'")) {
+        return [{ changes: 1 }];
+      }
+      return [{ changes: 0 }];
+    });
+    mocks.pendingStart.mockResolvedValue(savedStartRequest({
+      clientStartId: "00000000-0000-4000-8000-000000000198",
+      mode: "MISSION",
+      scenarioKey: "lost-luggage",
+    }, {
+      updatedAt: new Date(now.getTime() - 120_001),
+    }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "START_OUTCOME_UNKNOWN",
+      status: 409,
+    });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("replays a persisted, safe budget failure with its bounded retry window", async () => {
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input, {
+      status: "FAILED",
+      errorCode: "AI_REQUEST_LIMIT",
+      errorRetryAfterSeconds: 9,
+    }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "AI_REQUEST_LIMIT",
+      status: 429,
+      details: { retryAfterSeconds: 9 },
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+  });
+
+  it("re-reads a proven COMMITTED row when the atomic graph response is lost", async () => {
+    const committedSessionId = "committed-after-lost-response";
+    record.id = committedSessionId;
+    mocks.startRequest.mockResolvedValue(null);
+    mocks.atomicBatch.mockImplementation(async (statements: AtomicStatement[]) => {
+      if (statements[0]?.sql.includes('INSERT INTO "LearningSession"')) {
+        mocks.startRequest.mockResolvedValue(savedStartRequest(input, {
+          status: "COMMITTED",
+          sessionId: committedSessionId,
+        }));
+        throw new Error("libSQL response was lost after commit");
+      }
+      return [{ changes: 1 }];
+    });
+
+    const result = await createLearningSession(userId, input);
+
+    expect(result).toMatchObject({ idempotent: true, session: { id: committedSessionId } });
+    expect(mocks.start).toHaveBeenCalledOnce();
+    expect(mocks.reserveAICall).toHaveBeenCalledOnce();
+    expect(mocks.startRequest).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("Daily Quest start history", () => {
+  it("rejects a second primary start before reserving an AI call when an active session exists", async () => {
+    mocks.activeSession.mockResolvedValue({ id: "active-session" });
+
+    await expect(createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000010",
+      mode: "MISSION",
+      scenarioKey: "cafe-order",
+    })).rejects.toMatchObject({ code: "ACTIVE_SESSION_EXISTS", status: 409 });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("turns an atomic active-session fence loss into a replayable typed conflict", async () => {
+    mocks.atomicBatch.mockImplementation(async (statements: AtomicStatement[]) => {
+      if (statements[0]?.sql.includes('INSERT INTO "LearningSession"')) {
+        return statements.map((_, index) => ({ changes: index === statements.length - 2 ? 1 : 0 }));
+      }
+      return [{ changes: 1 }];
+    });
+
+    await expect(createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000020",
+      mode: "MISSION",
+      scenarioKey: "cafe-order",
+    })).rejects.toMatchObject({ code: "ACTIVE_SESSION_EXISTS", status: 409 });
+
+    expect(mocks.start).toHaveBeenCalledOnce();
+    expect(mocks.reserveAICall).toHaveBeenCalledOnce();
+  });
+
+  it("turns a Coach lesson unpublish race into a durable typed unavailable target", async () => {
+    const input = {
+      clientStartId: "00000000-0000-4000-8000-000000000021",
+      mode: "LESSON_COACH" as const,
+      lessonId: "00000000-0000-4000-8000-000000000022",
+    };
+    mocks.lessonForStart.mockResolvedValue({
+      id: input.lessonId,
+      title: "Listen at work",
+      topic: "listening",
+      transcript: "A short conversation.",
+      learningObjectives: "listening",
+      cefrLevel: "A2",
+      vocabulary: [],
+    });
+    mocks.atomicBatch.mockImplementation(async (statements: AtomicStatement[]) => {
+      if (statements[0]?.sql.includes('INSERT INTO "LearningSession"')) {
+        return statements.map((statement) => ({
+          changes: statement.sql.includes("'TARGET_UNAVAILABLE'") ? 1 : 0,
+        }));
+      }
+      return [{ changes: 1 }];
+    });
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "TARGET_UNAVAILABLE",
+      status: 404,
+    });
+
+    expect(mocks.reserveAICall).toHaveBeenCalledOnce();
+    expect(mocks.start).toHaveBeenCalledOnce();
+    const graph = mocks.atomicBatch.mock.calls.find(
+      ([statements]) => (statements as AtomicStatement[])[0]?.sql.includes('INSERT INTO "LearningSession"'),
+    )?.[0] as AtomicStatement[];
+    expect(graph[0]?.sql).toContain('"status" = \'PUBLISHED\'');
+  });
+
   it("does not persist a session, AI turn, or evidence when live AI is unavailable", async () => {
     mocks.start.mockRejectedValue(
       new AIUnavailableError({ reason: "provider_not_configured" }),
     );
 
     await expect(
-      createLearningSession(userId, { mode: "MISSION", scenarioKey: "cafe-order" }),
+      createLearningSession(userId, { clientStartId: "00000000-0000-4000-8000-000000000011", mode: "MISSION", scenarioKey: "cafe-order" }),
     ).rejects.toMatchObject({ code: "AI_UNAVAILABLE", status: 503 });
 
     expect(mocks.transaction).not.toHaveBeenCalled();
@@ -352,7 +617,7 @@ describe("Daily Quest start history", () => {
   it("passes only the owned validated recent history into the real Quest start path", async () => {
     mocks.recentQuestHistory.mockResolvedValue(["cafe-order"]);
 
-    const result = await createLearningSession(userId, { mode: "DAILY_QUEST" });
+    const result = await createLearningSession(userId, { clientStartId: "00000000-0000-4000-8000-000000000012", mode: "DAILY_QUEST" });
 
     expect(mocks.recentQuestHistory).toHaveBeenCalledWith(userId);
     expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
@@ -362,8 +627,78 @@ describe("Daily Quest start history", () => {
     expect(result.session.state.scenarioKey).not.toBe("cafe-order");
   });
 
+  it("honors a planner-pinned Quest scenario instead of generating a different one", async () => {
+    mocks.recentQuestHistory.mockResolvedValue(["lost-luggage"]);
+
+    const result = await createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000014",
+      mode: "DAILY_QUEST",
+      scenarioKey: "cafe-order",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({
+      mode: "DAILY_QUEST",
+      scenarioKey: "cafe-order",
+    }));
+    expect(result.session.state.scenarioKey).toBe("cafe-order");
+  });
+
+  it("derives the session turn budget from saved learner intent on the server", async () => {
+    mocks.getMemory.mockResolvedValue({
+      id: "memory-1",
+      userId,
+      goals: [],
+      recurringErrors: [],
+      provenSkills: [],
+      preferences: { dailyMinutes: 5 },
+    });
+
+    const result = await createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000015",
+      mode: "MISSION",
+      scenarioKey: "cafe-order",
+    });
+
+    expect(mocks.start).toHaveBeenCalledWith(expect.objectContaining({ maxTurns: 5 }));
+    expect(result.session.state.maxTurns).toBe(5);
+  });
+
+  it("rejects an unavailable scenario before reserving a provider call", async () => {
+    await expect(createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000016",
+      mode: "MISSION",
+      // Inherited object names must not pass an authored-template guard.
+      scenarioKey: "toString",
+    })).rejects.toMatchObject({ code: "TARGET_UNAVAILABLE", status: 404 });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("requires a Mission scenario instead of silently choosing a default", async () => {
+    await expect(createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000017",
+      mode: "MISSION",
+    })).rejects.toMatchObject({ code: "TARGET_UNAVAILABLE", status: 404 });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
+  it("returns a typed unavailable target when a Coach lesson disappears before start", async () => {
+    await expect(createLearningSession(userId, {
+      clientStartId: "00000000-0000-4000-8000-000000000018",
+      mode: "LESSON_COACH",
+      lessonId: "00000000-0000-4000-8000-000000000019",
+    })).rejects.toMatchObject({ code: "TARGET_UNAVAILABLE", status: 404 });
+
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+
   it("does not load Quest history for Mission or Coach starts", async () => {
-    await createLearningSession(userId, { mode: "MISSION", scenarioKey: "cafe-order" });
+    await createLearningSession(userId, { clientStartId: "00000000-0000-4000-8000-000000000013", mode: "MISSION", scenarioKey: "cafe-order" });
 
     expect(mocks.recentQuestHistory).not.toHaveBeenCalled();
     expect(mocks.start).toHaveBeenCalledWith(expect.not.objectContaining({
@@ -421,7 +756,7 @@ describe("session intervention persistence", () => {
   });
 
   it("overrides a false successful BOSS response, repeats the challenge and persists identical retry output", async () => {
-    record.stateJson = JSON.stringify({ ...initialState, phase: "BOSS", turnCount: 7 });
+    record.stateJson = JSON.stringify({ ...initialState, phase: "BOSS", turnCount: 6 });
     record.interventions.push(storedIntervention());
     const input = { ...turnInput, interventionId, content: "I need my flight ticket" };
 
@@ -443,6 +778,64 @@ describe("session intervention persistence", () => {
 });
 
 describe("session completion accounting", () => {
+  it("commits the final allowed turn as PARTIAL and never sends a sixth turn to AI", async () => {
+    record.stateJson = JSON.stringify({ ...initialState, turnCount: 4, maxTurns: 5 });
+    mocks.evaluate.mockImplementation(async ({ state, learnerMessage }) => ({
+      output: {
+        ...createEvaluateTurnFallback({ state, learnerMessage, template }),
+        shouldComplete: false,
+      },
+      meta: { provider: "test", promptVersion: "test", groundedKnowledgeIds: [] },
+    }));
+
+    const finalTurn = await submitLearningTurn(userId, sessionId, turnInput);
+
+    expect(finalTurn.session).toMatchObject({
+      status: "COMPLETED",
+      completionOutcome: "PARTIAL",
+      state: { phase: "DEBRIEF", turnCount: 5, maxTurns: 5 },
+    });
+    expect(record.evidence).toHaveLength(1);
+    await expect(submitLearningTurn(userId, sessionId, {
+      ...turnInput,
+      clientTurnId: "learner-turn-six",
+    })).rejects.toMatchObject({ status: 409 });
+    expect(mocks.evaluate).toHaveBeenCalledOnce();
+    expect(mocks.reserveAICall).toHaveBeenCalledOnce();
+  });
+
+  it("does not persist an unanswerable intervention on the final partial turn", async () => {
+    record.stateJson = JSON.stringify({ ...initialState, turnCount: 4, maxTurns: 5 });
+    mocks.evaluate.mockImplementation(async ({ state, learnerMessage }) => ({
+      output: {
+        ...createEvaluateTurnFallback({ state, learnerMessage, template }),
+        shouldComplete: false,
+        intervention: {
+          type: "FILL_BLANK",
+          prompt: "Name the missing item.",
+          spec: { placeholder: "One word" },
+          validator: { acceptedAnswers: ["suitcase"] },
+        },
+      },
+      meta: { provider: "test", promptVersion: "test", groundedKnowledgeIds: [] },
+    }));
+
+    const finalTurn = await submitLearningTurn(userId, sessionId, turnInput);
+
+    expect(finalTurn.session).toMatchObject({
+      status: "COMPLETED",
+      completionOutcome: "PARTIAL",
+      state: { phase: "DEBRIEF", turnCount: 5 },
+    });
+    expect(finalTurn.aiTurn?.content).toMatchObject({
+      pedagogicalAct: "REFLECT",
+      intervention: null,
+    });
+    expect(finalTurn.intervention).toBeNull();
+    expect(record.interventions).toHaveLength(0);
+    expect(JSON.stringify(finalTurn)).not.toContain("acceptedAnswers");
+  });
+
   it("counts natural completion once even when the final turn and complete endpoint are retried", async () => {
     record.stateJson = JSON.stringify({ ...initialState, phase: "BOSS", turnCount: 7 });
     const input = { ...turnInput, content: "I lost my black suitcase" };

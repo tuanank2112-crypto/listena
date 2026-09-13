@@ -27,7 +27,8 @@
     "dataset:import": "tsx scripts/import-dataset.ts",
     "dataset:build-d1-import": "tsx scripts/build-d1-core-import.ts",
     "tts:prebuild": "tsx scripts/tts-prebuild.ts",
-    "eval": "tsx eval/run.ts"
+    "eval": "tsx eval/run.ts",
+    "eval:quality": "tsx eval/quality-run.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

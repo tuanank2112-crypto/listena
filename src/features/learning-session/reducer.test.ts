@@ -80,8 +80,11 @@ describe("learningSessionPlayerReducer", () => {
     const nextAction = {
       kind: "MISSION" as const,
       scenarioKey: "cafe-order",
-      reason: "Use the skill again.",
-      evidenceRefs: ["evidence-1"],
+      reasonCode: "GOAL_PRACTICE" as const,
+      reasonVi: "Dùng lại kỹ năng này trong một tình huống mới.",
+      evidenceRefs: [{ source: "LEARNING" as const, id: "evidence-1" }],
+      estimatedMinutes: 10 as const,
+      decisionVersion: "p08-v1" as const,
     };
     const completed = session("COMPLETED");
     const afterTurn = learningSessionPlayerReducer(createInitialPlayerState(), {

@@ -51,4 +51,19 @@ describe("GET /api/recommendation", () => {
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
   });
+
+  it("computes recommendations without persisting from a GET request", async () => {
+    mocks.lessons.mockResolvedValue([
+      { id: "lesson-1", title: "At the hotel", cefrLevel: "A2", topic: "travel" },
+    ]);
+    mocks.recommendation.mockRejectedValue(new Error("GET must not write"));
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      recommendations: [expect.objectContaining({ lessonId: "lesson-1" })],
+    });
+    expect(mocks.recommendation).not.toHaveBeenCalled();
+  });
 });

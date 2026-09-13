@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -302,9 +303,11 @@ export function GamesClient() {
           <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="relative mb-9 overflow-hidden rounded-[32px] bg-[#18332d] p-6 text-white sm:p-8">
             <div className="relative z-10 max-w-2xl">
               <span className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-black text-[#f7d779]"><CalendarCheck2 className="h-3.5 w-3.5" /> Daily AI Quest</span>
-              <h2 className="mt-5 text-3xl font-black tracking-[-.05em] sm:text-4xl">Một nhiệm vụ chỉ dành cho hôm nay.</h2>
-              <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-white/65">AI dùng điểm yếu và từ cần ôn của bạn để dựng một cuộc hội thoại mới, không theo một bộ từ cố định.</p>
-              <StartSessionButton mode="DAILY_QUEST" label="Nhận nhiệm vụ hôm nay" className="mt-6 w-full sm:w-fit [&_button]:w-full [&_button]:bg-[#f7d779] [&_button]:text-[#18332d] [&_button]:shadow-none sm:[&_button]:w-auto" />
+              <h2 className="mt-5 text-3xl font-black tracking-[-.05em] sm:text-4xl">Xem nhiệm vụ được chọn cho hôm nay.</h2>
+              <p className="mt-3 max-w-xl text-sm font-bold leading-6 text-white/65">Trang Hôm nay chọn một bước tiếp theo từ bằng chứng học, mục tiêu và thời lượng bạn đã lưu. Ở đây bạn vẫn có thể tự chọn một Mission bên dưới.</p>
+              <Link href="/learner/dashboard" className="mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#f7d779] px-5 text-sm font-black text-[#18332d] shadow-none transition hover:-translate-y-0.5 sm:w-fit">
+                Xem nhiệm vụ hôm nay
+              </Link>
             </div>
             <div className="absolute -bottom-24 -right-16 h-64 w-64 rounded-full bg-[#f7d779]/15" />
             <Bot className="absolute bottom-7 right-9 hidden h-28 w-28 rotate-6 text-[#f7d779] sm:block" strokeWidth={1.15} />

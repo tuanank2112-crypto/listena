@@ -1,7 +1,7 @@
 import "server-only";
 
 import logger from "@/lib/logger";
-import { computeNextAction } from "@/server/learning/next-action";
+import { planNextLearningAction } from "@/server/learning/planner";
 import type { PublicLearningSession } from "@/features/learning-session/types";
 
 type SessionResult = { session: PublicLearningSession };
@@ -18,7 +18,10 @@ export async function withCompletedNextAction<T extends SessionResult>(
   try {
     return {
       ...result,
-      nextAction: await computeNextAction(userId, result.session.id),
+      // Dashboard and debrief intentionally consume the same read-only
+      // policy. The completed session is already durable before this helper
+      // runs, so a planner failure must never roll back its outcome.
+      nextAction: await planNextLearningAction(userId),
     };
   } catch (error) {
     logger.warn({ error, sessionId: result.session.id, userId }, "Next action unavailable");

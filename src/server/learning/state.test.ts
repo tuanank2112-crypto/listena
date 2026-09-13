@@ -62,6 +62,16 @@ describe("learning session state", () => {
   it("moves to debrief when the tutor recommends completion", () => {
     expect(applyTutorTurn(state, output({ shouldComplete: true })).phase).toBe("DEBRIEF");
   });
+
+  it("ends as partial at the server-owned turn budget even when the tutor does not request completion", () => {
+    const result = applyTutorTurn({ ...state, turnCount: 4, maxTurns: 5 }, output());
+
+    expect(result).toMatchObject({
+      phase: "DEBRIEF",
+      turnCount: 5,
+      completionOutcome: "PARTIAL",
+    });
+  });
 });
 
 describe("idempotency helpers", () => {

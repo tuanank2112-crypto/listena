@@ -16,7 +16,9 @@ export function applyTutorTurn(
   current: MissionState,
   output: TutorTurnOutput,
 ): MissionState {
-  const nextPhase = output.shouldComplete
+  const turnCount = current.turnCount + 1;
+  const reachedTurnBudget = turnCount >= current.maxTurns;
+  const nextPhase = output.shouldComplete || reachedTurnBudget
     ? "DEBRIEF"
     : (output.statePatch.phase ?? current.phase);
 
@@ -25,10 +27,15 @@ export function applyTutorTurn(
     phase: nextPhase,
     trust: clampScore(current.trust + output.statePatch.trustDelta),
     evidence: clampScore(current.evidence + output.statePatch.evidenceDelta),
-    turnCount: current.turnCount + 1,
+    turnCount,
     successfulTurns:
       current.successfulTurns + (output.statePatch.successfulTurn ? 1 : 0),
     recoveryCount: current.recoveryCount + (output.statePatch.recovered ? 1 : 0),
+    ...(output.shouldComplete
+      ? { completionOutcome: "COMPLETED" as const }
+      : reachedTurnBudget
+        ? { completionOutcome: "PARTIAL" as const }
+        : {}),
   });
 }
 

@@ -9,7 +9,11 @@ import {
   type LibSqlBatchStatement,
 } from "@/lib/libsql-batch";
 import { prisma } from "@/lib/prisma";
-import { isAIProviderError } from "@/server/ai/errors";
+import {
+  AIRequestBudgetError,
+  AIUnavailableError,
+  isAIProviderError,
+} from "@/server/ai/errors";
 import {
   reserveUserAICall,
   settleUserAICall,
@@ -21,10 +25,18 @@ import {
   type LessonTutorContext,
   type RecentTutorTurn,
 } from "@/server/ai/tutor-orchestrator";
+import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+import { turnBudgetForDailyMinutes } from "@/server/learning/decision";
 import { toLearningSessionDto } from "@/server/learning/dto";
 import {
   LearningSessionConflictError,
+  LearningSessionActiveConflictError,
+  LearningSessionIdempotencyConflictError,
   LearningSessionNotFoundError,
+  LearningSessionStartFailedError,
+  LearningSessionStartInProgressError,
+  LearningSessionStartOutcomeUnknownError,
+  LearningSessionTargetUnavailableError,
   LearningSessionValidationError,
 } from "@/server/learning/errors";
 import { applyInterventionOutcome, evaluateInterventionAnswer, splitIntervention } from "@/server/learning/intervention";
@@ -66,13 +78,54 @@ type LearnerMemoryWriteSnapshot = {
   fenceValues: LibSqlBatchValue[];
 };
 
+type StartRequestClaim =
+  | {
+      kind: "winner";
+      requestId: string;
+      userId: string;
+      clientStartId: string;
+      payloadHash: string;
+    }
+  | { kind: "replay"; sessionId: string };
+
+type StartRequestRecord = NonNullable<Awaited<
+  ReturnType<LearningSessionRepository["findStartRequest"]>
+>>;
+
+type StartPersistenceResult =
+  | "committed"
+  | "active-session"
+  | "target-unavailable"
+  | "unconfirmed";
+
 const repository = new LearningSessionRepository();
 const MAX_LEARNER_MEMORY_WRITE_ATTEMPTS = 3;
+const START_REQUEST_PENDING_LEASE_MS = 120_000;
+const START_REQUEST_RETRY_AFTER_SECONDS = 2;
 
 export async function createLearningSession(
   userId: string,
   input: CreateLearningSessionInput,
 ) {
+  // Resolve an existing request before looking up mutable lesson/profile data.
+  // A lost browser response must replay the committed owned session even if a
+  // lesson later becomes unpublished or the learner's current context changes.
+  const payloadHash = hashStartPayload(input);
+  const existingRequest = await repository.findStartRequest(userId, input.clientStartId);
+  if (existingRequest) {
+    const existingClaim = await reconcileExistingStartRequest(
+      userId,
+      input.clientStartId,
+      payloadHash,
+    );
+    if (existingClaim.kind === "replay") {
+      return {
+        session: await getCommittedStartSession(userId, existingClaim.sessionId),
+        idempotent: true,
+      };
+    }
+  }
+
   if (input.mode === "LESSON_COACH" && !input.lessonId) {
     throw new LearningSessionValidationError(
       "lessonId is required for lesson coach sessions",
@@ -80,32 +133,66 @@ export async function createLearningSession(
     );
   }
 
-  const [lesson, learner, learnerMemory, recentScenarioKeys] = await Promise.all([
+  // A replay with a changed body must report IDEMPOTENCY_CONFLICT above. For
+  // a genuinely new start, never let an invalid/stale authored target fall
+  // through to getMissionTemplate's defensive default scenario.
+  if (
+    input.mode === "MISSION"
+    && !isMissionScenarioKey(input.scenarioKey)
+  ) {
+    throw new LearningSessionTargetUnavailableError();
+  }
+  if (
+    input.mode === "DAILY_QUEST"
+    && input.scenarioKey
+    && !isMissionScenarioKey(input.scenarioKey)
+  ) {
+    throw new LearningSessionTargetUnavailableError();
+  }
+
+  const [lesson, learner, learnerMemory, recentScenarioKeys, activeSession] = await Promise.all([
     input.lessonId ? repository.findLessonForStart(input.lessonId) : null,
     repository.findLearnerContext(userId),
     getLearnerMemory(userId),
     input.mode === "DAILY_QUEST"
       ? repository.findRecentDailyQuestScenarioKeys(userId)
       : Promise.resolve([]),
+    repository.findActiveSession(userId),
   ]);
   if (input.lessonId && !lesson) {
-    throw new LearningSessionValidationError(
-      "The lesson is unavailable",
-      "LESSON_UNAVAILABLE",
-    );
+    throw new LearningSessionTargetUnavailableError();
   }
   if (!learner) {
     throw new LearningSessionNotFoundError();
   }
+  if (activeSession) {
+    throw new LearningSessionActiveConflictError();
+  }
+
+  const startClaim = await claimLearningSessionStart(userId, input);
+  if (startClaim.kind === "replay") {
+    return {
+      session: await getCommittedStartSession(userId, startClaim.sessionId),
+      idempotent: true,
+    };
+  }
 
   const learnerContext = makeLearnerContext(learner, learnerMemory);
+  const maxTurns = turnBudgetForDailyMinutes(learnerMemory?.preferences.dailyMinutes);
   const lessonContext = makeLessonContext(lesson);
   const sessionId = randomUUID();
-  const reservation = await reserveUserAICall({
-    userId,
-    purpose: "start_mission",
-    requestIdentity: sessionId,
-  });
+  let reservation: Awaited<ReturnType<typeof reserveUserAICall>>;
+  try {
+    reservation = await reserveUserAICall({
+      userId,
+      purpose: "start_mission",
+      requestIdentity: startClaim.requestId,
+    });
+  } catch (error) {
+    await safelyMarkStartRequestFailed(startClaim, error);
+    throw error;
+  }
+
   let generated: Awaited<ReturnType<typeof startMission>>;
   try {
     generated = await startMission({
@@ -115,35 +202,358 @@ export async function createLearningSession(
       learnerKey: userId,
       learnerContext,
       lessonContext,
+      maxTurns,
       ...(input.mode === "DAILY_QUEST" ? { recentScenarioKeys } : {}),
     });
   } catch (error) {
-    await settleUserAICall(reservation, {
-      success: false,
-      failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
-    });
-    throw error;
+    try {
+      await settleUserAICall(reservation, {
+        success: false,
+        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+      });
+    } catch {
+      const recovered = await recoverCommittedStart(startClaim);
+      if (recovered) return recovered;
+      await safelyMarkStartRequestUnknown(startClaim);
+      throw new LearningSessionStartOutcomeUnknownError();
+    }
+    if (isKnownNoCallStartFailure(error)) {
+      await safelyMarkStartRequestFailed(startClaim, error);
+      throw error;
+    } else {
+      // A timeout or opaque upstream failure can have been billed even though
+      // no session graph was committed. Preserve the key and force explicit
+      // reconciliation rather than triggering another provider call.
+      await safelyMarkStartRequestUnknown(startClaim);
+      throw new LearningSessionStartOutcomeUnknownError();
+    }
   }
-  await settleUserAICall(reservation, {
-    success: true,
-    provider: generated.meta.provider,
-    model: generated.meta.model,
-  });
+
+  try {
+    await settleUserAICall(reservation, {
+      success: true,
+      provider: generated.meta.provider,
+      model: generated.meta.model,
+    });
+  } catch {
+    const recovered = await recoverCommittedStart(startClaim);
+    if (recovered) return recovered;
+    await safelyMarkStartRequestUnknown(startClaim);
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
+
   const openingClientTurnId = `opening:${sessionId}`;
   const publicOpening = toPublicTutorContent(generated.opening);
 
-  await persistLearningSessionStartWithAtomicBatch({
-    sessionId,
-    openingClientTurnId,
-    userId,
-    input,
-    lesson,
-    learnerContext,
-    generated,
-    publicOpening,
-  });
+  let persistence: StartPersistenceResult;
+  try {
+    persistence = await persistLearningSessionStartWithAtomicBatch({
+      sessionId,
+      openingClientTurnId,
+      userId,
+      input,
+      lesson,
+      learnerContext,
+      generated,
+      publicOpening,
+      startClaim,
+    });
+  } catch {
+    const recovered = await recoverCommittedStart(startClaim);
+    if (recovered) return recovered;
+    await safelyMarkStartRequestUnknown(startClaim);
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
+  if (persistence === "active-session") {
+    throw new LearningSessionActiveConflictError();
+  }
+  if (persistence === "target-unavailable") {
+    throw new LearningSessionTargetUnavailableError();
+  }
+  if (persistence !== "committed") {
+    const recovered = await recoverCommittedStart(startClaim);
+    if (recovered) return recovered;
+    await safelyMarkStartRequestUnknown(startClaim);
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
 
-  return { session: await getOwnedSessionDto(userId, sessionId) };
+  // A response can still be lost after this point. The COMMITTED record is
+  // retained so the same clientStartId returns this exact owned session.
+  return { session: await getOwnedSessionDto(userId, sessionId), idempotent: false };
+}
+
+function hashStartPayload(input: CreateLearningSessionInput) {
+  return createHash("sha256")
+    .update(JSON.stringify({
+      lessonId: input.lessonId ?? null,
+      mode: input.mode,
+      goal: input.goal ?? null,
+      scenarioKey: input.scenarioKey ?? null,
+    }))
+    .digest("hex");
+}
+
+async function claimLearningSessionStart(
+  userId: string,
+  input: CreateLearningSessionInput,
+  attempt = 0,
+): Promise<StartRequestClaim> {
+  const requestId = randomUUID();
+  const payloadHash = hashStartPayload(input);
+  const timestamp = libSqlTimestamp(new Date());
+  let changes = 0;
+  try {
+    const result = await executeAtomicLibSqlBatch([
+      {
+        sql: `INSERT INTO "LearningSessionStartRequest"
+                ("id", "userId", "clientStartId", "payloadHash", "status", "createdAt", "updatedAt")
+              SELECT ?, ?, ?, ?, 'PENDING', ?, ?
+              WHERE NOT EXISTS (
+                SELECT 1 FROM "LearningSessionStartRequest"
+                WHERE "userId" = ? AND "clientStartId" = ?
+              )
+                AND NOT EXISTS (
+                  SELECT 1 FROM "LearningSessionStartRequest"
+                  WHERE "userId" = ? AND "status" = 'PENDING'
+                )
+                AND NOT EXISTS (
+                  SELECT 1 FROM "LearningSession"
+                  WHERE "userId" = ? AND "status" = 'ACTIVE'
+              )`,
+        values: [
+          requestId,
+          userId,
+          input.clientStartId,
+          payloadHash,
+          timestamp,
+          timestamp,
+          userId,
+          input.clientStartId,
+          userId,
+          userId,
+        ],
+      },
+    ]);
+    changes = result[0]?.changes ?? 0;
+  } catch (error) {
+    if (!isUniqueConflict(error)) throw error;
+  }
+
+  if (changes === 1) {
+    return { kind: "winner", requestId, userId, clientStartId: input.clientStartId, payloadHash };
+  }
+
+  const sameKey = await repository.findStartRequest(userId, input.clientStartId);
+  if (sameKey) {
+    return reconcileExistingStartRequest(userId, input.clientStartId, payloadHash);
+  }
+
+  const pending = await repository.findPendingStartRequest(userId);
+  if (pending) {
+    if (isStartRequestExpired(pending) && await expireStartRequest(pending)) {
+      // Its graph can no longer commit because every graph write requires
+      // PENDING. Do not silently turn this browser action into a new provider
+      // call, though: the original external call may have had an ambiguous
+      // outcome. The UI must show the explicit fresh-start warning first.
+      throw new LearningSessionStartOutcomeUnknownError();
+    }
+    throw new LearningSessionStartInProgressError(START_REQUEST_RETRY_AFTER_SECONDS);
+  }
+
+  if (await repository.findActiveSession(userId)) {
+    throw new LearningSessionActiveConflictError();
+  }
+  // A conflicting writer may have completed between the INSERT SELECT and
+  // these reads. Retry one claim; after that, uncertainty is safer than a
+  // duplicate provider reservation.
+  if (attempt < 1) return claimLearningSessionStart(userId, input, attempt + 1);
+  throw new LearningSessionStartOutcomeUnknownError();
+}
+
+async function reconcileExistingStartRequest(
+  userId: string,
+  clientStartId: string,
+  payloadHash: string,
+  attempt = 0,
+): Promise<StartRequestClaim> {
+  const existing = await repository.findStartRequest(userId, clientStartId);
+  if (!existing) {
+    // A failed/ambiguous database read must never be treated as permission to
+    // create a second session from the same browser action.
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
+  if (existing.payloadHash !== payloadHash) {
+    throw new LearningSessionIdempotencyConflictError();
+  }
+
+  if (existing.status === "COMMITTED") {
+    if (existing.sessionId) return { kind: "replay", sessionId: existing.sessionId };
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
+  if (existing.status === "FAILED") {
+    throw replayKnownStartFailure(existing);
+  }
+  if (existing.status === "UNKNOWN") {
+    throw new LearningSessionStartOutcomeUnknownError();
+  }
+
+  if (isStartRequestExpired(existing)) {
+    const markedUnknown = await expireStartRequest(existing);
+    if (markedUnknown) throw new LearningSessionStartOutcomeUnknownError();
+    if (attempt < 1) {
+      return reconcileExistingStartRequest(userId, clientStartId, payloadHash, attempt + 1);
+    }
+  }
+  throw new LearningSessionStartInProgressError(START_REQUEST_RETRY_AFTER_SECONDS);
+}
+
+function isStartRequestExpired(record: StartRequestRecord) {
+  const updatedAt = record.updatedAt.getTime();
+  return !Number.isFinite(updatedAt)
+    || updatedAt <= Date.now() - START_REQUEST_PENDING_LEASE_MS;
+}
+
+async function expireStartRequest(record: StartRequestRecord) {
+  const now = new Date();
+  const result = await executeAtomicLibSqlBatch([
+    {
+      sql: `UPDATE "LearningSessionStartRequest"
+            SET "status" = 'UNKNOWN', "errorCode" = 'START_OUTCOME_UNKNOWN', "updatedAt" = ?
+            WHERE "id" = ? AND "userId" = ?
+              AND "status" = 'PENDING' AND "updatedAt" <= ?`,
+      values: [
+        libSqlTimestamp(now),
+        record.id,
+        record.userId,
+        libSqlTimestamp(new Date(now.getTime() - START_REQUEST_PENDING_LEASE_MS)),
+      ],
+    },
+  ]);
+  return result[0]?.changes === 1;
+}
+
+async function safelyMarkStartRequestFailed(
+  claim: Extract<StartRequestClaim, { kind: "winner" }>,
+  error: unknown,
+) {
+  const failure = knownStartFailure(error);
+  if (!failure) return;
+  try {
+    await updatePendingStartRequest(claim, "FAILED", failure.code, failure.retryAfterSeconds);
+  } catch {
+    // The original typed error is more useful to the caller. A subsequent
+    // same-key request remains safely PENDING until its lease expires.
+  }
+}
+
+async function safelyMarkStartRequestUnknown(
+  claim: Extract<StartRequestClaim, { kind: "winner" }>,
+) {
+  try {
+    await updatePendingStartRequest(claim, "UNKNOWN", "START_OUTCOME_UNKNOWN");
+  } catch {
+    // See the caller's original typed/provider/database error. The expiry
+    // transition still prevents an automatic repeat if this write was lost.
+  }
+}
+
+async function updatePendingStartRequest(
+  claim: Extract<StartRequestClaim, { kind: "winner" }>,
+  status: "FAILED" | "UNKNOWN",
+  errorCode: string,
+  errorRetryAfterSeconds: number | null = null,
+) {
+  await executeAtomicLibSqlBatch([
+    {
+      sql: `UPDATE "LearningSessionStartRequest"
+            SET "status" = ?, "errorCode" = ?, "errorRetryAfterSeconds" = ?, "updatedAt" = ?
+            WHERE "id" = ? AND "userId" = ? AND "payloadHash" = ?
+              AND "status" = 'PENDING'`,
+      values: [
+        status,
+        errorCode,
+        errorRetryAfterSeconds,
+        libSqlTimestamp(new Date()),
+        claim.requestId,
+        claim.userId,
+        claim.payloadHash,
+      ],
+    },
+  ]);
+}
+
+function knownStartFailure(error: unknown) {
+  if (!isAIProviderError(error)) return null;
+  if (error.code === "AI_REQUEST_LIMIT") {
+    return {
+      code: error.code,
+      retryAfterSeconds: Math.max(1, Math.ceil(error.details.retryAfterSeconds ?? 1)),
+    };
+  }
+  if (error.code === "AI_UNAVAILABLE" && isKnownNoCallStartFailure(error)) {
+    return { code: error.code, retryAfterSeconds: null };
+  }
+  return null;
+}
+
+/** Only stored, safe failure codes are recreated; unknown history stays generic. */
+function replayKnownStartFailure(record: StartRequestRecord) {
+  if (record.errorCode === "AI_REQUEST_LIMIT") {
+    return new AIRequestBudgetError({
+      reason: "ACTIVE",
+      retryAfterSeconds: Math.max(1, record.errorRetryAfterSeconds ?? 1),
+    });
+  }
+  if (record.errorCode === "AI_UNAVAILABLE") {
+    return new AIUnavailableError({ reason: "provider_not_configured" });
+  }
+  if (record.errorCode === "ACTIVE_SESSION_EXISTS") {
+    return new LearningSessionActiveConflictError();
+  }
+  if (record.errorCode === "TARGET_UNAVAILABLE") {
+    return new LearningSessionTargetUnavailableError();
+  }
+  return new LearningSessionStartFailedError();
+}
+
+function isKnownNoCallStartFailure(error: unknown) {
+  return isAIProviderError(error) && [
+    "provider_not_configured",
+    "invalid_provider_configuration",
+    "invalid_input",
+  ].includes(error.details.reason);
+}
+
+async function getCommittedStartSession(userId: string, sessionId: string) {
+  const record = await repository.findOwned(userId, sessionId);
+  if (!record) throw new LearningSessionStartOutcomeUnknownError();
+  return toLearningSessionDto(record);
+}
+
+/**
+ * A libSQL response may be lost after an atomic batch commits. Before marking
+ * that request UNKNOWN, re-read the durable ledger and replay only a proven,
+ * owned session.
+ */
+async function recoverCommittedStart(
+  claim: Extract<StartRequestClaim, { kind: "winner" }>,
+) {
+  try {
+    const existing = await repository.findStartRequest(claim.userId, claim.clientStartId);
+    if (
+      existing?.status === "COMMITTED"
+      && existing.sessionId
+      && existing.payloadHash === claim.payloadHash
+    ) {
+      return {
+        session: await getCommittedStartSession(claim.userId, existing.sessionId),
+        idempotent: true as const,
+      };
+    }
+  } catch {
+    // A failed reconciliation read is not proof that the request is safe to repeat.
+  }
+  return null;
 }
 
 /**
@@ -159,7 +569,8 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
   learnerContext: LearnerTutorContext;
   generated: Awaited<ReturnType<typeof startMission>>;
   publicOpening: ReturnType<typeof toPublicTutorContent>;
-}) {
+  startClaim: Extract<StartRequestClaim, { kind: "winner" }>;
+}): Promise<StartPersistenceResult> {
   const now = new Date();
   const createdAt = libSqlTimestamp(now);
   const openingTurnId = randomUUID();
@@ -171,7 +582,23 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
     {
       sql: `INSERT INTO "LearningSession"
               ("id", "userId", "lessonId", "mode", "status", "goal", "levelSnapshot", "stateJson", "startedAt", "updatedAt")
-            VALUES (?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?)`,
+            SELECT ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?
+            WHERE EXISTS (
+              SELECT 1 FROM "LearningSessionStartRequest"
+              WHERE "id" = ? AND "userId" = ? AND "clientStartId" = ?
+                AND "payloadHash" = ? AND "status" = 'PENDING'
+            )
+              AND NOT EXISTS (
+                SELECT 1 FROM "LearningSession"
+                WHERE "userId" = ? AND "status" = 'ACTIVE'
+              )
+              AND (
+                ? <> 'LESSON_COACH'
+                OR EXISTS (
+                  SELECT 1 FROM "Lesson"
+                  WHERE "id" = ? AND "status" = 'PUBLISHED'
+                )
+              )`,
       values: [
         input.sessionId,
         input.userId,
@@ -182,12 +609,22 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
         JSON.stringify(input.generated.state),
         createdAt,
         createdAt,
+        input.startClaim.requestId,
+        input.userId,
+        input.input.clientStartId,
+        input.startClaim.payloadHash,
+        input.userId,
+        input.input.mode,
+        input.lesson?.id ?? input.input.lessonId ?? null,
       ],
     },
     {
       sql: `INSERT INTO "LearningTurn"
               ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
-            VALUES (?, ?, 1, ?, 'AI', 'PROMPT', ?, ?, ?)`,
+            SELECT ?, ?, 1, ?, 'AI', 'PROMPT', ?, ?, ?
+            WHERE EXISTS (
+              SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+            )`,
       values: [
         openingTurnId,
         input.sessionId,
@@ -195,6 +632,8 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
         JSON.stringify(input.publicOpening),
         input.generated.opening.targetSkill,
         createdAt,
+        input.sessionId,
+        input.userId,
       ],
     },
   ];
@@ -202,7 +641,10 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
     statements.push({
       sql: `INSERT INTO "Intervention"
               ("id", "sessionId", "sourceTurnId", "type", "prompt", "specJson", "validatorJson", "status", "createdAt")
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDING', ?)`,
+            SELECT ?, ?, ?, ?, ?, ?, ?, 'PENDING', ?
+            WHERE EXISTS (
+              SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+            )`,
       values: [
         randomUUID(),
         input.sessionId,
@@ -212,13 +654,18 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
         JSON.stringify(intervention.public.spec),
         JSON.stringify(intervention.validator),
         createdAt,
+        input.sessionId,
+        input.userId,
       ],
     });
   }
   statements.push({
     sql: `INSERT INTO "AIInteraction"
             ("id", "userId", "sessionId", "turnId", "purpose", "provider", "model", "promptVersion", "inputHash", "validatedOutput", "fallbackReason", "schemaValid", "success", "createdAt")
-          VALUES (?, ?, ?, ?, 'start_mission', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          SELECT ?, ?, ?, ?, 'start_mission', ?, ?, ?, ?, ?, ?, ?, ?, ?
+          WHERE EXISTS (
+            SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+          )`,
     values: [
       interactionId,
       input.userId,
@@ -227,17 +674,97 @@ async function persistLearningSessionStartWithAtomicBatch(input: {
       input.generated.meta.provider,
       input.generated.meta.model ?? null,
       input.generated.meta.promptVersion,
-      createHash("sha256")
-        .update(JSON.stringify({ mode: input.input.mode, scenarioKey: input.generated.state.scenarioKey }))
-        .digest("hex"),
+      input.startClaim.payloadHash,
       JSON.stringify(input.generated.opening),
       input.generated.meta.fallbackReason ?? null,
       libSqlBoolean(true),
       libSqlBoolean(!input.generated.meta.fallbackReason),
       createdAt,
+      input.sessionId,
+      input.userId,
     ],
   });
-  await executeAtomicLibSqlBatch(statements);
+  const targetUnavailableStatementIndex = statements.push({
+    sql: `UPDATE "LearningSessionStartRequest"
+          SET "status" = 'FAILED', "errorCode" = 'TARGET_UNAVAILABLE', "errorRetryAfterSeconds" = NULL, "updatedAt" = ?
+          WHERE "id" = ? AND "userId" = ? AND "clientStartId" = ?
+            AND "payloadHash" = ? AND "status" = 'PENDING'
+            AND ? = 'LESSON_COACH'
+            AND NOT EXISTS (
+              SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM "LearningSession"
+              WHERE "userId" = ? AND "status" = 'ACTIVE'
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM "Lesson"
+              WHERE "id" = ? AND "status" = 'PUBLISHED'
+            )`,
+    values: [
+      createdAt,
+      input.startClaim.requestId,
+      input.userId,
+      input.input.clientStartId,
+      input.startClaim.payloadHash,
+      input.input.mode,
+      input.sessionId,
+      input.userId,
+      input.userId,
+      input.lesson?.id ?? input.input.lessonId ?? null,
+    ],
+  }) - 1;
+  const activeConflictStatementIndex = statements.push({
+    sql: `UPDATE "LearningSessionStartRequest"
+          SET "status" = 'FAILED', "errorCode" = 'ACTIVE_SESSION_EXISTS', "errorRetryAfterSeconds" = NULL, "updatedAt" = ?
+          WHERE "id" = ? AND "userId" = ? AND "clientStartId" = ?
+            AND "payloadHash" = ? AND "status" = 'PENDING'
+            AND NOT EXISTS (
+              SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+            )
+            AND EXISTS (
+              SELECT 1 FROM "LearningSession"
+              WHERE "userId" = ? AND "status" = 'ACTIVE'
+            )`,
+    values: [
+      createdAt,
+      input.startClaim.requestId,
+      input.userId,
+      input.input.clientStartId,
+      input.startClaim.payloadHash,
+      input.sessionId,
+      input.userId,
+      input.userId,
+    ],
+  }) - 1;
+  const commitStatementIndex = statements.push({
+    sql: `UPDATE "LearningSessionStartRequest"
+          SET "status" = 'COMMITTED', "sessionId" = ?, "errorCode" = NULL, "errorRetryAfterSeconds" = NULL, "updatedAt" = ?
+          WHERE "id" = ? AND "userId" = ? AND "clientStartId" = ?
+            AND "payloadHash" = ? AND "status" = 'PENDING'
+            AND EXISTS (
+              SELECT 1 FROM "LearningSession" WHERE "id" = ? AND "userId" = ?
+            )`,
+    values: [
+      input.sessionId,
+      createdAt,
+      input.startClaim.requestId,
+      input.userId,
+      input.input.clientStartId,
+      input.startClaim.payloadHash,
+      input.sessionId,
+      input.userId,
+    ],
+  }) - 1;
+  const results = await executeAtomicLibSqlBatch(statements);
+  if (results[0]?.changes === 1 && results[commitStatementIndex]?.changes === 1) {
+    return "committed";
+  }
+  if (results[targetUnavailableStatementIndex]?.changes === 1) {
+    return "target-unavailable";
+  }
+  if (results[activeConflictStatementIndex]?.changes === 1) return "active-session";
+  return "unconfirmed";
 }
 
 /**
@@ -472,12 +999,9 @@ async function persistLearningTurnWithAtomicBatch(input: {
     ],
   });
 
-  if (input.output.shouldComplete) {
-    const completedState = {
-      ...input.nextState,
-      phase: "DEBRIEF" as const,
-      completionOutcome: "COMPLETED" as const,
-    };
+  const completionOutcome = input.nextState.completionOutcome;
+  if (completionOutcome) {
+    const completedState = input.nextState;
     const studyMinutes = Math.max(
       1,
       Math.min(120, Math.round((now.getTime() - input.snapshot.startedAt.getTime()) / 60_000)),
@@ -491,7 +1015,7 @@ async function persistLearningTurnWithAtomicBatch(input: {
         values: [
           timestamp,
           JSON.stringify(completedState),
-          makeSummary(completedState, "COMPLETED"),
+          makeSummary(completedState, completionOutcome),
           timestamp,
           input.sessionId,
           input.userId,
@@ -611,6 +1135,10 @@ export async function submitLearningTurn(
   if (snapshot.status !== "ACTIVE") {
     throw new LearningSessionConflictError("Only active sessions accept new turns");
   }
+  const currentState = parseMissionState(snapshot.stateJson);
+  if (currentState.turnCount >= currentState.maxTurns) {
+    throw new LearningSessionConflictError("This session has reached its turn budget");
+  }
 
   const intervention = resolveIntervention(snapshot, input.interventionId);
   const interventionEvaluation = intervention
@@ -626,7 +1154,6 @@ export async function submitLearningTurn(
     getLearnerMemory(userId),
   ]);
   if (!learnerContext) throw new LearningSessionNotFoundError();
-  const currentState = parseMissionState(snapshot.stateJson);
   const reservation = await reserveUserAICall({
     userId,
     purpose: "evaluate_turn",
@@ -654,7 +1181,7 @@ export async function submitLearningTurn(
     provider: generated.meta.provider,
     model: generated.meta.model,
   });
-  const output = intervention && interventionEvaluation
+  let output = intervention && interventionEvaluation
     ? applyInterventionOutcome(
         currentState,
         generated.output,
@@ -665,9 +1192,16 @@ export async function submitLearningTurn(
           spec: parseJsonObject(intervention.specJson),
           validator: parseJsonObject(intervention.validatorJson),
         }),
-      )
+    )
     : generated.output;
-  const nextState = applyTutorTurn(currentState, output);
+  let nextState = applyTutorTurn(currentState, output);
+  // A final state cannot expose a fresh intervention because the learner has
+  // no active session in which to answer it. Keep the evidence for this turn,
+  // but never persist an impossible pending repair.
+  if (nextState.completionOutcome && output.intervention) {
+    output = { ...output, intervention: null, pedagogicalAct: "REFLECT" };
+    nextState = applyTutorTurn(currentState, output);
+  }
 
   const committed = await persistLearningTurnWithAtomicBatch({
     userId,
@@ -900,6 +1434,13 @@ function makeLearnerContext(
   learnerMemory: LearnerMemory | null,
 ): LearnerTutorContext {
   const profile = learner.learnerProfile;
+  const savedTopics = learnerMemory?.preferences.preferredTopics;
+  const preferredTopics = Array.isArray(savedTopics)
+    ? savedTopics.filter((item): item is string => typeof item === "string" && Boolean(item.trim())).map((item) => item.trim())
+    : profile?.preferredTopics
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean) ?? [];
   const skillMastery = Object.fromEntries(
     learner.skillMastery
       .filter((item) =>
@@ -912,10 +1453,7 @@ function makeLearnerContext(
 
   return {
     cefrLevel: profile?.estimatedCefrLevel ?? "A2",
-    preferredTopics: profile?.preferredTopics
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
+    preferredTopics,
     skillMastery,
     dueVocabulary: learner.dueVocabulary,
     learnerMemory: learnerMemory ?? undefined,

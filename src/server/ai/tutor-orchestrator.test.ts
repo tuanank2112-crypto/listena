@@ -139,6 +139,27 @@ describe("tutor orchestrator", () => {
     expect(result.meta.groundedKnowledgeIds).toEqual([]);
   });
 
+  it("honors a planner-pinned Daily Quest scenario and server-derived turn budget", async () => {
+    const result = await startMission(
+      {
+        mode: "DAILY_QUEST",
+        scenarioKey: "cafe-order",
+        maxTurns: 5,
+        learnerKey: "learner-42",
+        learnerContext: {
+          preferredTopics: ["travel"],
+          skillMastery: { communication: 0.2 },
+        },
+        recentScenarioKeys: ["cafe-order"],
+      },
+      { provider: new DeterministicMockTutorProvider() },
+    );
+
+    expect(result.state).toMatchObject({ scenarioKey: "cafe-order", maxTurns: 5 });
+    expect(result.dailyQuest?.scenarioKey).toBe("cafe-order");
+    expect(result.state.targetVocabulary).toContain("coffee");
+  });
+
   it("completes a deterministic BOSS turn when the learner succeeds", async () => {
     const state = createMissionState(getMissionTemplate("lost-luggage"));
     state.phase = "BOSS";

@@ -99,7 +99,7 @@ export const MISSION_TEMPLATES: Record<MissionScenarioKey, MissionTemplate> = {
 export function isMissionScenarioKey(
   value: string | undefined,
 ): value is MissionScenarioKey {
-  return Boolean(value && value in MISSION_TEMPLATES);
+  return typeof value === "string" && Object.hasOwn(MISSION_TEMPLATES, value);
 }
 
 export function getMissionTemplate(scenarioKey?: string): MissionTemplate {
@@ -110,7 +110,7 @@ export function getMissionTemplate(scenarioKey?: string): MissionTemplate {
 
 export function createMissionState(
   template: MissionTemplate,
-  overrides: { goal?: string; targetVocabulary?: string[] } = {},
+  overrides: { goal?: string; targetVocabulary?: string[]; maxTurns?: number } = {},
 ): MissionState {
   return {
     phase: "ENCOUNTER",
@@ -129,8 +129,14 @@ export function createMissionState(
     turnCount: 0,
     successfulTurns: 0,
     recoveryCount: 0,
-    maxTurns: template.maxTurns,
+    maxTurns: validTurnBudget(overrides.maxTurns) ?? template.maxTurns,
   };
+}
+
+function validTurnBudget(value: number | undefined) {
+  return typeof value === "number" && Number.isInteger(value) && value >= 3 && value <= 20
+    ? value
+    : undefined;
 }
 
 function uniqueWords(values: string[]) {

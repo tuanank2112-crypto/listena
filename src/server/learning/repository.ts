@@ -218,6 +218,59 @@ export class LearningSessionRepository {
     });
   }
 
+  findStartRequest(userId: string, clientStartId: string) {
+    return this.db.learningSessionStartRequest.findUnique({
+      where: {
+        userId_clientStartId: { userId, clientStartId },
+      },
+      select: {
+        id: true,
+        userId: true,
+        clientStartId: true,
+        payloadHash: true,
+        status: true,
+        sessionId: true,
+        errorCode: true,
+        errorRetryAfterSeconds: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  /**
+   * A PENDING row is the durable, user-scoped pre-provider start lease. It is
+   * deliberately queried separately from a same-key replay: a second browser
+   * action must wait for the first primary session to resolve instead of
+   * reserving a second AI call.
+   */
+  findPendingStartRequest(userId: string) {
+    return this.db.learningSessionStartRequest.findFirst({
+      where: { userId, status: "PENDING" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      select: {
+        id: true,
+        userId: true,
+        clientStartId: true,
+        payloadHash: true,
+        status: true,
+        sessionId: true,
+        errorCode: true,
+        errorRetryAfterSeconds: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+  }
+
+  findActiveSession(userId: string) {
+    return this.db.learningSession.findFirst({
+      where: { userId, status: "ACTIVE" },
+      orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
+      select: { id: true },
+    });
+  }
+
   findOwned(userId: string, sessionId: string): Promise<LearningSessionRecord | null> {
     return this.db.learningSession.findFirst({
       where: { id: sessionId, userId },

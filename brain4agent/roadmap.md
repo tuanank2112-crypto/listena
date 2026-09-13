@@ -1,7 +1,19 @@
 # Roadmap AI-native
 
+## Plan08 đã hoàn thành implementation + local acceptance 2026-09-13
+
+Plan08 P80–P85 đã được root điều phối, tích hợp và nghiệm thu ở local: reliability trước (GET không ghi DB, account/start contract atomic + idempotent, auth-secret thống nhất), rồi learner intent/calibration trung thực, planner chung bounded/evidence-aware, bộ quality offline versioned và E2E integration. Bằng chứng local: 387/387 tests/78 files; type-check PASS; lint exit 0 với 34 warnings có sẵn; production build PASS; Prisma validate/generate PASS; E2E fresh SQLite 20/20; quality 30/30 cases + 12/12 dataset checks. Không mở rộng legacy evidence ngoài adapter có hợp đồng và không tạo synthetic session.
+
+Đây không đóng Plan07 hoặc tạo release: Vercel/Turso Preview/Production, final D1 export, cutover, rollback, successful live provider và consented learner pilot vẫn OPEN; `current_version` giữ 0.5.0. P2 không chặn release local: Coach reservation có thể bị tiêu nếu lesson bị unpublish sau provider output nhưng trước atomic target commit; commit sẽ reject target và không ghi stale graph, nên đây là quota waste bị giới hạn cần xử lý riêng.
+
+## Historical review và kế hoạch cải tiến 2026-09-13 — planning phase
+
+User tái xác nhận: tự học tiếng Anh AI-native, root điều phối như orchestrator. [Review](../docs/PROJECT_REVIEW_2026-09-13.md) và [Plan08](../planning/08_2026-09-13_ai-native-self-learning/plan.md) đã lập trong pha review; thứ tự P81 → P82 → P83 → P84/P85 đã được thực hiện ở local theo checkpoint bên trên. Các local work package không vượt hosted gates Plan07.
+
+Baseline của pha review:293 tests/67files + type-check PASS. Khi đó GET recommendation còn upsert khi write mode disabled; registration-fence proof cũ không chứng minh toàn bộ read-only window. Các finding đã được xử lý và local fingerprint đã có; hosted clone equivalent vẫn là gate Plan07 riêng và cutover vẫn cần phê duyệt riêng.
+
 ## Đang thực hiện — staging + bounded Preview evidence
-[Plan07](../planning/07_2026-09-10_vercel-turso-migration/plan.md): thay thế mục tiêu hạ tầng bằng Next.js Node trên Vercel + Turso/libSQL. P71/P72/P73 hiện có 293 unit tests/67 files, type-check, lint 0 errors/34 pre-existing warnings, standard Next build, E2E 16/16, canonical Turso staging verification và bounded Vercel Preview proof trên clone riêng. Preview chứng minh registration/dashboard, một game evidence write/readback, Tutor typed-unavailable và final write fence; chưa có hosted duplicate retry/private-owner proof đầy đủ, final D1 export, Production, DNS/traffic cutover, rollback drill hay successful live Kira smoke. Cloudflare Worker + D1 đang triển khai được giữ làm rollback asset.
+[Plan07](../planning/07_2026-09-10_vercel-turso-migration/plan.md): thay thế mục tiêu hạ tầng bằng Next.js Node trên Vercel + Turso/libSQL. Proof hosted đã ghi nhận vẫn là canonical Turso staging và bounded Vercel Preview clone (registration/dashboard, một game evidence write/readback, Tutor typed-unavailable và final write fence). Working tree hiện được xác nhận lại bởi Plan08 local gates 387 tests/78 files, type-check, lint exit 0/34 warnings có sẵn, standard Next build, Prisma validate/generate, E2E 20/20 và quality offline 30/30 + 12/12; các số này không thay thế hosted duplicate-retry/private-owner proof, final D1 export, Production, DNS/traffic cutover, rollback drill hay successful live Kira smoke. Cloudflare Worker + D1 đang triển khai được giữ làm rollback asset.
 
 ## Đã hoàn tất local
 [Plan06](../planning/06_2026-09-10_personalized-ai-learning/plan.md): production now has additive core curriculum recovery, private persisted AI-lesson contracts and server-authoritative adaptive games. Worker `ee5de83a-c2a9-45e3-996a-e624072bb250` deploys the Kira Chat Completions adapter plus P65 D1/resource guards; secret-change version `d1347978-d0c6-4c66-bf44-01315783ec9b` adds the opaque Kira binding. The final real-provider smoke remains pending; no live-AI claim is made before then.

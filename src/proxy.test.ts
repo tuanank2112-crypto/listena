@@ -7,6 +7,7 @@ import { config, proxy } from "./proxy";
 const secret = "isolated-proxy-regression-secret";
 
 beforeEach(() => {
+  vi.stubEnv("AUTH_SECRET", undefined);
   vi.stubEnv("NEXTAUTH_SECRET", secret);
   vi.stubEnv("NEXTAUTH_URL", undefined);
   vi.stubEnv("AUTH_URL", undefined);
@@ -21,9 +22,15 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
-async function request(url: string, secure: boolean, role = "LEARNER", chunked = false) {
+async function request(
+  url: string,
+  secure: boolean,
+  role = "LEARNER",
+  chunked = false,
+  signingSecret = secret,
+) {
   const name = `${secure ? "__Secure-" : ""}authjs.session-token`;
-  const token = await encode({ token: { id: "learner", role }, secret, salt: name });
+  const token = await encode({ token: { id: "learner", role }, secret: signingSecret, salt: name });
   const split = Math.floor(token.length / 2);
   const cookie = chunked
     ? `${name}.0=${token.slice(0, split)}; ${name}.1=${token.slice(split)}`
@@ -121,6 +128,21 @@ describe("authenticated page proxy", () => {
     vi.stubEnv("NEXTAUTH_URL", "http://localhost");
     vi.stubEnv("AUTH_URL", "https://school.example");
     const response = await proxy(await request("http://localhost/learner/dashboard", true));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("uses AUTH_SECRET ahead of a different NEXTAUTH_SECRET", async () => {
+    vi.stubEnv("AUTH_SECRET", "preferred-auth-secret");
+    vi.stubEnv("NEXTAUTH_SECRET", "legacy-nextauth-secret");
+
+    const response = await proxy(await request(
+      "https://school.example/learner/dashboard",
+      true,
+      "LEARNER",
+      false,
+      "preferred-auth-secret",
+    ));
+
     expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
