@@ -25,7 +25,7 @@
 
 ## Exit gates
 
-- ✅ local — additive migration applied to local SQLite; Prisma validate/status, 424 unit tests across 87 files, type-check, lint (0 errors; existing warnings), standard production build, and isolated fresh-SQLite E2E 20/20 pass.
+- ✅ local — additive migration applied to local SQLite; Prisma validate/status, 425 unit tests across 87 files, type-check, lint (0 errors; existing warnings), standard production build, and isolated fresh-SQLite E2E 20/20 pass.
 - ⬜ Preview disabled — artifact builds with mail config names present; read paths and public pages work while writes remain fenced.
 - ⬜ Preview enabled — disposable clone proves full action links, one reset, feedback receipt, owner isolation, and provider result without secret exposure.
 - ⬜ server — production is evaluated only under Plan07 target/export/cutover gates.

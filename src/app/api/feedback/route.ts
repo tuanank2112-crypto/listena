@@ -73,6 +73,10 @@ export async function POST(request: Request) {
     await delivery.send(renderFeedbackReceiptEmail({
       to: user.email,
       recipientName: user.name,
+      // A receipt can be replied to without exposing a learner-controlled
+      // header. Use the explicitly configured reply inbox when present, then
+      // the controlled support mailbox that received this feedback.
+      replyTo: process.env.EMAIL_REPLY_TO?.trim() || supportEmail,
       idempotencyKey: `feedback-receipt-${feedback.id}`,
     }));
 

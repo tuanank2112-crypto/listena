@@ -18,7 +18,8 @@ Templates must be plain Vietnamese-first text plus safe HTML. They must not incl
 - `/verify-email?token=…` submits the token once and gives a clear verified, expired, or already-used outcome.
 - `/forgot-password` always confirms that an email will be sent if eligible, with no account-existence disclosure.
 - `/reset-password?token=…` requires new-password confirmation and returns to login only after the server confirms the atomic reset.
-- `/feedback` is authenticated and verified-only, with subject and message fields. It acknowledges storage even if delivery is temporarily unavailable.
+- `/feedback` is authenticated and verified-only, with subject and message fields. It acknowledges storage even if delivery is temporarily unavailable. The learner navigation exposes a visible `Phản hồi` entry on desktop and mobile.
+- The acknowledgement uses configured `EMAIL_REPLY_TO`, or the controlled `SUPPORT_EMAIL` fallback, so a learner can reply to the receipt without a browser-supplied mail header.
 
 ## Error handling
 

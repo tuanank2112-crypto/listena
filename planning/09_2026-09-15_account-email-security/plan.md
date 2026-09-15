@@ -15,6 +15,7 @@
 - 2026-09-15: Password-reset requests return one uniform accepted response whether or not an email exists. This prevents account enumeration.
 - 2026-09-15: Feedback is a verified learner action, persisted server-side and delivered to configured support email with an acknowledgement to the learner when mail delivery is available.
 - 2026-09-15: Registration itself issues the first verification link. A failed mail delivery leaves the new account unverified and reports a safe retry state; the browser does not auto-sign in or create a second initial request.
+- 2026-09-15: Feedback is visible in learner navigation. Its acknowledgement uses only a configured support reply address, or the controlled support mailbox fallback, so a learner reply cannot target a browser-supplied recipient.
 
 ## Superseded decisions
 

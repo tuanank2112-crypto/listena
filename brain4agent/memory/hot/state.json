@@ -19,7 +19,7 @@
     "plan": "planning/09_2026-09-15_account-email-security/plan.md",
     "scope": "Account email verification, one-time recovery and verified feedback local implementation accepted; Preview mail delivery remains unproven",
     "scenarios_passed": [
-      "unit-tests-424-across-87-files",
+      "unit-tests-425-across-87-files",
       "type-check",
       "lint-exit-0-existing-repository-warnings",
       "standard-Next-production-build",
@@ -35,7 +35,7 @@
   },
   "current_verification": {
     "type_check": "PASS via npm run type-check on 2026-09-15",
-    "unit_tests": "424 passed across 87 files on 2026-09-15",
+    "unit_tests": "425 passed across 87 files on 2026-09-15",
     "lint": "exit 0 with existing repository warnings on 2026-09-15",
     "build": "PASS via standard Next production build on 2026-09-15",
     "prisma": "validate/status PASS and additive account-email migration applied locally on 2026-09-15",

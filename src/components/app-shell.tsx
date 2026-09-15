@@ -12,6 +12,7 @@ import {
   LayoutDashboard,
   Library,
   LogOut,
+  MessageSquareText,
   PlusCircle,
   Sparkles,
 } from "lucide-react";
@@ -24,6 +25,7 @@ const learnerNav = [
   { href: "/learner/games", label: "Trò chơi", icon: Gamepad2 },
   { href: "/learner/flashcards", label: "Ôn từ", icon: Sparkles },
   { href: "/learner/progress", label: "Tiến bộ", icon: BarChart3 },
+  { href: "/feedback", label: "Phản hồi", icon: MessageSquareText },
 ];
 
 const teacherNav = [
@@ -82,6 +84,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <p className="truncate text-[11px] text-[#7b857f]">{session?.user?.email}</p>
             </div>
           </div>
+          <Link
+            className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]"
+            href="/feedback"
+          >
+            <MessageSquareText className="h-4 w-4" /> Phản hồi
+          </Link>
           <button onClick={() => signOut({ callbackUrl: "/" })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]">
             <LogOut className="h-4 w-4" /> Đăng xuất
           </button>
@@ -91,7 +99,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <main className={cn("min-h-screen pb-24 lg:ml-[232px] lg:pb-0", isTeacher && "bg-[#030014] text-white")}>{children}</main>
 
       {!isTeacher && (
-        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-3 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
+        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
           {learnerNav.map((item) => {
             const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
             return (

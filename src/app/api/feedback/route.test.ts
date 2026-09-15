@@ -162,6 +162,7 @@ describe("POST /api/feedback", () => {
     expect(mocks.renderFeedbackReceiptEmail).toHaveBeenCalledWith({
       to: user.email,
       recipientName: user.name,
+      replyTo: "noreply@example.com",
       idempotencyKey: "feedback-receipt-feedback-1",
     });
     expect(mocks.send).toHaveBeenNthCalledWith(1, { kind: "support" });
@@ -169,6 +170,20 @@ describe("POST /api/feedback", () => {
     expect(mocks.update).toHaveBeenCalledWith({
       where: { id: "feedback-1" },
       data: { deliveryStatus: "SENT", deliveredAt: expect.any(Date) },
+    });
+  });
+
+  it("makes a feedback receipt replyable through the controlled support mailbox", async () => {
+    delete process.env.EMAIL_REPLY_TO;
+
+    const response = await POST(request());
+
+    expect(response.status).toBe(201);
+    expect(mocks.renderFeedbackReceiptEmail).toHaveBeenCalledWith({
+      to: user.email,
+      recipientName: user.name,
+      replyTo: "support@example.com",
+      idempotencyKey: "feedback-receipt-feedback-1",
     });
   });
 

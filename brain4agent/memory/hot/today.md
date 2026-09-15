@@ -3,7 +3,7 @@
 ## Plan09 account email security — local acceptance 2026-09-15
 - Added the additive Prisma migration for `User.emailVerifiedAt`, hashed one-time account-action tokens and feedback delivery state; applied it only to local `dev.db`. No reset, seed, Vercel, Turso, D1 or Production write occurred.
 - Registration remains unverified and sends its initial link through the server-side Resend boundary. Credentials rejects an unverified account after a correct password, password reset request is non-enumerating, and feedback is attributed server-side to an authenticated verified user.
-- Local evidence: `npm test` 424/424 across 87 files; `npm run type-check`; `npm run lint` 0 errors with existing warnings; `npm run build`; Prisma validate/status; isolated fresh-SQLite `npm run test:e2e` 20/20. The E2E fixture accounts were marked verified; a reveal-button accessible name regression was caught and corrected.
+- Local evidence: `npm test` 425/425 across 87 files; `npm run type-check`; `npm run lint` 0 errors with existing warnings; `npm run build`; Prisma validate/status; isolated fresh-SQLite `npm run test:e2e` 20/20. The E2E fixture accounts were marked verified; a reveal-button accessible name regression was caught and corrected. Learner navigation exposes feedback, while receipt replies use a controlled support mailbox.
 - Preview remains blocked on configuration and hosted evidence: Resend API key, verified sender, support inbox, and a disposable Turso clone/enabled write window under Plan07. Do not claim real inbox delivery or auto-verify historical accounts.
 
 ## Plan08 implementation + local acceptance 2026-09-13 — current checkpoint
