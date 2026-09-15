@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Plan09 account email security, local accepted (2026-09-15; hosted mail evidence open)
+- Add additive `emailVerifiedAt`, hashed one-time account-action tokens and durable feedback records. Credentials sign-in now requires the server-recorded email proof, while proxy/session claims reject pre-verification sessions.
+- Add verification resend/confirm and password-reset request/confirm APIs, server-only Resend delivery, safe Vietnamese action emails, and verified-user feedback notification plus acknowledgement. Raw action tokens, mail keys and feedback text never enter logs or tracked config.
+- Add login/register/recovery/verification/feedback pages, reset the synthetic E2E accounts to verified state, and preserve a generic request response for absent and existing email addresses.
+- Local evidence: additive migration applied to local SQLite; 424/424 unit tests across 87 files; type-check; lint 0 errors with existing warnings; standard build; Prisma validate/status; isolated E2E 20/20. No Resend credential, Vercel write enable, Turso Preview mail proof, Production mutation, or release version claim is included.
+
 ## Unreleased — Plan08 local implementation and acceptance (2026-09-13; hosted/live/pilot open)
 - Complete the local AI-native self-learning improvement package: P81 removes read-side recommendation persistence, makes account/session-start boundaries atomic and durable, aligns auth-secret resolution, and proves the disabled-read surface with an all-table E2E fingerprint; P82 adds learner intent plus honest mastery/count presentation; P83 routes dashboard/session/game actions through one bounded, evidence-aware planner; P84 adds versioned offline quality cases; P85 records independent local acceptance.
 - Local evidence: 387/387 tests across 78 files, type-check PASS, lint exit 0 with 34 pre-existing warnings, standard Next production build PASS, Prisma validate/generate PASS, isolated fresh-SQLite E2E 20/20, and offline quality evaluation 30/30 cases with 12/12 dataset checks.

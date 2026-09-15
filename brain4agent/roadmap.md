@@ -1,5 +1,11 @@
 # Roadmap AI-native
 
+## Plan09 local acceptance 2026-09-15 — verified email, recovery and feedback
+
+[Plan09](../planning/09_2026-09-15_account-email-security/plan.md) now gives the authentication surface a durable email-ownership boundary: new accounts cannot sign in until a one-time verification link succeeds; password recovery stores only hashed tokens and returns indistinguishable request responses; verified learners can persist feedback and receive mail acknowledgement when Resend is configured. The local SQLite migration is additive and applied only locally. Local proof: 424/424 unit tests across 87 files, type-check, lint with 0 errors and existing warnings, standard build, Prisma validation/status, and isolated E2E 20/20. The E2E seed/fixtures mark synthetic accounts verified so regression login represents an already-proven inbox owner.
+
+Hosted email proof remains open. Before an enabled Preview window, configure `EMAIL_PROVIDER=resend`, a Resend key, verified `EMAIL_FROM`, `SUPPORT_EMAIL`, and the public Vercel origin; then use a disposable Turso clone and return the branch Preview to the Plan07 write fence after evidence. No historic account is auto-verified, no production account is touched, and stateless JWT sessions are not globally revoked by password reset.
+
 ## Plan08 đã hoàn thành implementation + local acceptance 2026-09-13
 
 Plan08 P80–P85 đã được root điều phối, tích hợp và nghiệm thu ở local: reliability trước (GET không ghi DB, account/start contract atomic + idempotent, auth-secret thống nhất), rồi learner intent/calibration trung thực, planner chung bounded/evidence-aware, bộ quality offline versioned và E2E integration. Bằng chứng local: 387/387 tests/78 files; type-check PASS; lint exit 0 với 34 warnings có sẵn; production build PASS; Prisma validate/generate PASS; E2E fresh SQLite 20/20; quality 30/30 cases + 12/12 dataset checks. Không mở rộng legacy evidence ngoài adapter có hợp đồng và không tạo synthetic session.
@@ -25,14 +31,15 @@ Baseline của pha review:293 tests/67files + type-check PASS. Khi đó GET reco
 [Plan03](../planning/03_2026-09-08_learning-loop-completion/plan.md): hoàn thiện memory transaction, next-action UI, timeline, curriculum và TTS auth. Local gates PASS: 139 unit, type-check, lint 0 error, eval mock 15/15, build, Prisma validate, Python sidecar 3/3 và E2E 15/15 trên DB tạm. Production là kế hoạch hạ tầng riêng trong tương lai, không phải Plan 03 này.
 
 ## Ưu tiên tiếp theo
-1. Hoàn tất Preview clone gate còn thiếu: hosted duplicate retry/idempotency và private-resource owner isolation; sau từng window phải trả branch Preview về `MIGRATION_WRITE_MODE=disabled`.
-2. Đối chiếu disabled-window fresh login/read + before/after fingerprint đầy đủ trên clone, rồi giữ canonical staging không nhận Preview data và không promote staging DB sang production.
-3. Sau Preview đạt, xin phê duyệt riêng cho final D1 export/cutover, giữ Cloudflare rollback trước khi Turso nhận write; sau write phải có quyết định reconciliation trước mọi rollback.
-4. Chỉ sau khi target hosting đạt điều kiện: record one bounded successful persisted personalized-lesson/Kira smoke against the hosted binding, rồi quan sát quota/cost/latency trước khi mở rộng live generation. OpenAI remains an explicit alternate path, not a Kira URL override.
-5. Pedagogical eval thật: thử nghiệm người học, đo tiến bộ/transfer và efficacy của Coach/Mission/Quest/PRACTICE thay vì số chat.
-6. Learner memory xuyên phiên mở rộng: mục tiêu dài hạn, sở thích, quyền riêng tư và kiểm thử với người thật.
-7. Thiết kế unified evidence contract cho legacy attempt/review/game (không tạo synthetic session); đồng thời audit server-owned game grading, self-service teacher role và transaction legacy.
-8. Dọn 34 lint warnings theo gói riêng.
+1. Configure the Plan09 Resend Preview variables and use a disposable clone to prove verification, one reset and feedback acknowledgement; after the window return Preview to `MIGRATION_WRITE_MODE=disabled`.
+2. Hoàn tất Preview clone gate còn thiếu: hosted duplicate retry/idempotency và private-resource owner isolation; sau từng window phải trả branch Preview về `MIGRATION_WRITE_MODE=disabled`.
+3. Đối chiếu disabled-window fresh login/read + before/after fingerprint đầy đủ trên clone, rồi giữ canonical staging không nhận Preview data và không promote staging DB sang production.
+4. Sau Preview đạt, xin phê duyệt riêng cho final D1 export/cutover, giữ Cloudflare rollback trước khi Turso nhận write; sau write phải có quyết định reconciliation trước mọi rollback.
+5. Chỉ sau khi target hosting đạt điều kiện: record one bounded successful persisted personalized-lesson/Kira smoke against the hosted binding, rồi quan sát quota/cost/latency trước khi mở rộng live generation. OpenAI remains an explicit alternate path, not a Kira URL override.
+6. Pedagogical eval thật: thử nghiệm người học, đo tiến bộ/transfer và efficacy của Coach/Mission/Quest/PRACTICE thay vì số chat.
+7. Learner memory xuyên phiên mở rộng: mục tiêu dài hạn, sở thích, quyền riêng tư và kiểm thử với người thật.
+8. Thiết kế unified evidence contract cho legacy attempt/review/game (không tạo synthetic session); đồng thời audit server-owned game grading, self-service teacher role và transaction legacy.
+9. Dọn 34 lint warnings theo gói riêng.
 
 ## Idea vault
 STT/pronunciation, streaming, nhiệm vụ sinh theo mục tiêu thực, concurrent review schedule, bỏ legacy Kokoro sau quyết định deprecation. Đây là backlog, không phải tính năng đã có.

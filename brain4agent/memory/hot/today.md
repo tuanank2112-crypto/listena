@@ -1,5 +1,11 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Plan09 account email security — local acceptance 2026-09-15
+- Added the additive Prisma migration for `User.emailVerifiedAt`, hashed one-time account-action tokens and feedback delivery state; applied it only to local `dev.db`. No reset, seed, Vercel, Turso, D1 or Production write occurred.
+- Registration remains unverified and sends its initial link through the server-side Resend boundary. Credentials rejects an unverified account after a correct password, password reset request is non-enumerating, and feedback is attributed server-side to an authenticated verified user.
+- Local evidence: `npm test` 424/424 across 87 files; `npm run type-check`; `npm run lint` 0 errors with existing warnings; `npm run build`; Prisma validate/status; isolated fresh-SQLite `npm run test:e2e` 20/20. The E2E fixture accounts were marked verified; a reveal-button accessible name regression was caught and corrected.
+- Preview remains blocked on configuration and hosted evidence: Resend API key, verified sender, support inbox, and a disposable Turso clone/enabled write window under Plan07. Do not claim real inbox delivery or auto-verify historical accounts.
+
 ## Plan08 implementation + local acceptance 2026-09-13 — current checkpoint
 - Root completed and integrated the Plan08 local scope for the AI-native self-learning loop: P81 reliability, P82 learner intent/truth, P83 shared bounded planner, P84 offline quality assets, and P85 local acceptance. Existing Mission/Coach/Daily Quest, server grading, evidence and adaptive context were strengthened rather than replaced.
 - Fresh local evidence: `npm test` 387/387 across 78 files; `npm run type-check` PASS; lint exit 0 with 34 pre-existing warnings; production build PASS; `npx prisma validate` and `npx prisma generate` PASS; isolated fresh-SQLite Playwright E2E 20/20; offline quality evaluation 30/30 cases and 12/12 dataset checks. The recommendation read path now has an all-application-table no-mutation E2E fingerprint.

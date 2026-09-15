@@ -132,14 +132,26 @@ enum AdaptiveGameRunStatus {
   EXPIRED
 }
 
+enum AccountActionPurpose {
+  VERIFY_EMAIL
+  PASSWORD_RESET
+}
+
+enum FeedbackDeliveryStatus {
+  PENDING
+  SENT
+  EMAIL_UNAVAILABLE
+}
+
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String // hashed
-  role      Role     @default(LEARNER)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String    @id @default(uuid())
+  name            String
+  email           String    @unique
+  password        String // hashed
+  role            Role      @default(LEARNER)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
 
   learnerProfile             LearnerProfile?
   learnerMemory              LearnerMemory?
@@ -156,9 +168,40 @@ model User {
   personalizedLessonAttempts PersonalizedLessonAttempt[]
   adaptiveGameRuns           AdaptiveGameRun[]
   adaptiveEvidence           AdaptiveEvidence[]
+  accountActionTokens        AccountActionToken[]
+  feedbackMessages           FeedbackMessage[]
   coursesCreated             Course[]                    @relation("CourseCreator")
   lessonsCreated             Lesson[]                    @relation("LessonCreator")
   lessonsReviewed            Lesson[]                    @relation("LessonReviewer")
+}
+
+model AccountActionToken {
+  id        String               @id @default(uuid())
+  userId    String
+  purpose   AccountActionPurpose
+  tokenHash String               @unique
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime             @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose, createdAt])
+  @@index([purpose, expiresAt])
+}
+
+model FeedbackMessage {
+  id             String                 @id @default(uuid())
+  userId         String
+  subject        String
+  message        String
+  deliveryStatus FeedbackDeliveryStatus @default(PENDING)
+  createdAt      DateTime               @default(now())
+  deliveredAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
 }
 
 model LearnerMemory {

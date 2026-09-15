@@ -14,6 +14,7 @@ async function createAndLoginLearner(page: Page) {
       email,
       password: await hash("memory-test-password", 10),
       role: "LEARNER",
+      emailVerifiedAt: new Date(),
       learnerProfile: { create: {} },
     },
   });

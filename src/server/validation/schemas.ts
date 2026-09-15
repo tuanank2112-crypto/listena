@@ -149,13 +149,33 @@ export const CreateLessonSchema = z.object({
     .min(1),
 });
 
+const NormalizedEmailSchema = z.string().trim().toLowerCase().email().max(320);
+
 export const RegisterSchema = z.object({
-  name: z.string().min(1).max(100),
-  email: z.string().email(),
-  password: z.string().min(6).max(100),
+  name: z.string().trim().min(1).max(100),
+  email: NormalizedEmailSchema,
+  password: z.string().min(8).max(100),
 });
 
 export const LoginSchema = z.object({
-  email: z.string().email(),
-  password: z.string().min(1),
+  email: NormalizedEmailSchema,
+  password: z.string().min(1).max(100),
+});
+
+export const AccountActionTokenSchema = z.object({
+  token: z.string().min(43).max(128),
+});
+
+export const AccountActionRequestSchema = z.object({
+  email: NormalizedEmailSchema,
+});
+
+export const PasswordResetConfirmSchema = z.object({
+  token: z.string().min(43).max(128),
+  password: z.string().min(8).max(100),
+});
+
+export const FeedbackSchema = z.object({
+  subject: z.string().trim().min(3).max(160),
+  message: z.string().trim().min(10).max(5000),
 });

@@ -13,6 +13,7 @@ async function createAndLoginLearner(page: Page) {
     email,
     password: await hash("timeline-test-password", 10),
     role: "LEARNER",
+    emailVerifiedAt: new Date(),
     learnerProfile: { create: {} },
   } });
   await page.goto("/login");
@@ -137,6 +138,7 @@ test("timeline shows all learner activity kinds and published curriculum without
     email: `other-timeline-${suffix}@example.com`,
     password: "not-used-for-login",
     role: "LEARNER",
+    emailVerifiedAt: new Date(),
   } });
   const otherSession = await db.learningSession.create({ data: {
     userId: otherUser.id,

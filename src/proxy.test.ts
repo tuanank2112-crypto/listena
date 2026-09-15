@@ -28,9 +28,14 @@ async function request(
   role = "LEARNER",
   chunked = false,
   signingSecret = secret,
+  isEmailVerified = true,
 ) {
   const name = `${secure ? "__Secure-" : ""}authjs.session-token`;
-  const token = await encode({ token: { id: "learner", role }, secret: signingSecret, salt: name });
+  const token = await encode({
+    token: { id: "learner", role, isEmailVerified },
+    secret: signingSecret,
+    salt: name,
+  });
   const split = Math.floor(token.length / 2);
   const cookie = chunked
     ? `${name}.0=${token.slice(0, split)}; ${name}.1=${token.slice(split)}`
@@ -151,6 +156,48 @@ describe("authenticated page proxy", () => {
       headers: { cookie: "__Secure-authjs.session-token=invalid" },
     }));
     expect(new URL(response.headers.get("location")!).pathname).toBe("/login");
+  });
+
+  it("redirects a signed but unverified session to login", async () => {
+    const response = await proxy(await request(
+      "https://school.example/learner/dashboard",
+      true,
+      "LEARNER",
+      false,
+      secret,
+      false,
+    ));
+
+    const location = new URL(response.headers.get("location")!);
+    expect(location.pathname).toBe("/login");
+    expect(location.searchParams.get("error")).toBe("email_not_verified");
+  });
+
+  it("rejects a signed but unverified session on protected APIs", async () => {
+    const response = await proxy(await request(
+      "https://school.example/api/feedback",
+      true,
+      "LEARNER",
+      false,
+      secret,
+      false,
+    ));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: "EMAIL_NOT_VERIFIED" });
+  });
+
+  it("keeps public account-action APIs available to an unverified session", async () => {
+    const response = await proxy(await request(
+      "https://school.example/api/account/verification/request",
+      true,
+      "LEARNER",
+      false,
+      secret,
+      false,
+    ));
+
+    expect(response.headers.get("x-middleware-next")).toBe("1");
   });
 
   it.each([

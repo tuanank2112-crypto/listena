@@ -43,7 +43,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
   // it on a credentials form races with signIn() fetching its CSRF token.
   // These public entry pages do not consume useSession(); mount the provider
   // once the user moves into the app instead.
-  if (pathname === "/login" || pathname === "/register") {
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/verify-email" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password"
+  ) {
     return children;
   }
 

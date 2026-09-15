@@ -8,6 +8,10 @@ const mocks = vi.hoisted(() => ({
   hash: vi.fn(),
   info: vi.fn(),
   error: vi.fn(),
+  warn: vi.fn(),
+  issueAccountActionToken: vi.fn(),
+  sendVerificationEmail: vi.fn(),
+  isEmailDeliveryUnavailableError: vi.fn(),
 }));
 
 vi.mock("@/lib/prisma", () => ({
@@ -20,7 +24,16 @@ vi.mock("@/lib/libsql-batch", () => ({
   libSqlTimestamp: (value: Date) => value.getTime(),
 }));
 vi.mock("bcryptjs", () => ({ hash: mocks.hash }));
-vi.mock("@/lib/logger", () => ({ default: { info: mocks.info, error: mocks.error } }));
+vi.mock("@/lib/logger", () => ({ default: { info: mocks.info, error: mocks.error, warn: mocks.warn } }));
+vi.mock("@/server/account-actions", () => ({
+  issueAccountActionToken: mocks.issueAccountActionToken,
+}));
+vi.mock("@/server/account-email", () => ({
+  sendVerificationEmail: mocks.sendVerificationEmail,
+}));
+vi.mock("@/server/email", () => ({
+  isEmailDeliveryUnavailableError: mocks.isEmailDeliveryUnavailableError,
+}));
 
 import { POST } from "./route";
 
@@ -102,6 +115,9 @@ beforeEach(async () => {
   ], "write");
   mocks.findUnique.mockResolvedValue(null);
   mocks.hash.mockResolvedValue("bcrypt-hash");
+  mocks.issueAccountActionToken.mockResolvedValue({ rawToken: "test-token" });
+  mocks.sendVerificationEmail.mockResolvedValue(undefined);
+  mocks.isEmailDeliveryUnavailableError.mockReturnValue(false);
   mocks.executeAtomicBatch.mockImplementation(async (statements: Array<{
     sql: string;
     values?: Array<string | number | null>;
@@ -127,6 +143,7 @@ describe("POST /api/register", () => {
       name: "Lan",
       email: "lan@example.com",
       role: "LEARNER",
+      verificationEmailSent: true,
     });
     expect(mocks.hash).toHaveBeenCalledWith("safe-pass", 12);
     expect(mocks.executeAtomicBatch).toHaveBeenCalledTimes(1);
@@ -137,6 +154,24 @@ describe("POST /api/register", () => {
 
     const user = await database.execute('SELECT "role", "password" FROM "User"');
     expect(user.rows[0]).toMatchObject({ role: "LEARNER", password: "bcrypt-hash" });
+    expect(mocks.sendVerificationEmail).toHaveBeenCalledWith(expect.objectContaining({
+      recipient: expect.objectContaining({ email: "lan@example.com" }),
+      rawToken: "test-token",
+    }));
+  });
+
+  it("keeps the unverified account and reports mail unavailability without exposing a token", async () => {
+    mocks.sendVerificationEmail.mockRejectedValue(new Error("provider unavailable"));
+
+    const response = await request();
+
+    expect(response.status).toBe(201);
+    await expect(response.json()).resolves.toMatchObject({ verificationEmailSent: false });
+    await expect(rowCount("User")).resolves.toBe(1);
+    expect(mocks.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ reason: "unknown" }),
+      "Initial verification email delivery unavailable",
+    );
   });
 
   it.each([

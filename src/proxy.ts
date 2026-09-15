@@ -7,6 +7,9 @@ import { resolveMigrationWriteMode } from "@/lib/migration-write-gate";
 const publicPaths = [
   "/login",
   "/register",
+  "/forgot-password",
+  "/reset-password",
+  "/verify-email",
   "/api/auth",
   "/_next",
   "/favicon.ico",
@@ -34,6 +37,26 @@ function isAuthApiPath(pathname: string): boolean {
   return pathname === "/api/auth" || pathname.startsWith("/api/auth/");
 }
 
+function isPublicAccountActionApiPath(pathname: string): boolean {
+  return pathname === "/api/register"
+    || pathname === "/api/account/verification/request"
+    || pathname === "/api/account/verification/confirm"
+    || pathname === "/api/account/password-reset/request"
+    || pathname === "/api/account/password-reset/confirm";
+}
+
+function authOrigin(req: NextRequest) {
+  return process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? req.url;
+}
+
+async function readToken(req: NextRequest) {
+  return getToken({
+    req,
+    secret: requireAuthSecret(),
+    secureCookie: new URL(authOrigin(req)).protocol === "https:",
+  });
+}
+
 function isUnsafeWriteMethod(method: string): boolean {
   return ["POST", "PUT", "PATCH", "DELETE"].includes(method);
 }
@@ -57,6 +80,20 @@ export async function proxy(req: NextRequest) {
       return NextResponse.json(migrationWriteDisabledBody, { status: 503 });
     }
 
+    // Auth.js manages its own endpoints and the explicit public account-action
+    // routes must remain reachable to a user holding a pre-verification cookie.
+    // Every other API call rejects a session that lacks the signed verification
+    // claim, including all JWTs issued before this contract was introduced.
+    if (!isAuthApiPath(pathname) && !isPublicAccountActionApiPath(pathname)) {
+      const token = await readToken(req);
+      if (token && token.isEmailVerified !== true) {
+        return NextResponse.json(
+          { error: "Email verification is required.", code: "EMAIL_NOT_VERIFIED" },
+          { status: 403 },
+        );
+      }
+    }
+
     return NextResponse.next();
   }
 
@@ -65,17 +102,17 @@ export async function proxy(req: NextRequest) {
   }
 
   // Match Auth.js URL precedence, including HTTPS behind a reverse proxy.
-  const authUrl = process.env.AUTH_URL ?? process.env.NEXTAUTH_URL ?? req.url;
-  const authSecret = requireAuthSecret();
-  const token = await getToken({
-    req,
-    secret: authSecret,
-    secureCookie: new URL(authUrl).protocol === "https:",
-  });
+  const token = await readToken(req);
 
   if (!token) {
     const loginUrl = new URL("/login", req.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  if (token.isEmailVerified !== true) {
+    const loginUrl = new URL("/login", req.url);
+    loginUrl.searchParams.set("error", "email_not_verified");
     return NextResponse.redirect(loginUrl);
   }
 

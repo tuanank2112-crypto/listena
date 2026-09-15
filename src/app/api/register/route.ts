@@ -8,6 +8,9 @@ import {
   type LibSqlBatchStatement,
 } from "@/lib/libsql-batch";
 import { prisma } from "@/lib/prisma";
+import { issueAccountActionToken } from "@/server/account-actions";
+import { sendVerificationEmail } from "@/server/account-email";
+import { isEmailDeliveryUnavailableError } from "@/server/email";
 import { RegisterSchema } from "@/server/validation/schemas";
 import logger from "@/lib/logger";
 
@@ -92,7 +95,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -106,7 +109,7 @@ export async function POST(req: Request) {
     if (existing) {
       return NextResponse.json(
         { error: "Email đã được sử dụng" },
-        { status: 409 }
+        { status: 409, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -120,11 +123,43 @@ export async function POST(req: Request) {
       role,
     });
 
+    // Registration creates an unverified account. The account remains usable
+    // for a later resend even if the mail provider is temporarily unavailable.
+    let verificationEmailSent = false;
+    try {
+      const token = await issueAccountActionToken({
+        userId: user.id,
+        purpose: "VERIFY_EMAIL",
+      });
+      if (token) {
+        await sendVerificationEmail({
+          requestUrl: req.url,
+          recipient: user,
+          rawToken: token.rawToken,
+        });
+        verificationEmailSent = true;
+      }
+    } catch (error) {
+      logger.warn(
+        {
+          userId: user.id,
+          reason: isEmailDeliveryUnavailableError(error) ? error.details.reason : "unknown",
+        },
+        "Initial verification email delivery unavailable",
+      );
+    }
+
     logger.info({ userId: user.id, role }, "User registered");
 
     return NextResponse.json(
-      { id: user.id, name: user.name, email: user.email, role: user.role },
-      { status: 201 }
+      {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+        verificationEmailSent,
+      },
+      { status: 201, headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
     // The preflight read is only an ergonomic fast path. A second request can
@@ -133,7 +168,7 @@ export async function POST(req: Request) {
     if (isDuplicateEmailError(error)) {
       return NextResponse.json(
         { error: "Email đã được sử dụng" },
-        { status: 409 }
+        { status: 409, headers: { "Cache-Control": "no-store" } }
       );
     }
 
@@ -143,7 +178,7 @@ export async function POST(req: Request) {
     logger.error({ err: error }, "Registration failed");
     return NextResponse.json(
       { error: "Đăng ký thất bại. Vui lòng thử lại sau." },
-      { status: 500 }
+      { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
 }

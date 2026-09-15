@@ -1,9 +1,9 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan08_local_implementation_and_acceptance_complete_plan07_active_hosted_preview_production_cutover_rollback_live_provider_pilot_open_cloudflare_rollback_retained",
-  "active_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
-  "checkpoint": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
+  "system_status": "plan09_account_email_security_local_accepted_plan07_vercel_turso_preview_mail_window_production_cutover_rollback_live_provider_pilot_open_cloudflare_rollback_retained",
+  "active_plan": "planning/09_2026-09-15_account-email-security/plan.md",
+  "checkpoint": "planning/09_2026-09-15_account-email-security/plan.md",
   "planned_improvement_plan": "planning/08_2026-09-13_ai-native-self-learning/plan.md",
   "last_project_review": {
     "date": "2026-09-13",
@@ -15,29 +15,32 @@
     "release_caveat": "P81–P85 are locally implemented/accepted, including recommendation read-only all-table fingerprinting. This does not close Vercel/Turso Preview/Production, cutover/rollback, successful live-provider, or consented-pilot gates. No release/version bump."
   },
   "last_local_acceptance": {
-    "date": "2026-09-13",
-    "plan": "planning/08_2026-09-13_ai-native-self-learning/plan.md",
-    "scope": "P80–P85 local implementation and integration accepted; independent audit found no remaining P0/P1 in the delivered reliability/learning-loop scope",
+    "date": "2026-09-15",
+    "plan": "planning/09_2026-09-15_account-email-security/plan.md",
+    "scope": "Account email verification, one-time recovery and verified feedback local implementation accepted; Preview mail delivery remains unproven",
     "scenarios_passed": [
-      "unit-tests-387-across-78-files",
+      "unit-tests-424-across-87-files",
       "type-check",
-      "lint-exit-0-34-pre-existing-warnings",
+      "lint-exit-0-existing-repository-warnings",
       "standard-Next-production-build",
-      "Prisma-validate-and-generate",
+      "Prisma-validate-status-and-additive-local-migration",
       "isolated-fresh-SQLite-E2E-20-of-20",
-      "offline-quality-30-of-30-cases-and-12-of-12-dataset-checks",
-      "recommendation-read-all-application-table-no-mutation-fingerprint"
+      "account-token-hash-replay-reset-and-route-contracts",
+      "auth-verification-claim-and-proxy-regression",
+      "feedback-owner-delivery-state-and-mail-boundary-redaction",
+      "isolated-E2E-regression-seed-and-fixtures-verified"
     ],
-    "deferred_p2": "A Coach reservation can be spent if its lesson becomes unpublished after provider output and before the atomic published-target commit. The commit rejects the target and persists no stale learning graph; follow up as bounded quota waste.",
-    "environment_caveat": "Vercel/Turso Preview and Production, final D1 export/cutover/rollback, successful live-provider behavior, and consented learner pilot remain OPEN. Plan07 remains active; current_version remains 0.5.0."
+    "deferred_p2": "Password reset deliberately does not revoke all existing stateless Auth.js JWT sessions; global revocation needs a separate session-state design.",
+    "environment_caveat": "A Resend key, verified sender, support mailbox and disposable Vercel/Turso Preview enabled-write evidence remain OPEN. No historic account is auto-verified. Plan07 retains Production/cutover/rollback gates; current_version remains 0.5.0."
   },
   "current_verification": {
-    "type_check": "PASS via npm run type-check on 2026-09-13",
-    "unit_tests": "387 passed across 78 files on 2026-09-13",
-    "lint": "exit 0 with 34 pre-existing warnings on 2026-09-13",
-    "build": "PASS via standard Next production build on 2026-09-13",
-    "prisma": "validate and generate PASS on 2026-09-13",
-    "e2e": "20/20 PASS on an isolated fresh SQLite DB on 2026-09-13",
+    "type_check": "PASS via npm run type-check on 2026-09-15",
+    "unit_tests": "424 passed across 87 files on 2026-09-15",
+    "lint": "exit 0 with existing repository warnings on 2026-09-15",
+    "build": "PASS via standard Next production build on 2026-09-15",
+    "prisma": "validate/status PASS and additive account-email migration applied locally on 2026-09-15",
+    "e2e": "20/20 PASS on an isolated fresh SQLite DB on 2026-09-15",
+    "plan09": "Local account verification/reset/feedback acceptance complete. Hosted Resend inbox and disposable Vercel/Turso Preview evidence remain open; no Vercel, Turso, D1 or Production mutation was performed.",
     "offline_quality": "30/30 cases and 12/12 dataset checks PASS on 2026-09-13; this is not live-provider or pedagogical-efficacy proof",
     "migration_verifier": "Canonical staging import listena-staging-20260911 matched the approved D1 snapshot on schema/index/FK/timestamp/core-curriculum evidence; the verifier is deliberately read-only",
     "turso_vercel": "Vercel Preview commit 587641a built Ready. A disposable clone-only enabled window proved registration/dashboard, one server-scored adaptive-game evidence write and direct readback; final Preview is redeployed disabled after a blocked-registration/no-row-persistence check. Full hosted retry/owner-isolation evidence remains open",

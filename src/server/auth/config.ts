@@ -1,11 +1,18 @@
 import NextAuth from "next-auth";
+import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { requireAuthSecret } from "@/lib/auth-secret";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
+import { LoginSchema } from "@/server/validation/schemas";
 
 const authSecret = requireAuthSecret();
+
+/** The code is safe to show only after a successful password check. */
+export class EmailNotVerifiedError extends CredentialsSignin {
+  code = "email_not_verified";
+}
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
@@ -16,16 +23,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        const email = credentials?.email as string | undefined;
-        const password = credentials?.password as string | undefined;
+        const parsed = LoginSchema.safeParse({
+          email: credentials?.email,
+          password: credentials?.password,
+        });
+        if (!parsed.success) return null;
 
-        if (!email || !password) {
-          return null;
-        }
+        const { email, password } = parsed.data;
 
         const user = await prisma.user.findUnique({
           where: { email },
-          select: { id: true, name: true, email: true, password: true, role: true },
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            password: true,
+            role: true,
+            emailVerifiedAt: true,
+          },
         });
 
         if (!user) {
@@ -37,11 +52,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
+        if (!user.emailVerifiedAt) {
+          throw new EmailNotVerifiedError();
+        }
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
+          isEmailVerified: true,
         };
       },
     }),
@@ -51,6 +71,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (user) {
         token.id = user.id ?? "";
         token.role = (user.role as Role) ?? "LEARNER";
+        token.isEmailVerified = user.isEmailVerified === true;
       }
       return token;
     },
@@ -58,6 +79,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = (token.id as string) ?? "";
         session.user.role = (token.role as Role) ?? "LEARNER";
+        session.user.isEmailVerified = token.isEmailVerified === true;
       }
       return session;
     },

@@ -34,6 +34,7 @@ async function main() {
       email: "learner@example.com",
       password: learnerPassword,
       role: "LEARNER",
+      emailVerifiedAt: new Date(),
     },
   });
 
@@ -43,6 +44,7 @@ async function main() {
       email: "teacher@example.com",
       password: teacherPassword,
       role: "TEACHER",
+      emailVerifiedAt: new Date(),
     },
   });
 

@@ -9,7 +9,13 @@ async function createAndLoginLearner(page: Page) {
   const email = `next-action-${randomUUID()}@example.com`;
   const password = "next-action-pass";
   const user = await db.user.create({
-    data: { name: "Next action learner", email, password: await hash(password, 8), role: "LEARNER" },
+    data: {
+      name: "Next action learner",
+      email,
+      password: await hash(password, 8),
+      role: "LEARNER",
+      emailVerifiedAt: new Date(),
+    },
   });
   await page.goto("/login");
   await page.getByLabel("Email").fill(email);
