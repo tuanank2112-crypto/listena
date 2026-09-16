@@ -7,6 +7,9 @@ import path from "node:path";
 // This test process and its workers share a fresh DB; never seed the user's dev.db.
 process.env.LISTENAI_E2E_DIR ??= mkdtempSync(path.join(tmpdir(), "listena-e2e-"));
 process.env.DATABASE_URL = `file:${path.join(process.env.LISTENAI_E2E_DIR, "test.db").replaceAll("\\", "/")}`;
+// The isolated E2E database is intentionally writable. Override any inherited
+// hosted/CI fence so tests exercise mutations only against this temp SQLite DB.
+process.env.MIGRATION_WRITE_MODE = "enabled";
 // Exercise the production Responses transport with a generated fake key. The
 // Playwright web-server command below preloads a process-only upstream stub;
 // application runtime never gets an environment-selected mock provider.
@@ -41,6 +44,7 @@ export default defineConfig({
     env: {
       ...process.env,
       DATABASE_URL: process.env.DATABASE_URL!,
+      MIGRATION_WRITE_MODE: process.env.MIGRATION_WRITE_MODE!,
       AI_PROVIDER: process.env.AI_PROVIDER!,
       OPENAI_API_KEY: process.env.OPENAI_API_KEY!,
       OPENAI_MODEL: process.env.OPENAI_MODEL!,
