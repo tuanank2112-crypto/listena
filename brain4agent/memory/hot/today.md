@@ -18,8 +18,12 @@
   - Offline quality: 30/30 test cases, 12/12 dataset checks passed
   - Playwright E2E: 20/20 scenarios passed on isolated temp SQLite
   - Audit: 0 runtime high/critical vulnerabilities
-  - Pre-existing user files `eval/report.md`, `foo`, `` preserved.
+- Pre-existing user files `eval/report.md`, `foo`, `` preserved.
   - Hosted Preview/Production/WAF gates remain fenced under Plan 07/09.
+- Hosted Turso & Vercel Preview Synchronization (2026-09-16):
+  - Turso Schema Reconciled: Minted RW DB JWT tokens via Turso Control Plane API. Executed Plan 09 (`20260915023959_add_account_email_security`) and Plan 10 (`20260916000000_release_hardening_mutations`) migrations on both `listena-preview-20260912` and `listena-staging-20260911`. Verified all new columns (`emailVerifiedAt`, `clientAttemptId`, `requestHash`, `clientReviewId`, `revision`) and tables (`LessonCreationRequest`, `FeedbackMessage`). Live readback tested on preview DB (`User` count = 7).
+  - Vercel Preview Configured: Team `n-listen-ai`, Project `listena`. Configured branch `codex/vercel-turso-migration` preview environment variables: `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` (updated to active preview db JWT), `APP_RUNTIME=vercel`, `MIGRATION_WRITE_MODE=disabled`, `NEXTAUTH_URL`.
+  - Deployment Succeeded: Commit `788dae6` pushed to `origin/codex/vercel-turso-migration`. Vercel deployment `dpl_J7mpqTPdmbqTrqHi9xoZeeQQdGsS` completed cleanly: Next.js 16.3.5 built all 42 routes, status is `READY`. Deployment URL: `https://listena-ps3egp2k0-n-listen-ai.vercel.app`, branch alias: `https://listena-git-codex-vercel-turso-migration-n-listen-ai.vercel.app`.
 
 ## Plan10 project-wide review and worker specs — 2026-09-16
 - Brain check passed; reviewed source at `0ce30e1`, current plans/memory, Next local docs, auth/routes/persistence/providers/TTS/deploy/test boundaries. Preserved pre-existing dirty `eval/report.md`, `foo` and ``.
