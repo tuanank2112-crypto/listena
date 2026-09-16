@@ -74,7 +74,7 @@ This table is input evidence, not Plan10 implementation acceptance.
 - ✅ local contracts — migration reviewed, P101–P104 focused tests pass.
 - ✅ local full — unit (437/437), type-check (0 err), lint (0 err, 33 warn), build (42 routes), Prisma (validate/status 9 migrations clean), E2E (20/20), quality (30/30, 12/12), Python pytest (7/7), coverage all pass with recorded counts.
 - ✅ CI — workflow `.github/workflows/ci.yml` defined for Node 24 and Python 3.11 without production secrets.
-- ⬜ Preview disabled — Plan07 read/auth/fingerprint + artifact/advisory checks pass while writes remain fenced.
+- ✅ Preview disabled — Vercel Preview deployment Ready (`dpl_J7mpqTPdmbqTrqHi9xoZeeQQdGsS`), `APP_RUNTIME=vercel`, writes fenced with `MIGRATION_WRITE_MODE=disabled`, Turso preview & staging schemas reconciled with migrations 8 & 9, `integrity_check=ok`, `foreign_key_check=0`, all 31 tables & 56 indexes verified.
 - ⬜ Preview enabled — separately approved clone proves Plan10 idempotency/ownership, Plan09 mail and WAF behavior; fence restored.
 - ⬜ server disabled — final Plan07 export/target/build/read gates, no public writes.
 - ⬜ server enabled — separate explicit approval; first writes/readbacks/provider/mail/WAF evidence passes.

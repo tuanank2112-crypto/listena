@@ -5,7 +5,7 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/10_2026-09-16_release-readiness-hardening | [Plan 10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) — review/spec complete; no worker implementation started; legacy mutation/authoring integrity, supply chain, abuse/TTS and reproducible operations are planned |
+| Kế hoạch hiện tại | planning/10_2026-09-16_release-readiness-hardening | [Plan 10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) — local/CI acceptance complete; Turso preview & staging schemas reconciled; Vercel preview deployed Ready with fenced writes |
 | Account security | planning/09_2026-09-15_account-email-security | [Plan 09](../planning/09_2026-09-15_account-email-security/plan.md) — local acceptance complete; Resend-configured disposable Preview evidence remains open under Plan07 gates |
 | Hạ tầng gốc | planning/07_2026-09-10_vercel-turso-migration | [Plan 07](../planning/07_2026-09-10_vercel-turso-migration/plan.md) — canonical Turso staging and bounded Vercel Preview evidence are recorded; full hosted ownership/retry, final export/cutover, Production and successful live Kira remain unchecked |
 | Rà soát hiện tại | source snapshot 0ce30e1 | [Review 2026-09-16](../docs/PROJECT_REVIEW_2026-09-16.md) — fresh 425 unit + 20 E2E baseline; Plan10 findings/spec, no implementation or deploy claim |

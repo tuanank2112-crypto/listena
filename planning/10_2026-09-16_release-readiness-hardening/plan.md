@@ -55,6 +55,7 @@
 - [x] P104 implement response/log/TTS fixes and prepare hosted WAF evidence procedure.
 - [x] P105 make tests reproducible in CI and reconcile README/env/deploy truth.
 - [x] P106 rerun all local/CI gates; request separate approval for any Preview/Production action.
+- [x] P107 execute Turso preview & staging schema reconciliation (migrations 8 & 9) and deploy Vercel Preview (READY).
 
 ## Spec router
 

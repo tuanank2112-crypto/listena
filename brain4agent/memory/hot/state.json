@@ -1,7 +1,7 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan10_release_readiness_hardening_local_accepted_plan07_preview_mail_production_cutover_rollback_live_provider_pilot_open",
+  "system_status": "plan10_release_readiness_hardening_preview_deployed_ready_schema_reconciled",
   "active_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
   "checkpoint": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
   "planned_improvement_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
@@ -47,7 +47,7 @@
     "plan09": "Local account verification/reset/feedback acceptance complete. Hosted Resend inbox and disposable Vercel/Turso Preview evidence remain open; no Vercel, Turso, D1 or Production mutation was performed.",
     "offline_quality": "30/30 cases and 12/12 dataset checks PASS on 2026-09-16; this is not live-provider or pedagogical-efficacy proof",
     "migration_verifier": "Canonical staging import listena-staging-20260911 matched the approved D1 snapshot on schema/index/FK/timestamp/core-curriculum evidence; the verifier is deliberately read-only",
-    "turso_vercel": "Vercel Preview commit 587641a built Ready. A disposable clone-only enabled window proved registration/dashboard, one server-scored adaptive-game evidence write and direct readback; final Preview is redeployed disabled after a blocked-registration/no-row-persistence check. Full hosted retry/owner-isolation evidence remains open",
+    "turso_vercel": "Vercel Preview deployment dpl_J7mpqTPdmbqTrqHi9xoZeeQQdGsS Ready on Next.js 16.3.5. Turso preview (listena-preview-20260912) and staging (listena-staging-20260911) schemas reconciled with Plan 09 & Plan 10 additive migrations (8 & 9). PRAGMA integrity_check=ok, foreign_key_check=0, 31 tables, 56 indexes verified on both. Writes fenced with MIGRATION_WRITE_MODE=disabled.",
     "d1": "Plan07 performed a one-way approved snapshot import into canonical Turso staging without mutating/resetting/seeding/dual-writing D1. Final D1 export, Production target, cutover, and rollback remain open",
     "kira": "Target Tutor UI returned its typed unavailable behavior; no successful live Kira/provider call, secret value, cost, or latency claim is made"
   },
