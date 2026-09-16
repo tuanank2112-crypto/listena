@@ -1,3 +1,8 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# [UNSUPPORTED / HISTORICAL REFERENCE ONLY]
+# This blueprint is NOT executable with the current SQLite / libSQL Prisma schema.
+# Production deployment target is Vercel + Turso (libSQL). Do not deploy to Render.
+# ─────────────────────────────────────────────────────────────────────────────
 version: "1"
 
 services:

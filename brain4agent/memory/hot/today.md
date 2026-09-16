@@ -1,5 +1,33 @@
 # 📅 Nhật Ký Làm Việc Ngày 07/09/2026 (Session Memory Log)
 
+## Plan10 release-readiness hardening — local & CI acceptance 2026-09-16
+- P100 Schema/Contract Freeze: Added additive Prisma migration `20260916000000_release_hardening_mutations` for `Attempt.clientAttemptId`/`requestHash`, `ReviewLog.clientReviewId`/`requestHash`, `VocabularyMastery.revision` (CAS), and `LessonCreationRequest`. Generated additive SQL script, verified on temporary isolated database and applied cleanly to local `prisma/dev.db` (backup `prisma/dev.db.bak-plan10`).
+- P101 Supply-Chain & Cleanup: Deleted dead Kokoro client/worker files; cleaned Kokoro logic from `scripts/tts-prebuild.ts`; uninstalled `kokoro-js` & `@huggingface/transformers`; upgraded Next.js to 16.3.5 and Wrangler to 4.132.0; verified 0 runtime high/critical vulnerabilities via `npm audit --omit=dev`.
+- P102 Learning Mutation Integrity: Created `src/lib/idempotency.ts`. Implemented atomic libSQL batch and clientAttemptId deduplication for `submitAttempt`; implemented CAS on revision in atomic batch for `reviewFlashcard`; updated client UI to retain retry IDs.
+- P103 Authoring Request Ledger: Created `src/server/services/lesson-authoring.ts` with `reserveLessonCreationRequest`, `commitLessonGraph`, and atomic multi-entity lesson publishing with completeness validation.
+- P104 Security Boundary & TTS: Hardened Pino logger redaction with wildcard and nested path support; added security response headers in `next.config.ts`; enforced VieNeu sidecar schema (`speed: Literal[1.0]`, loopback bind `127.0.0.1`, opaque synthesis error, private no-store cache headers); added 7 reproducible Python boundary tests in `tts-service/test_main.py`.
+- P105 Tooling, Docs & CI: Created root `prisma.config.ts` using Prisma 6 API and removed deprecated package.json field; migrated to ESM `vitest.config.mts` with `@vitest/coverage-v8` (0 Vite loader warnings); added `.github/workflows/ci.yml` (Node 24, Python 3.11, full test pipeline); reconciled `README.md`, `.env.example`, `render.yaml`, `docker-compose.yml`.
+- P106 QA & Exit Gates: All local & CI gates PASSED:
+  - TypeScript type-check: 0 errors
+  - ESLint: 0 errors, 33 baseline warnings (0 new warnings)
+  - Unit tests: 437/437 passing across 87 files (0 regressions)
+  - Vitest coverage: full statement, branch, function, and line coverage generated
+  - Python tests: 7/7 passing in `tts-service/test_main.py` without model downloads
+  - Prisma: schema valid, 9 migrations up to date, 0 deprecation warnings
+  - Production build: Next.js 16.3.5 compiled all 42 routes (static/dynamic)
+  - Offline quality: 30/30 test cases, 12/12 dataset checks passed
+  - Playwright E2E: 20/20 scenarios passed on isolated temp SQLite
+  - Audit: 0 runtime high/critical vulnerabilities
+  - Pre-existing user files `eval/report.md`, `foo`, `` preserved.
+  - Hosted Preview/Production/WAF gates remain fenced under Plan 07/09.
+
+## Plan10 project-wide review and worker specs — 2026-09-16
+- Brain check passed; reviewed source at `0ce30e1`, current plans/memory, Next local docs, auth/routes/persistence/providers/TTS/deploy/test boundaries. Preserved pre-existing dirty `eval/report.md`, `foo` and ``.
+- Fresh local evidence: 425/425 unit tests across 87 files; type-check PASS; lint 0 errors/33 warnings; standard build PASS; Prisma validate/status PASS with 8 migrations; isolated fresh-SQLite E2E 20/20; offline quality dry-run 30/30 cases + 12/12 dataset checks. Python sidecar tests were not executed because host lacks `fastapi` and collection stopped before assertions.
+- Dependency audit found 8 high/0 critical. Runtime-relevant Kokoro/HuggingFace/Sharp paths and Prisma/Wrangler toolchain paths need separate disposition; no package was changed in this review.
+- Created `docs/PROJECT_REVIEW_2026-09-16.md` and Plan10 spec package. No P0 found. P1 priorities are legacy attempt/review idempotency+atomicity, lesson-authoring request/graph atomicity, dependency cleanup/patching and hosted abuse proof. Docs/tooling/TTS/error-redaction gaps are P2.
+- No implementation agent started; no app code, migration, dependency, secret, deployment or external database changed. Plan07/09 Preview/Production/mail/cutover/rollback/live-provider gates remain open and independent.
+
 ## Plan09 account email security — local acceptance 2026-09-15
 - Added the additive Prisma migration for `User.emailVerifiedAt`, hashed one-time account-action tokens and feedback delivery state; applied it only to local `dev.db`. No reset, seed, Vercel, Turso, D1 or Production write occurred.
 - Registration remains unverified and sends its initial link through the server-side Resend boundary. Credentials rejects an unverified account after a correct password, password reset request is non-enumerating, and feedback is attributed server-side to an authenticated verified user.

@@ -22,6 +22,7 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
   const startedAt = useRef(0);
   useEffect(() => { startedAt.current = Date.now(); }, []);
   const submitting = useRef(false);
+  const clientReviewIdRef = useRef<string | null>(null);
   const speechState = useSpeechState();
   const card = flashcards[index];
 
@@ -36,8 +37,21 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
     setSaving(true);
     setError(null);
     try {
-      const response = await fetch("/api/flashcard", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ flashcardId: card.id, rating, responseTimeMs: Math.max(1, Date.now() - startedAt.current) }) });
+      if (!clientReviewIdRef.current) {
+        clientReviewIdRef.current = crypto.randomUUID();
+      }
+      const response = await fetch("/api/flashcard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          flashcardId: card.id,
+          rating,
+          responseTimeMs: Math.max(1, Date.now() - startedAt.current),
+          clientReviewId: clientReviewIdRef.current,
+        }),
+      });
       if (!response.ok) throw new Error("review failed");
+      clientReviewIdRef.current = null;
       setFlipped(false);
       setIndex((value) => value + 1);
       startedAt.current = Date.now();

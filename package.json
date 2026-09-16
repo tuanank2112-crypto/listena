@@ -14,6 +14,7 @@
     "lint": "eslint .",
     "type-check": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "db:generate": "prisma generate",
@@ -30,12 +31,8 @@
     "eval": "tsx eval/run.ts",
     "eval:quality": "tsx eval/quality-run.ts"
   },
-  "prisma": {
-    "seed": "npx tsx prisma/seed.ts"
-  },
   "dependencies": {
     "@auth/prisma-adapter": "^2.8.0",
-    "@huggingface/transformers": "^3.8.1",
     "@libsql/client": "^0.17.0",
     "@opennextjs/cloudflare": "^1.20.6",
     "@prisma/adapter-d1": "^6.19.3",
@@ -44,9 +41,8 @@
     "bcryptjs": "^2.4.3",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.0",
-    "kokoro-js": "^1.2.1",
     "lucide-react": "^1.31.0",
-    "next": "^16.3.3",
+    "next": "^16.3.5",
     "next-auth": "^5.0.0-beta.28",
     "pino": "^9.6.0",
     "react": "19.2.8",
@@ -64,15 +60,16 @@
     "@types/react-dom": "^19",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^6.0.5",
+    "@vitest/coverage-v8": "^4.1.11",
     "eslint": "^9",
-    "eslint-config-next": "^16.3.3",
+    "eslint-config-next": "^16.3.5",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.9.6",
     "prisma": "^6.6.0",
     "tailwindcss": "^4",
     "tsx": "^4.23.12",
     "typescript": "^5",
-    "vitest": "^4.1.10",
-    "wrangler": "^4.130.0"
+    "vitest": "^4.1.11",
+    "wrangler": "^4.132.0"
   }
 }

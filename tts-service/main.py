@@ -12,19 +12,20 @@ import io
 import os
 import time
 from pathlib import Path
+from typing import Annotated, Literal
 from urllib.parse import quote
 
 import numpy as np
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import Response
-from pydantic import BaseModel
+from pydantic import BaseModel, StringConstraints
 
 # ── Pydantic schemas ─────────────────────────────────
 
 class TTSRequest(BaseModel):
-    text: str
-    voice: str | None = None
-    speed: float = 1.0
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=1000)]
+    voice: Annotated[str | None, StringConstraints(strip_whitespace=True, min_length=1, max_length=100)] = None
+    speed: Literal[1.0] = 1.0
 
 class VoiceInfo(BaseModel):
     name: str
@@ -106,8 +107,8 @@ def synthesize(req: TTSRequest) -> Response:
             text=req.text,
             voice=voice,
         )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Synthesis failed: {e}")
+    except Exception:
+        raise HTTPException(status_code=500, detail="Synthesis failed")
 
     sample_rate = 48000  # v3turbo mặc định 48kHz
 
@@ -127,10 +128,10 @@ def synthesize(req: TTSRequest) -> Response:
         "X-TTS-Cache": "MISS",
         "X-TTS-Engine": ENGINE_VERSION,
         "X-TTS-Voice": quote(voice, safe=""),
-        "Cache-Control": "no-store",
+        "Cache-Control": "private, no-store",
     })
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8001, workers=1)
+    uvicorn.run("main:app", host="127.0.0.1", port=8001, workers=1)

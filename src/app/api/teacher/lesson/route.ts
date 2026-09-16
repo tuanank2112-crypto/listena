@@ -3,14 +3,22 @@ import { auth } from "@/server/auth/config";
 import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
 import { CreateLessonSchema } from "@/server/validation/schemas";
+import {
+  createLessonFromRequest,
+  publishLesson,
+  LessonGraphIncompleteError,
+} from "@/server/services/lesson-authoring";
+import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency";
 import logger from "@/lib/logger";
-import type { CefrLevel, ExerciseType } from "@prisma/client";
 
 export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { code: "FORBIDDEN", error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
     const body = await req.json();
@@ -18,96 +26,74 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
-        { status: 400 }
+        { code: "VALIDATION_ERROR", error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
-    const course = await prisma.course.findUnique({
-      where: { id: parsed.data.courseId },
-      select: { createdById: true },
+    const result = await createLessonFromRequest({
+      userId: session.user.id,
+      role: session.user.role,
+      clientRequestId: parsed.data.clientRequestId,
+      request: parsed.data,
     });
-    if (!course) {
-      return NextResponse.json({ error: "Course not found" }, { status: 404 });
-    }
-    if (course.createdById !== session.user.id && session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
 
-    const lesson = await prisma.lesson.create({
-      data: {
-        courseId: parsed.data.courseId,
-        title: parsed.data.title,
-        topic: parsed.data.topic,
-        cefrLevel: parsed.data.cefrLevel as CefrLevel,
-        learningObjectives: parsed.data.learningObjectives.join("\n"),
-        transcript: parsed.data.transcript,
-        audioUrl: parsed.data.audioUrl,
-        accent: parsed.data.accent,
-        defaultPlaybackRate: parsed.data.defaultPlaybackRate,
-        estimatedMinutes: parsed.data.estimatedMinutes,
-        status: "DRAFT",
-        createdById: session.user.id,
-        segments: {
-          create: parsed.data.segments.map((s) => ({
-            position: s.position,
-            text: s.text,
-            difficulty: s.difficulty,
-          })),
-        },
-        exercises: {
-          create: parsed.data.exercises.map((e) => ({
-            type: e.type as ExerciseType,
-            prompt: e.prompt,
-            correctAnswer: e.correctAnswer,
-            difficulty: e.difficulty,
-            position: e.position,
-          })),
-        },
+    return NextResponse.json(
+      {
+        replayed: result.replayed,
+        lesson: { id: result.value.lessonId },
       },
-    });
-
-    // Create vocabulary items
-    for (const v of parsed.data.vocabulary) {
-      const item = await prisma.vocabularyItem.upsert({
-        where: { lemma: v.lemma },
-        create: {
-          lemma: v.lemma,
-          displayText: v.displayText,
-          ipa: v.ipa,
-          meaningVi: v.meaningVi,
-          meaningEn: v.meaningEn,
-          partOfSpeech: v.partOfSpeech,
-          cefrLevel: v.cefrLevel as CefrLevel,
-          exampleSentence: v.exampleSentence,
-        },
-        update: {},
-      });
-      await prisma.lessonVocabulary.create({
-        data: {
-          lessonId: lesson.id,
-          vocabularyItemId: item.id,
-          isTarget: v.isTarget,
-          importance: v.importance,
-        },
-      });
+      {
+        status: result.replayed ? 200 : 201,
+        headers: { "Cache-Control": "private, no-store" },
+      }
+    );
+  } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      logger.warn({ code: error.code }, "Lesson creation idempotency conflict");
+      return NextResponse.json(
+        { code: error.code, error: error.message },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
-    logger.info(
-      { lessonId: lesson.id, userId: session.user.id },
-      "Lesson created manually"
-    );
+    if (error instanceof OutcomePendingError) {
+      return NextResponse.json(
+        { code: error.code, error: error.message, retryAfterSeconds: error.retryAfterSeconds },
+        {
+          status: 409,
+          headers: {
+            "Cache-Control": "private, no-store",
+            "Retry-After": String(error.retryAfterSeconds),
+          },
+        }
+      );
+    }
 
-    return NextResponse.json({ lesson }, { status: 201 });
-  } catch (error) {
     const databaseResponse = databaseErrorResponse(error);
     if (databaseResponse) return databaseResponse;
 
     const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error({ error: message }, "Lesson creation failed");
+    if (message === "Course not found") {
+      return NextResponse.json(
+        { code: "NOT_FOUND", error: "Course not found" },
+        { status: 404, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+    if (message === "Forbidden") {
+      return NextResponse.json(
+        { code: "FORBIDDEN", error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    logger.error(
+      { errorName: error instanceof Error ? error.name : "unknown", code: "INTERNAL_ERROR" },
+      "Lesson creation failed"
+    );
     return NextResponse.json(
-      { error: "Tạo bài học thất bại" },
-      { status: 500 }
+      { code: "INTERNAL_ERROR", error: "Tạo bài học thất bại" },
+      { status: 500, headers: { "Cache-Control": "private, no-store" } }
     );
   }
 }
@@ -116,52 +102,94 @@ export async function PUT(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { code: "FORBIDDEN", error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
     const body = await req.json();
     const { id, action } = body;
 
     if (!id) {
-      return NextResponse.json({ error: "Missing lesson ID" }, { status: 400 });
-    }
-
-    const lesson = await prisma.lesson.findUnique({ where: { id } });
-    if (!lesson) {
-      return NextResponse.json({ error: "Lesson not found" }, { status: 404 });
-    }
-
-    if (lesson.createdById !== session.user.id && session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { code: "VALIDATION_ERROR", error: "Missing lesson ID" },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
     if (action === "publish") {
-      await prisma.lesson.update({
-        where: { id },
-        data: {
-          status: "PUBLISHED",
-          reviewedById: session.user.id,
-        },
+      const result = await publishLesson({
+        lessonId: id,
+        userId: session.user.id,
+        role: session.user.role,
       });
-      logger.info({ lessonId: id, userId: session.user.id }, "Lesson published");
-      return NextResponse.json({ status: "PUBLISHED" });
+      return NextResponse.json(result, { headers: { "Cache-Control": "private, no-store" } });
     }
 
     if (action === "review") {
+      const lesson = await prisma.lesson.findUnique({
+        where: { id },
+        select: { createdById: true },
+      });
+      if (!lesson) {
+        return NextResponse.json(
+          { code: "NOT_FOUND", error: "Lesson not found" },
+          { status: 404, headers: { "Cache-Control": "private, no-store" } }
+        );
+      }
+      if (lesson.createdById !== session.user.id && session.user.role !== "ADMIN") {
+        return NextResponse.json(
+          { code: "FORBIDDEN", error: "Forbidden" },
+          { status: 403, headers: { "Cache-Control": "private, no-store" } }
+        );
+      }
       await prisma.lesson.update({
         where: { id },
         data: { status: "REVIEWED" },
       });
-      return NextResponse.json({ status: "REVIEWED" });
+      return NextResponse.json(
+        { status: "REVIEWED" },
+        { headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json(
+      { code: "VALIDATION_ERROR", error: "Invalid action" },
+      { status: 400, headers: { "Cache-Control": "private, no-store" } }
+    );
   } catch (error) {
+    if (error instanceof LessonGraphIncompleteError) {
+      return NextResponse.json(
+        { code: error.code, error: error.message },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
     const databaseResponse = databaseErrorResponse(error);
     if (databaseResponse) return databaseResponse;
 
     const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error({ error: message }, "Lesson update failed");
-    return NextResponse.json({ error: "Cập nhật thất bại" }, { status: 500 });
+    if (message === "Lesson not found") {
+      return NextResponse.json(
+        { code: "NOT_FOUND", error: "Lesson not found" },
+        { status: 404, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+    if (message === "Forbidden") {
+      return NextResponse.json(
+        { code: "FORBIDDEN", error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    logger.error(
+      { errorName: error instanceof Error ? error.name : "unknown", code: "INTERNAL_ERROR" },
+      "Lesson update failed"
+    );
+    return NextResponse.json(
+      { code: "INTERNAL_ERROR", error: "Cập nhật thất bại" },
+      { status: 500, headers: { "Cache-Control": "private, no-store" } }
+    );
   }
 }

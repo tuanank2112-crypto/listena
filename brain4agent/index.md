@@ -5,9 +5,11 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/09_2026-09-15_account-email-security | [Plan 09](../planning/09_2026-09-15_account-email-security/plan.md) — local acceptance complete for verified email, reset and feedback; Resend-configured disposable Vercel/Turso Preview evidence remains open under Plan07 gates |
+| Kế hoạch hiện tại | planning/10_2026-09-16_release-readiness-hardening | [Plan 10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) — review/spec complete; no worker implementation started; legacy mutation/authoring integrity, supply chain, abuse/TTS and reproducible operations are planned |
+| Account security | planning/09_2026-09-15_account-email-security | [Plan 09](../planning/09_2026-09-15_account-email-security/plan.md) — local acceptance complete; Resend-configured disposable Preview evidence remains open under Plan07 gates |
 | Hạ tầng gốc | planning/07_2026-09-10_vercel-turso-migration | [Plan 07](../planning/07_2026-09-10_vercel-turso-migration/plan.md) — canonical Turso staging and bounded Vercel Preview evidence are recorded; full hosted ownership/retry, final export/cutover, Production and successful live Kira remain unchecked |
-| Rà soát lịch sử | source snapshot aa2021d | [Review 2026-09-13](../docs/PROJECT_REVIEW_2026-09-13.md) — 8 findings at 293 tests; frozen source review, not a current implementation-status claim |
+| Rà soát hiện tại | source snapshot 0ce30e1 | [Review 2026-09-16](../docs/PROJECT_REVIEW_2026-09-16.md) — fresh 425 unit + 20 E2E baseline; Plan10 findings/spec, no implementation or deploy claim |
+| Rà soát lịch sử | source snapshot aa2021d | [Review 2026-09-13](../docs/PROJECT_REVIEW_2026-09-13.md) — 8 findings later completed locally by Plan08; frozen snapshot |
 | Cải tiến AI-native (local accepted) | planning/08_2026-09-13_ai-native-self-learning | [Plan08](../planning/08_2026-09-13_ai-native-self-learning/plan.md) — P80–P85 implementation + local acceptance complete: 387/387 tests (78 files), type-check/build/Prisma PASS, E2E 20/20, offline quality 30/30 and 12/12; hosted/live/pilot remain open |
 | Rà soát lịch sử | toàn repository | [Audit 2026-09-07](../docs/PROJECT_AUDIT_2026-09-07.md) |
 | Auth, session, SRS | proxy; server/auth,learning,services,repos | [Learning](../docs/learning.md) |

@@ -143,6 +143,18 @@ enum FeedbackDeliveryStatus {
   EMAIL_UNAVAILABLE
 }
 
+enum LessonCreationMode {
+  MANUAL
+  AI
+}
+
+enum LessonCreationRequestStatus {
+  PENDING
+  COMMITTED
+  FAILED
+  UNKNOWN
+}
+
 model User {
   id              String    @id @default(uuid())
   name            String
@@ -170,6 +182,7 @@ model User {
   adaptiveEvidence           AdaptiveEvidence[]
   accountActionTokens        AccountActionToken[]
   feedbackMessages           FeedbackMessage[]
+  lessonCreationRequests     LessonCreationRequest[]
   coursesCreated             Course[]                    @relation("CourseCreator")
   lessonsCreated             Lesson[]                    @relation("LessonCreator")
   lessonsReviewed            Lesson[]                    @relation("LessonReviewer")
@@ -278,6 +291,7 @@ model Lesson {
   attempts         Attempt[]
   recommendations  Recommendation[]
   learningSessions LearningSession[]
+  creationRequests LessonCreationRequest[]
 
   @@index([courseId])
   @@index([status])
@@ -361,6 +375,8 @@ model Attempt {
   replayCount      Int      @default(0)
   hintCount        Int      @default(0)
   playbackRate     Float    @default(1.0)
+  clientAttemptId  String?
+  requestHash      String?
   createdAt        DateTime @default(now())
 
   user       User           @relation(fields: [userId], references: [id])
@@ -369,6 +385,7 @@ model Attempt {
   errors     AttemptError[]
   flashcards Flashcard[]
 
+  @@unique([userId, clientAttemptId])
   @@index([userId, lessonId])
   @@index([userId, createdAt])
 }
@@ -402,6 +419,7 @@ model VocabularyMastery {
   intervalDays     Float     @default(0.0)
   easeFactor       Float     @default(2.5)
   repetitionCount  Int       @default(0)
+  revision         Int       @default(0)
 
   user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabularyItem VocabularyItem @relation(fields: [vocabularyItemId], references: [id], onDelete: Cascade)
@@ -452,11 +470,14 @@ model ReviewLog {
   responseTimeMs   Int?
   previousInterval Float      @default(0.0)
   nextInterval     Float      @default(0.0)
+  clientReviewId   String?
+  requestHash      String?
   reviewedAt       DateTime   @default(now())
 
   flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, clientReviewId])
   @@index([flashcardId])
   @@index([userId, reviewedAt])
 }
@@ -759,3 +780,24 @@ model AdaptiveEvidence {
   @@index([userId, vocabularyItemId, createdAt])
   @@unique([sourceKind, sourceId, skillKey])
 }
+
+model LessonCreationRequest {
+  id              String                      @id @default(uuid())
+  userId          String
+  clientRequestId String
+  requestHash     String
+  mode            LessonCreationMode
+  status          LessonCreationRequestStatus @default(PENDING)
+  lessonId        String?
+  errorCode       String?
+  leaseExpiresAt  DateTime
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson? @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, clientRequestId])
+  @@index([userId, status, createdAt])
+}
+

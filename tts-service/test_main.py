@@ -67,3 +67,90 @@ def test_authenticated_cached_audio_is_private_and_does_not_need_model(monkeypat
     assert response.content == b"wav"
     assert response.headers["cache-control"] == "private, no-store"
     assert module._vieneu is None
+
+
+def test_sidecar_rejects_invalid_speed(monkeypatch, tmp_path):
+    _, client = load_sidecar(monkeypatch, tmp_path, secret="shared-key")
+
+    resp_fast = client.post(
+        "/tts",
+        json={"text": "xin chào", "speed": 1.5},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+    assert resp_fast.status_code == 422
+
+    resp_slow = client.post(
+        "/tts",
+        json={"text": "xin chào", "speed": 0.8},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+    assert resp_slow.status_code == 422
+
+
+def test_sidecar_rejects_text_bounds(monkeypatch, tmp_path):
+    _, client = load_sidecar(monkeypatch, tmp_path, secret="shared-key")
+
+    resp_empty = client.post(
+        "/tts",
+        json={"text": ""},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+    assert resp_empty.status_code == 422
+
+    resp_whitespace = client.post(
+        "/tts",
+        json={"text": "    "},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+    assert resp_whitespace.status_code == 422
+
+    resp_long = client.post(
+        "/tts",
+        json={"text": "a" * 1001},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+    assert resp_long.status_code == 422
+
+
+def test_sidecar_opaque_synthesis_failure_never_leaks_exception(monkeypatch, tmp_path):
+    module, client = load_sidecar(monkeypatch, tmp_path, secret="shared-key")
+
+    class MockFailingEngine:
+        def infer(self, text, voice):
+            raise RuntimeError("internal_secret_token_12345: cuda device failure")
+
+    module._vieneu = MockFailingEngine()
+
+    response = client.post(
+        "/tts",
+        json={"text": "xin chào"},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Synthesis failed"}
+    assert "internal_secret_token_12345" not in response.text
+    assert "cuda device failure" not in response.text
+
+
+def test_sidecar_miss_response_has_private_no_store(monkeypatch, tmp_path):
+    import numpy as np
+
+    module, client = load_sidecar(monkeypatch, tmp_path, secret="shared-key")
+
+    class MockSuccessEngine:
+        def infer(self, text, voice):
+            return np.zeros(48000, dtype=np.float32)
+
+    module._vieneu = MockSuccessEngine()
+
+    response = client.post(
+        "/tts",
+        json={"text": "xin chào"},
+        headers={"X-TTS-Key": "shared-key"},
+    )
+
+    assert response.status_code == 200
+    assert response.headers["cache-control"] == "private, no-store"
+    assert response.headers["x-tts-cache"] == "MISS"
+

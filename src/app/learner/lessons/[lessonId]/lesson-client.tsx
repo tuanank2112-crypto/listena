@@ -122,6 +122,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
   }, [lesson.audioUrl, lesson.transcript, rate, segment, speakEnglish]);
 
   function move(next: number) {
+    clientAttemptIdRef.current = null;
     setIndex(next);
     setAnswer("");
     setError("");
@@ -131,11 +132,16 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
     setStartedAt(Date.now());
   }
 
+  const clientAttemptIdRef = useRef<string | null>(null);
+
   async function submit() {
     if (!answer.trim()) return setError("Nhập câu trả lời trước nhé.");
     setLoading(true);
     setError("");
     try {
+      if (!clientAttemptIdRef.current) {
+        clientAttemptIdRef.current = crypto.randomUUID();
+      }
       const response = await fetch("/api/attempt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -147,11 +153,13 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
           replayCount,
           hintCount,
           playbackRate: rate,
+          clientAttemptId: clientAttemptIdRef.current,
         }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Không thể chấm bài");
-      router.push(`/learner/attempt/${payload.attempt.id}`);
+      clientAttemptIdRef.current = null;
+      router.push(`/learner/attempt/${payload.attemptId ?? payload.attempt.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Thử lại nhé.");
     } finally { setLoading(false); }

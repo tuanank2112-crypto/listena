@@ -80,12 +80,14 @@ export const SubmitAttemptSchema = z.object({
   replayCount: z.number().int().min(0).default(0),
   hintCount: z.number().int().min(0).default(0),
   playbackRate: z.number().min(0.5).max(2).default(1.0),
+  clientAttemptId: z.string().uuid(),
 });
 
 export const ReviewFlashcardSchema = z.object({
   flashcardId: z.string().uuid(),
   rating: z.enum(["AGAIN", "HARD", "GOOD", "EASY"]),
   responseTimeMs: z.number().int().positive().optional(),
+  clientReviewId: z.string().uuid(),
 });
 
 export const GenerateLessonSchema = z.object({
@@ -97,6 +99,7 @@ export const GenerateLessonSchema = z.object({
   audioDuration: z.number().int().min(30).max(600).optional(),
   accent: z.enum(["us", "uk"]).optional(),
   difficulty: z.number().min(0.5).max(2).optional(),
+  clientRequestId: z.string().uuid(),
 });
 
 export const CreateLessonSchema = z.object({
@@ -110,6 +113,7 @@ export const CreateLessonSchema = z.object({
   accent: z.enum(["us", "uk"]).default("us"),
   defaultPlaybackRate: z.number().min(0.5).max(2).default(1.0),
   estimatedMinutes: z.number().int().min(1).default(10),
+  clientRequestId: z.string().uuid(),
   segments: z
     .array(
       z.object({

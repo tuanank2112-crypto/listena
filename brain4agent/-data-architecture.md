@@ -3,7 +3,7 @@
 Plan07 uses Prisma/libSQL with file-backed SQLite for local development and E2E; Turso is selected only by exact `APP_RUNTIME=vercel` plus complete server-only Turso configuration. Missing, partial or inherited hosted settings fail closed rather than open local SQLite. Canonical staging `listena-staging-20260911` is a verified one-way import of the approved D1 snapshot; bounded Preview writes used separate disposable clone `listena-preview-20260912`, never the canonical staging target. The former request-scoped Cloudflare D1 path is not part of the target Vercel graph; the deployed Cloudflare Worker+D1 remains a historical rollback asset. DDL is forward-only through `migrations/0001`–`0003`; the historical production curriculum recovery was a reviewed idempotent upsert import, never reset/seed. E2E creates a temporary `listena-e2e-*` database and never touches `dev.db`, historical production D1, or a Turso target.
 
 ## Model
-- User/roles, LearnerProfile (including calibration state).
+- User/roles, verified-email timestamp, hashed one-time AccountActionToken and owner-bound FeedbackMessage; LearnerProfile includes calibration state.
 - Course→Lesson→LessonSegment/Exercise; LessonVocabulary nối VocabularyItem.
 - LearningSession→LearningTurn/LearningEvidence/Intervention; AIInteraction trace provider/output/fallback.
 - Attempt/AttemptError, VocabularyMastery, Flashcard/ReviewLog, SkillMastery, Recommendation.
@@ -23,3 +23,5 @@ Attempt chỉ nhận exercise đúng lesson PUBLISHED. Flashcard review kiểm o
 ## Cache/memory
 English dùng voice hệ thống. Vietnamese có Next/Python disk caches, còn thiếu sidecar auth và speed semantics. Kokoro tồn tại legacy nhưng không đăng ký runtime.
 Brain lưu kiến thức dự án, không secrets/hội thoại riêng tư của học viên. state.json.current_version là app; brain_template_version là khung não.
+
+Plan10 review notes that legacy Attempt/ReviewLog and teacher authoring paths do not yet have complete request-level idempotency/atomic graph guarantees. The proposed additive request IDs and LessonCreationRequest ledger are specifications only until the Plan10 migration is implemented and accepted; they must not be described as existing schema before then.

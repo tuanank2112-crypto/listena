@@ -1,17 +1,11 @@
-import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/server/auth/config";
 import { databaseErrorResponse } from "@/lib/database-error-response";
-import { createAIProviderFromEnv } from "@/server/ai/provider";
 import { isAIProviderError } from "@/server/ai/errors";
-import {
-  reserveUserAICall,
-  settleUserAICall,
-} from "@/server/ai/request-budget";
-import { GenerateLessonSchema, AILessonDraftSchema } from "@/server/validation/schemas";
-import { prisma } from "@/lib/prisma";
+import { GenerateLessonSchema } from "@/server/validation/schemas";
+import { generateLessonFromRequest } from "@/server/services/lesson-authoring";
+import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency";
 import logger from "@/lib/logger";
-import type { CefrLevel, ExerciseType } from "@prisma/client";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -20,7 +14,10 @@ export async function POST(req: Request) {
   try {
     const session = await auth();
     if (!session?.user?.id || (session.user.role !== "TEACHER" && session.user.role !== "ADMIN")) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { code: "FORBIDDEN", error: "Forbidden" },
+        { status: 403, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
     const body = await req.json();
@@ -28,182 +25,72 @@ export async function POST(req: Request) {
 
     if (!parsed.success) {
       return NextResponse.json(
-        { error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
-        { status: 400 }
+        { code: "VALIDATION_ERROR", error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
+        { status: 400, headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
-    // Generate lesson draft with AI
-    const aiProvider = createAIProviderFromEnv();
-    const reservation = await reserveUserAICall({
+    const result = await generateLessonFromRequest({
       userId: session.user.id,
-      purpose: "lesson_generation",
-      provider: aiProvider.providerName,
-      model: aiProvider.modelName,
+      role: session.user.role,
+      clientRequestId: parsed.data.clientRequestId,
+      request: parsed.data,
     });
-    let draft;
-    try {
-      draft = await aiProvider.generateLesson({
-        ...parsed.data,
-        safetyIdentifier: session.user.id,
-      });
-    } catch (error) {
-      await settleUserAICall(reservation, {
-        success: false,
-        provider: aiProvider.providerName,
-        model: aiProvider.modelName,
-        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
-      });
-      throw error;
-    }
 
-    // Validate AI output
-    const validated = AILessonDraftSchema.safeParse(draft);
-    if (!validated.success) {
-      await settleUserAICall(reservation, {
-        success: false,
-        provider: aiProvider.providerName,
-        model: aiProvider.modelName,
-        failureReason: "schema_validation_failed",
-      });
-      logger.warn({ validationError: validated.error.format() }, "AI lesson draft validation failed");
+    return NextResponse.json(
+      {
+        replayed: result.replayed,
+        lesson: { id: result.value.lessonId },
+      },
+      {
+        status: result.replayed ? 200 : 201,
+        headers: { "Cache-Control": "private, no-store" },
+      }
+    );
+  } catch (error) {
+    if (error instanceof IdempotencyConflictError) {
+      logger.warn({ code: error.code }, "Lesson generation idempotency conflict");
       return NextResponse.json(
-        { error: "AI tạo nội dung không hợp lệ, vui lòng thử lại" },
-        { status: 422 }
+        { code: error.code, error: error.message },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } }
       );
     }
 
-    await settleUserAICall(reservation, {
-      success: true,
-      provider: aiProvider.providerName,
-      model: aiProvider.modelName,
-    });
-    await prisma.aIInteraction.create({
-      data: {
-        userId: session.user.id,
-        purpose: "lesson_generation",
-        provider: aiProvider.providerName,
-        model: aiProvider.modelName,
-        promptVersion: "live-lesson-generation-1.0",
-        inputHash: createHash("sha256")
-          .update(JSON.stringify(parsed.data))
-          .digest("hex"),
-        validatedOutput: JSON.stringify({
-          title: validated.data.title,
-          cefrLevel: parsed.data.cefrLevel,
-          segmentCount: validated.data.segments.length,
-          exerciseCount: validated.data.exercises.length,
-        }),
-        success: true,
-      },
-    });
-
-    // Find or create default course
-    let course = await prisma.course.findFirst({
-      where: { createdById: session.user.id },
-    });
-
-    if (!course) {
-      course = await prisma.course.create({
-        data: {
-          title: `Course - ${parsed.data.cefrLevel}`,
-          description: `Auto-generated course for ${parsed.data.cefrLevel}`,
-          cefrLevel: parsed.data.cefrLevel as CefrLevel,
-          status: "DRAFT",
-          createdById: session.user.id,
-        },
-      });
+    if (error instanceof OutcomePendingError) {
+      return NextResponse.json(
+        { code: error.code, error: error.message, retryAfterSeconds: error.retryAfterSeconds },
+        {
+          status: 409,
+          headers: {
+            "Cache-Control": "private, no-store",
+            "Retry-After": String(error.retryAfterSeconds),
+          },
+        }
+      );
     }
 
-    // Create lesson
-    const lesson = await prisma.lesson.create({
-      data: {
-        courseId: course.id,
-        title: validated.data.title,
-        topic: parsed.data.topic,
-        cefrLevel: parsed.data.cefrLevel as CefrLevel,
-        learningObjectives: parsed.data.learningObjectives.join("\n"),
-        transcript: validated.data.transcript,
-        status: "DRAFT",
-        createdById: session.user.id,
-        estimatedMinutes: parsed.data.audioDuration ?? 10,
-        segments: {
-          create: validated.data.segments.map((s) => ({
-            position: s.position,
-            text: s.text,
-            difficulty: s.difficulty,
-          })),
-        },
-        exercises: {
-          create: validated.data.exercises.map((e) => ({
-            type: e.type as ExerciseType,
-            prompt: e.prompt,
-            correctAnswer: e.correctAnswer,
-            difficulty: e.difficulty,
-            position: e.position,
-          })),
-        },
-      },
-    });
-
-    // Create vocabulary items
-    for (const v of validated.data.vocabulary) {
-      const item = await prisma.vocabularyItem.upsert({
-        where: { lemma: v.lemma },
-        create: {
-          lemma: v.lemma,
-          displayText: v.displayText,
-          ipa: v.ipa,
-          meaningVi: v.meaningVi,
-          meaningEn: v.meaningEn,
-          partOfSpeech: v.partOfSpeech,
-          cefrLevel: v.cefrLevel as CefrLevel,
-          exampleSentence: v.exampleSentence,
-        },
-        update: {},
-      });
-      await prisma.lessonVocabulary.create({
-        data: {
-          lessonId: lesson.id,
-          vocabularyItemId: item.id,
-          isTarget: true,
-          importance: 1.0,
-        },
-      });
+    if (isAIProviderError(error)) {
+      logger.warn(
+        { code: error.code, provider: error.details.provider },
+        "AI lesson generation unavailable"
+      );
+      return NextResponse.json(
+        { code: error.code, error: "Dịch vụ AI hiện không khả dụng, vui lòng thử lại sau" },
+        { status: 503, headers: { "Cache-Control": "private, no-store" } }
+      );
     }
 
-    logger.info(
-      { lessonId: lesson.id, userId: session.user.id },
-      "AI lesson draft created"
-    );
-
-    return NextResponse.json({ lesson }, { status: 201 });
-  } catch (error) {
     const databaseResponse = databaseErrorResponse(error);
     if (databaseResponse) return databaseResponse;
 
-    if (isAIProviderError(error)) {
-      return NextResponse.json(
-        {
-          error: error.message,
-          code: error.code,
-          ...(error.details.retryAfterSeconds
-            ? { retryAfterSeconds: error.details.retryAfterSeconds }
-            : {}),
-        },
-        {
-          status: error.status,
-          headers: error.details.retryAfterSeconds
-            ? { "Retry-After": String(error.details.retryAfterSeconds) }
-            : undefined,
-        },
-      );
-    }
-    const message = error instanceof Error ? error.message : "Unknown error";
-    logger.error({ error: message }, "AI lesson generation failed");
+    const message = error instanceof Error ? error.message : "Tạo bài học thất bại";
+    logger.error(
+      { errorName: error instanceof Error ? error.name : "unknown", code: "INTERNAL_ERROR" },
+      "Lesson generation failed"
+    );
     return NextResponse.json(
-      { error: "Tạo bài học thất bại. Vui lòng thử lại." },
-      { status: 500 }
+      { code: "INTERNAL_ERROR", error: message },
+      { status: 500, headers: { "Cache-Control": "private, no-store" } }
     );
   }
 }

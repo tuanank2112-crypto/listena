@@ -1,7 +1,6 @@
 /**
  * Prebuild TTS audio — sinh sẵn âm thanh trước khi chạy runtime.
  *
- * - Tiếng Anh (116 từ vựng): Kokoro-82M chạy trực tiếp trên Node (kokoro-js).
  * - Tiếng Việt (chú giải nghĩa, tiêu đề ngữ pháp): VieNeu qua sidecar HTTP.
  *
  * Đầu ra được ghi theo khóa cache (SHA-256 của text + voice + engine version
@@ -11,35 +10,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import vocabulary from "../dataset/vocabulary.json";
 import grammar from "../dataset/grammar-reference.json";
-import { KokoroTTS } from "kokoro-js";
 import { createTTSAudioFilename, resolveTTSCacheKeyInput } from "../src/core/tts/cache-key";
-
-const kokoroModelId = process.env.KOKORO_MODEL_ID ?? "onnx-community/Kokoro-82M-v1.0-ONNX";
-const kokoroVoice = process.env.KOKORO_DEFAULT_VOICE ?? "bf_emma";
-const kokoroEngineVersion = "kokoro-js@1.2.1-q8";
 
 const vieNeuUrl = process.env.VIENEU_URL ?? "http://localhost:8001";
 let vieVoice = process.env.VIENEU_DEFAULT_VOICE ?? "";
 const vieEngineVersion = "vieneu-3.3.0";
 
 const cacheRoot = path.resolve(process.env.TTS_CACHE_DIR ?? "public/tts");
-const kokoroOutputDirectory = path.join(cacheRoot, "kokoro");
 const vieOutputDirectory = path.join(cacheRoot, "vie");
-
-async function prebuildKokoro() {
-  console.log(`[prebuild] Kokoro: 116 từ vựng → ${kokoroOutputDirectory}`);
-  await mkdir(kokoroOutputDirectory, { recursive: true });
-  const tts = await KokoroTTS.from_pretrained(kokoroModelId, { dtype: "q8", device: "cpu" });
-  let count = 0;
-  for (const item of vocabulary.items) {
-    const input = resolveTTSCacheKeyInput({ text: item.displayText, engineVersion: kokoroEngineVersion }, kokoroVoice);
-    const filename = await createTTSAudioFilename(input);
-    const audio = await tts.generate(input.text, { voice: input.voice as never, speed: 1 });
-    await writeFile(path.join(kokoroOutputDirectory, filename), Buffer.from(audio.toWav()));
-    count += 1;
-  }
-  console.log(`[prebuild] Kokoro xong: ${count} tệp (voice ${kokoroVoice}).`);
-}
 
 async function prebuildVie() {
   console.log(`[prebuild] VieNeu: nội dung tiếng Việt → ${vieOutputDirectory}`);
@@ -75,10 +53,6 @@ async function prebuildVie() {
   const unique = [...new Set(texts.map((t) => t.trim()).filter(Boolean))];
   console.log(`[prebuild] VieNeu: ${unique.length} chuỗi tiếng Việt độc nhất.`);
 
-  if (!vieVoice) {
-    console.warn("[prebuild] VIENEU_DEFAULT_VOICE rỗng — dùng voice mặc định của sidecar (bỏ qua voice trong khóa cache).");
-  }
-
   let count = 0;
   for (const text of unique) {
     const input = resolveTTSCacheKeyInput({ text, engineVersion: vieEngineVersion }, vieVoice);
@@ -108,7 +82,6 @@ async function prebuildVie() {
 }
 
 async function main() {
-  await prebuildKokoro();
   await prebuildVie();
   console.log("[prebuild] Hoàn tất toàn bộ.");
 }

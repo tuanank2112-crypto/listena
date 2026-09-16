@@ -7,7 +7,7 @@ const ENGINE_VERSION = "vieneu-3.3.0";
 const RequestSchema = z.object({
   text: z.string().trim().min(1).max(1000),
   voice: z.string().trim().min(1).max(100).optional(),
-  speed: z.number().finite().min(0.5).max(2).default(1),
+  speed: z.literal(1.0).default(1.0),
 });
 
 function sidecarConfig() {

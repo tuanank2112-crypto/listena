@@ -25,6 +25,42 @@ export function resolveLogLevel(value: string | undefined): LogLevel {
     : "info";
 }
 
+export const REDACT_PATHS = [
+  "password",
+  "*.password",
+  "*.*.password",
+  "token",
+  "*.token",
+  "*.*.token",
+  "apiKey",
+  "*.apiKey",
+  "*.*.apiKey",
+  "api_key",
+  "*.api_key",
+  "*.*.api_key",
+  "secret",
+  "*.secret",
+  "*.*.secret",
+  "authorization",
+  "*.authorization",
+  "*.*.authorization",
+  "cookie",
+  "*.cookie",
+  "*.*.cookie",
+  "set-cookie",
+  "*.set-cookie",
+  "*.*.set-cookie",
+  "submittedAnswer",
+  "*.submittedAnswer",
+  "*.*.submittedAnswer",
+  "rawToken",
+  "*.rawToken",
+  "*.*.rawToken",
+  "tokenHash",
+  "*.tokenHash",
+  "*.*.tokenHash",
+];
+
 const logger = pino({
   level: resolveLogLevel(process.env.LOG_LEVEL),
   transport:
@@ -32,7 +68,7 @@ const logger = pino({
       ? { target: "pino/file", options: { destination: 1 } }
       : undefined,
   redact: {
-    paths: ["password", "token", "apiKey", "api_key", "secret", "authorization"],
+    paths: REDACT_PATHS,
     censor: "[REDACTED]",
   },
 });

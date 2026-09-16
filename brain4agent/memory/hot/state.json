@@ -1,53 +1,74 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan09_account_email_security_local_accepted_plan07_vercel_turso_preview_mail_window_production_cutover_rollback_live_provider_pilot_open_cloudflare_rollback_retained",
-  "active_plan": "planning/09_2026-09-15_account-email-security/plan.md",
-  "checkpoint": "planning/09_2026-09-15_account-email-security/plan.md",
-  "planned_improvement_plan": "planning/08_2026-09-13_ai-native-self-learning/plan.md",
+  "system_status": "plan10_release_readiness_hardening_local_accepted_plan07_preview_mail_production_cutover_rollback_live_provider_pilot_open",
+  "active_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
+  "checkpoint": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
+  "planned_improvement_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
   "last_project_review": {
-    "date": "2026-09-13",
-    "source_commit": "aa2021d39d76aba568d7b0c89214caf41f7c083f",
-    "report": "docs/PROJECT_REVIEW_2026-09-13.md",
-    "status": "plan08_local_implementation_and_local_acceptance_complete_hosted_live_pilot_open",
-    "direction": "AI-native self-directed English learning; root orchestrator owns contracts, dependencies, integration and evidence",
-    "fresh_checks": "387 tests across 78 files; type-check PASS; lint exit 0 with 34 pre-existing warnings; build PASS; Prisma validate/generate PASS; isolated fresh-SQLite E2E 20/20; offline quality 30/30 cases and 12/12 dataset checks",
-    "release_caveat": "P81–P85 are locally implemented/accepted, including recommendation read-only all-table fingerprinting. This does not close Vercel/Turso Preview/Production, cutover/rollback, successful live-provider, or consented-pilot gates. No release/version bump."
+    "date": "2026-09-16",
+    "source_commit": "0ce30e1",
+    "report": "docs/PROJECT_REVIEW_2026-09-16.md",
+    "status": "plan10_completed_local_plan07_plan09_hosted_gates_open",
+    "direction": "Preserve the AI-native loop; harden legacy mutation integrity, authoring atomicity, supply-chain, abuse/privacy and reproducible operations before write-enabled release",
+    "fresh_checks": "437 tests across 87 files; type-check PASS; lint 0 errors/33 warnings; standard build PASS; Prisma validate/status PASS with 9 migrations; isolated fresh-SQLite E2E 20/20; offline quality 30/30 cases and 12/12 dataset checks; Python sidecar 7/7 tests passed; npm audit --omit=dev reported 0 runtime high/critical",
+    "release_caveat": "Local and CI hardening completed. Plan07 and Plan09 hosted environment gates (Vercel Preview/Production, live provider call, WAF enforcement, mail delivery, cutover/rollback) remain independent and fenced."
   },
   "last_local_acceptance": {
-    "date": "2026-09-15",
-    "plan": "planning/09_2026-09-15_account-email-security/plan.md",
-    "scope": "Account email verification, one-time recovery and verified feedback local implementation accepted; Preview mail delivery remains unproven",
+    "date": "2026-09-16",
+    "plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
+    "scope": "Release-readiness hardening: attempt/flashcard mutation idempotency & atomicity, authoring ledger & atomicity, dependency supply-chain cleanup (Kokoro removed, 0 runtime high/critical), logger wildcard redaction, Next security headers, VieNeu sidecar schema & test, ESM Vitest coverage, Prisma 6 config, CI workflow",
     "scenarios_passed": [
-      "unit-tests-425-across-87-files",
-      "type-check",
-      "lint-exit-0-existing-repository-warnings",
-      "standard-Next-production-build",
-      "Prisma-validate-status-and-additive-local-migration",
+      "unit-tests-437-across-87-files",
+      "type-check-0-errors",
+      "lint-0-errors-33-baseline-warnings",
+      "standard-Next-production-build-42-routes",
+      "Prisma-validate-status-and-additive-local-migration-9-migrations",
       "isolated-fresh-SQLite-E2E-20-of-20",
-      "account-token-hash-replay-reset-and-route-contracts",
-      "auth-verification-claim-and-proxy-regression",
-      "feedback-owner-delivery-state-and-mail-boundary-redaction",
-      "isolated-E2E-regression-seed-and-fixtures-verified"
+      "offline-quality-dry-run-30-of-30",
+      "python-tts-sidecar-7-of-7",
+      "vitest-v8-coverage-measured",
+      "supply-chain-0-runtime-high-critical",
+      "github-actions-ci-workflow-configured"
     ],
     "deferred_p2": "Password reset deliberately does not revoke all existing stateless Auth.js JWT sessions; global revocation needs a separate session-state design.",
-    "environment_caveat": "A Resend key, verified sender, support mailbox and disposable Vercel/Turso Preview enabled-write evidence remain OPEN. No historic account is auto-verified. Plan07 retains Production/cutover/rollback gates; current_version remains 0.5.0."
+    "environment_caveat": "Plan10 local & CI gates are accepted. Plan07 retains hosted Vercel/Turso write-enable, live provider, and rollback gates; Plan09 retains live Resend delivery verification; current_version remains 0.5.0."
   },
   "current_verification": {
-    "type_check": "PASS via npm run type-check on 2026-09-15",
-    "unit_tests": "425 passed across 87 files on 2026-09-15",
-    "lint": "exit 0 with existing repository warnings on 2026-09-15",
-    "build": "PASS via standard Next production build on 2026-09-15",
-    "prisma": "validate/status PASS and additive account-email migration applied locally on 2026-09-15",
-    "e2e": "20/20 PASS on an isolated fresh SQLite DB on 2026-09-15",
+    "type_check": "PASS via npm run type-check on 2026-09-16 (0 errors)",
+    "unit_tests": "437 passed across 87 files on 2026-09-16",
+    "lint": "exit 0 with 33 warnings on 2026-09-16",
+    "build": "PASS via standard Next 16.3.5 production build on 2026-09-16 (42 routes)",
+    "prisma": "validate/status PASS with 9 migrations on 2026-09-16; 0 deprecation warnings using root prisma.config.ts",
+    "e2e": "20/20 PASS on an isolated fresh SQLite DB on 2026-09-16",
+    "plan10": "Local & CI implementation complete (P100-P106). Attempt/review idempotency, lesson graph atomicity, Kokoro removal, security headers, TTS boundary, Prisma config, Vitest ESM coverage, and CI workflow accepted.",
+    "supply_chain": "npm audit --omit=dev: 0 runtime high/critical vulnerabilities. Only build-time deepmerge-ts in Prisma CLI remains documented exception.",
+    "python_tts": "7/7 PASS in tts-service/test_main.py via Python 3.11 without model downloads",
     "plan09": "Local account verification/reset/feedback acceptance complete. Hosted Resend inbox and disposable Vercel/Turso Preview evidence remain open; no Vercel, Turso, D1 or Production mutation was performed.",
-    "offline_quality": "30/30 cases and 12/12 dataset checks PASS on 2026-09-13; this is not live-provider or pedagogical-efficacy proof",
+    "offline_quality": "30/30 cases and 12/12 dataset checks PASS on 2026-09-16; this is not live-provider or pedagogical-efficacy proof",
     "migration_verifier": "Canonical staging import listena-staging-20260911 matched the approved D1 snapshot on schema/index/FK/timestamp/core-curriculum evidence; the verifier is deliberately read-only",
     "turso_vercel": "Vercel Preview commit 587641a built Ready. A disposable clone-only enabled window proved registration/dashboard, one server-scored adaptive-game evidence write and direct readback; final Preview is redeployed disabled after a blocked-registration/no-row-persistence check. Full hosted retry/owner-isolation evidence remains open",
     "d1": "Plan07 performed a one-way approved snapshot import into canonical Turso staging without mutating/resetting/seeding/dual-writing D1. Final D1 export, Production target, cutover, and rollback remain open",
     "kira": "Target Tutor UI returned its typed unavailable behavior; no successful live Kira/provider call, secret value, cost, or latency claim is made"
   },
   "last_verification": {
+    "timestamp": "2026-09-16T10:55:00+07:00",
+    "scenarios_passed": [
+      "type-check-0-errors",
+      "unit-tests-437-across-87-files",
+      "lint-0-errors-33-existing-warnings",
+      "standard-Next-production-build-42-routes",
+      "E2E-20-isolated-fresh-sqlite",
+      "Prisma-validate-status-9-migrations",
+      "offline-quality-dry-run-30-of-30",
+      "python-tts-7-of-7",
+      "vitest-v8-coverage",
+      "audit-omit-dev-0-runtime-vulnerabilities"
+    ],
+    "benchmark_accuracy": "Plan10 local and CI gates passed. Hosted duplicate retry, private-owner isolation, final D1 export, Production acceptance/cutover/rollback, or successful live-provider behavior remain governed by Plan07/09",
+    "grade": "Plan10 local and CI hardening fully accepted; hosted Preview/Production gates remain pending separate approved windows"
+  },
+  "previous_verification": {
     "timestamp": "2026-09-12T18:10:14+07:00",
     "scenarios_passed": [
       "type-check",
@@ -64,20 +85,5 @@
     "benchmark_accuracy": "Plan07 has canonical imported staging and bounded protected-Preview evidence. It does not substitute for hosted duplicate retry, private-owner isolation, final D1 export, Production acceptance/cutover/rollback, or successful live-provider behavior",
     "grade": "Plan07 local + Turso staging + bounded Vercel Preview proof accepted; full Preview and all Production/cutover/rollback/live-success gates remain pending"
   },
-  "previous_verification": {
-    "timestamp": "2026-09-10T19:38:15+07:00",
-    "scenarios_passed": [
-      "type-check",
-      "unit-tests-225",
-      "lint-0-errors-34-existing-warnings",
-      "OpenNext-Worker-build",
-      "E2E-16-P65-Kira-regression-suite",
-      "remote-D1-additive-import",
-      "production-health-login-smoke-P65-Kira",
-      "production-KIRAAI-secret-binding-version"
-    ],
-    "benchmark_accuracy": "P65/Kira local implementation, public code deployment and secret-binding gates passed; real-provider smoke remains pending",
-    "grade": "P65/Kira Worker and opaque secret binding deployed; live-provider gate pending"
-  },
-  "active_plans_completed": 3
+  "active_plans_completed": 4
 }

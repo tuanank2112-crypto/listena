@@ -1,0 +1,76 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, "codex/*"]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-and-test:
+    name: Build, Lint & Test
+    runs-on: ubuntu-latest
+
+    env:
+      NODE_ENV: test
+      DATABASE_URL: "file:./prisma/dev.db"
+      AUTH_SECRET: "ci-auth-secret-for-testing-only-12345678901234567890"
+      MIGRATION_WRITE_MODE: "disabled"
+      TTS_API_KEY: "test-sidecar-api-key"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: "npm"
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Install Python TTS dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r tts-service/requirements-test.txt -r tts-service/requirements.txt
+
+      - name: Prisma validate & generate
+        run: |
+          npx prisma validate
+          npx prisma generate
+
+      - name: TypeScript type-check
+        run: npm run type-check
+
+      - name: ESLint check
+        run: npm run lint
+
+      - name: Vitest unit tests with coverage
+        run: npm run test:coverage
+
+      - name: Python TTS sidecar boundary tests
+        run: python -m pytest tts-service -q
+
+      - name: Next.js standard build
+        run: npm run build
+
+      - name: Offline quality evaluation (dry-run)
+        run: npm run eval:quality -- --dry-run
+
+      - name: Install Playwright Chromium browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Isolated Playwright E2E tests
+        run: npm run test:e2e

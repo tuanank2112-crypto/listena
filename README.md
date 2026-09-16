@@ -4,7 +4,7 @@
 
 ## Kiến trúc
 
-Next.js 16.3.1 App Router, React 19, TypeScript, Auth.js Credentials/JWT, Prisma 6 và SQLite. Tutor dùng provider tương thích OpenAI hoặc fallback xác định; server giữ validator, điểm, trạng thái và evidence.
+Next.js 16.3.5 App Router, React 19, TypeScript, Auth.js Credentials/JWT, Prisma 6 và SQLite (local/test) hoặc Turso/libSQL (hosted). Tutor dùng provider tương thích (Kira hoặc OpenAI); server giữ validator, điểm, trạng thái và evidence.
 
 - Session/turn/intervention được lưu để tải lại hội thoại. `clientTurnId` chống ghi trùng.
 - Evidence, mastery và learner memory ghi trong cùng transaction. Memory có kiểu dữ liệu được kiểm tra và chỉ bản tóm tắt giới hạn được đưa vào ngữ cảnh tutor.
@@ -15,13 +15,13 @@ Chi tiết: [Learning runtime](docs/learning.md), [AI architecture](docs/AI_FIRS
 
 ## Chạy local
 
-Dùng Node.js theo `.nvmrc`. Sao chép `.env.example` thành `.env`, đặt `DATABASE_URL` tới SQLite local và cấu hình auth secret.
+Dùng Node.js theo `.nvmrc` (Node 24). Sao chép `.env.example` thành `.env`, đặt `DATABASE_URL` tới SQLite local và cấu hình auth secret.
 
 ```bash
 npm install
 ```
 
-Chỉ với database demo mới: `npm run db:push`, `npm run db:seed`, rồi `npm run dataset:import`. Seed xóa dữ liệu hiện có; không chạy trên database có tiến độ người học. Với database đang dùng, áp dụng migrations phù hợp sau khi sao lưu.
+Chỉ với database demo mới: `npm run db:push`, `npm run db:seed`, rồi `npm run dataset:import`. Seed xóa dữ liệu hiện có; không chạy trên database có tiến độ người học. Với database đang dùng, áp dụng migrations phù hợp sau khi sao lưu (`dev.db.bak`).
 
 ```bash
 npm run dev
@@ -37,30 +37,37 @@ Game Hub ưu tiên Mission và Daily Quest; Quick comeback gồm chọn nhanh, g
 
 ## AI provider
 
-Mặc định dùng mock/fallback với retrieval từ dataset, không cần API key. Cấu hình provider bên ngoài bằng:
+Hỗ trợ hai provider bên ngoài: KiraAI (Chat Completions) và OpenAI (Responses). Không có provider mock trong runtime. Khi provider chưa cấu hình hoặc gặp sự cố, server trả về phản hồi lỗi typed/unavailable tường minh (hoặc mẫu nhiệm vụ xác định cho mission):
+
+```env
+AI_PROVIDER=kira
+KIRAAI_API_KEY=...
+KIRAAI_MODEL=glm-5.3-flash-free
+KIRAAI_BASE_URL=https://kiraai.vn/api/v1
+```
+
+Hoặc OpenAI:
 
 ```env
 AI_PROVIDER=openai
 OPENAI_API_KEY=...
-OPENAI_MODEL=your-model
+OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1
 ```
 
-Provider lỗi hoặc trả dữ liệu không hợp lệ sẽ dùng fallback. Eval mock kiểm hợp đồng/phase/grounding nội bộ; không chứng minh hiệu quả học tập với người học thật.
-
 ## Giọng đọc
 
-Tiếng Anh dùng Web Speech API và giọng hệ thống. Kokoro không đăng ký trong runtime; script `tts:prebuild` và thư viện Kokoro còn là legacy, không cần chạy để dùng app.
+Tiếng Anh dùng Web Speech API phía trình duyệt và giọng hệ thống. Thư viện Kokoro đã được loại bỏ hoàn toàn khỏi dự án.
 
-Tiếng Việt dùng VieNeu sidecar; khi không khả dụng, speech controller thử Web Speech nếu thiết bị có giọng phù hợp.
+Tiếng Việt dùng private VieNeu TTS sidecar (`vieneu==3.3.0`, speed cố định 1.0); khi không khả dụng, speech controller thử Web Speech nếu thiết bị có giọng phù hợp.
 
 - `GET/POST /api/tts/vie` yêu cầu đăng nhập.
-- App và sidecar phải có cùng `TTS_API_KEY`. Thiếu cấu hình sẽ từ chối phục vụ.
+- App và sidecar phải có cùng `TTS_API_KEY`. Thiếu cấu hình sẽ từ chối phục vụ (503).
 - App dùng `VIENEU_URL` (mặc định `http://localhost:8001`). Có thể để trống `VIENEU_DEFAULT_VOICE` để lấy giọng từ sidecar.
-- Cache mới của Next nằm ở `TTS_PROXY_CACHE_DIR` (mặc định `tts-service/cache/proxy`), ngoài `public/`; phản hồi audio dùng `Cache-Control: private, no-store`.
-- Cache riêng của sidecar dùng `TTS_CACHE_DIR`; Docker đặt `/app/cache`. Các file public audio được sinh trước đây không tự bị xóa.
+- Next.js audio cache nằm ở `TTS_PROXY_CACHE_DIR` (mặc định `tts-service/cache/proxy`), ngoài `public/`; phản hồi audio dùng `Cache-Control: private, no-store`.
+- Sidecar chỉ lắng nghe trên loopback (`127.0.0.1:8001`) và trả về lỗi opaque khi synthesis thất bại.
 
-Chạy sidecar trực tiếp với cùng secret trong môi trường shell:
+Chạy sidecar trực tiếp với Python 3.11 trong môi trường shell:
 
 ```bash
 cd tts-service
@@ -68,20 +75,26 @@ pip install -r requirements.txt
 uvicorn main:app --host 127.0.0.1 --port 8001 --workers 1
 ```
 
-Hoặc `docker compose build tts` rồi `docker compose up tts`. Compose truyền `TTS_API_KEY` và chỉ publish cổng TTS trên loopback. Sidecar dùng `vieneu==3.3.0`, khởi tạo model lúc startup; chỉ chạy một worker. Chất lượng giọng và tốc độ audio thực tế cần kiểm riêng với model đã cài.
+Hoặc `docker compose up tts`. Compose truyền `TTS_API_KEY` và chỉ publish cổng TTS trên loopback (`127.0.0.1:8001`). Sidecar dùng `vieneu==3.3.0`, khởi tạo model lúc startup; chỉ chạy một worker.
 
-## Kiểm tra và triển khai
+## Kiểm tra và CI
 
 ```bash
-npm test
-npm run type-check
-npm run lint
-npm run eval
-npx prisma validate
-npm run build
-npm run test:e2e
+npm test                      # Chạy toàn bộ Vitest unit tests
+npm run test:coverage         # Đo độ phủ kiểm thử với v8
+npm run type-check            # Kiểm tra kiểu TypeScript
+npm run lint                  # Kiểm tra ESLint
+npx prisma validate           # Xác thực schema Prisma
+python -m pytest tts-service -q # Kiểm thử boundary TTS (không tải model)
+npm run build                 # Build Next.js production
+npm run eval:quality -- --dry-run # Đánh giá chất lượng offline (không ghi đè file báo cáo)
+npm run test:e2e              # Chạy Playwright E2E trên database SQLite tạm
 ```
 
-E2E dùng database SQLite mới trong thư mục temp, tự chạy migrations/seed/import với provider mock; không dùng database người học. Không chạy build và E2E đồng thời vì cùng dùng `.next`. Bằng chứng và giới hạn nghiệm thu cập nhật trong [TESTING-ACCEPTANCE](planning/03_2026-09-08_learning-loop-completion/specs/TESTING-ACCEPTANCE.md).
+E2E dùng database SQLite mới trong thư mục temp, tự chạy migrations/seed/import; không dùng database người học. Không chạy build và E2E đồng thời vì cùng dùng `.next`.
 
-`render.yaml` và dịch vụ PostgreSQL trong Compose là cấu hình hạ tầng chưa đồng bộ với SQLite hiện tại. Chưa triển khai production; cần kế hoạch chuyển provider, migration, backup/restore và cấu hình dịch vụ trước khi sử dụng.
+Hạ tầng và triển khai:
+- Mục tiêu triển khai hosted: Vercel + Turso (libSQL) theo lộ trình kiểm soát của Plan 07 và Plan 09.
+- Cloudflare Worker + D1 là phương án rollback lịch sử.
+- `render.yaml` và dịch vụ PostgreSQL trong `docker-compose.yml` là cấu hình tham khảo lịch sử không được hỗ trợ (unsupported) với schema SQLite hiện tại.
+

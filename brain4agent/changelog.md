@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Plan10 project review/spec, 2026-09-16
+- Add a fresh project-wide review and worker-ready Plan10 spec package for supply-chain remediation, atomic/idempotent legacy learning mutations, authoring integrity, security/TTS boundaries, reproducible tooling/docs/CI and environment-labelled acceptance.
+- Record current local evidence: 425/425 unit, type-check, lint 0 errors/33 warnings, standard build, Prisma validate/status with 8 migrations, isolated E2E 20/20, offline quality 30/30 + 12/12. Python sidecar tests are not claimed because host dependencies are missing.
+- Record 8 high/0 critical npm advisories without changing dependencies or accepting runtime exposure. No app implementation, migration, deploy, secret, hosted DB or version change in this entry.
+
 ## Unreleased — Plan09 account email security, local accepted (2026-09-15; hosted mail evidence open)
 - Add additive `emailVerifiedAt`, hashed one-time account-action tokens and durable feedback records. Credentials sign-in now requires the server-recorded email proof, while proxy/session claims reject pre-verification sessions.
 - Add verification resend/confirm and password-reset request/confirm APIs, server-only Resend delivery, safe Vietnamese action emails, and verified-user feedback notification plus acknowledgement. Raw action tokens, mail keys and feedback text never enter logs or tracked config.

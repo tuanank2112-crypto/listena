@@ -13,6 +13,10 @@
 - Daily Quest recency chỉ là lịch sử stateJson đã validate của chính learner; malformed key phải bị bỏ qua và all-recent phải fallback authored deterministic.
 
 ## Còn backlog
+- Plan10 review promotes legacy attempt/flashcard multi-write retry safety and teacher lesson graph atomicity to pre-release work; do not create synthetic LearningEvidence to hide these gaps.
+- `npm audit` on 2026-09-16 reports 8 high/0 critical across Kokoro/HuggingFace/Sharp and Prisma/Wrangler toolchain paths. Remove unused runtime packages and classify resolved paths; do not use `--force` or a blanket ignore.
+- Vitest TS/CJS loader and deprecated `package.json#prisma` config warnings are current. Python sidecar tests need an explicit Python 3.11 test dependency environment; missing host packages are not a pass or a logical failure.
+- README, `.env.example`, Render/Postgres and Kokoro text contain stale runtime/deployment claims. Current truth is Next 16.3.3, no selectable production mock, Vercel/Turso target and Cloudflare rollback asset; reconcile before worker/deploy handoff.
 - Render PostgreSQL không khớp SQLite schema/migration lock; chưa production ready.
 - TTS auth/key/loopback boundary đã được Plan03 xử lý. Speed được nhận nhưng infer bỏ qua/cache Python thiếu speed; real voice behavior vẫn chưa verified.
 - Legacy attempt/review/game chưa tạo unified LearningEvidence/memory; không tự tạo synthetic session để vá tạm.

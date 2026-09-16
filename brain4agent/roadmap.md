@@ -1,5 +1,11 @@
 # Roadmap AI-native
 
+## Plan10 planned — release-readiness hardening, 2026-09-16
+
+[Review](../docs/PROJECT_REVIEW_2026-09-16.md) and [Plan10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) define the next worker sequence without rewriting the AI-native loop. First freeze one additive schema/migration; then remove unused vulnerable Kokoro/HuggingFace runtime dependencies, make legacy attempt/flashcard mutations atomic and retry-safe, add a durable lesson-authoring request/atomic graph, harden errors/TTS/hosted abuse controls, and finish reproducible Prisma/Vitest/Python/CI/docs evidence. No implementation or deploy has started.
+
+Fresh review baseline: 425/425 unit tests, type-check, lint 0 errors/33 warnings, build, Prisma validate/status, E2E 20/20 and offline quality 30/30 + 12/12 pass. Python sidecar is unverified in this host because dependencies are absent; npm audit reports 8 high/0 critical. Plan07 remains the only authority for production cutover/rollback and Plan09 remains the mail proof owner.
+
 ## Plan09 local acceptance 2026-09-15 — verified email, recovery and feedback
 
 [Plan09](../planning/09_2026-09-15_account-email-security/plan.md) now gives the authentication surface a durable email-ownership boundary: new accounts cannot sign in until a one-time verification link succeeds; password recovery stores only hashed tokens and returns indistinguishable request responses; verified learners can persist feedback and receive mail acknowledgement when Resend is configured. Feedback is directly reachable from learner navigation, and acknowledgements reply only to controlled support mail. The local SQLite migration is additive and applied only locally. Local proof: 425/425 unit tests across 87 files, type-check, lint with 0 errors and existing warnings, standard build, Prisma validation/status, and isolated E2E 20/20. The E2E seed/fixtures mark synthetic accounts verified so regression login represents an already-proven inbox owner.
