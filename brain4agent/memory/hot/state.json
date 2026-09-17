@@ -1,7 +1,7 @@
 {
   "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "production_live_login_blocked_by_missing_mail_config",
+  "system_status": "production_live_mail_configured_awaiting_owner_signup",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -230,9 +230,19 @@
     },
     "blocked": {
       "login": "Plan09 requires a verified email before sign-in; production lacks RESEND_API_KEY, EMAIL_FROM, EMAIL_REPLY_TO, SUPPORT_EMAIL so no verification mail is sent and verificationEmailSent=false",
-      "ai_on_production": "UNVERIFIED: every AI endpoint needs a signed-in session, which cannot be obtained until mail works"
+      "ai_on_production": "still UNVERIFIED; needs a signed-in session, which needs the owner to complete sign-up"
     },
-    "root_could_not": "write to the production database to verify the test account; blocked by the shared-resource guard, which is the correct guard"
+    "root_could_not": "write to the production database to verify the test account; blocked by the shared-resource guard, which is the correct guard",
+    "mail": {
+      "provider": "Resend, sending-only restricted key",
+      "from": "ListenAI <onboarding@resend.dev>",
+      "reply_to_and_support": "tuanank2112@gmail.com",
+      "env_type": "encrypted (NOT sensitive) so values actually apply",
+      "verified_send": "direct API send to tuanank2112@gmail.com returned 200",
+      "limitation": "no verified domain, so Resend 403s every recipient except tuanank2112@gmail.com verbatim; plus-aliases are rejected too",
+      "consequence": "registrations to any other address get upstream_unauthorized and verificationEmailSent=false"
+    },
+    "next_step": "owner registers at https://listena.vercel.app/register using exactly tuanank2112@gmail.com, clicks the emailed link, then signs in; AI on production can be verified after that"
   },
   "build_lesson_2026_09_17": {
     "symptom": "production build failed: Failed to collect configuration for /api/attempt, caused by AuthSecretConfigurationError",

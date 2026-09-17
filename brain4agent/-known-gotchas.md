@@ -93,3 +93,9 @@
 - Domain `listena-n-listen-ai.vercel.app` bi SSO protection (302). Alias `listena.vercel.app` moi la duong vao cong khai. Kiem ca hai truoc khi ket luan production hong.
 - Prisma migration SQL co dong chu thich `-- CreateTable` truoc moi lenh. Khi tu tach cau lenh de chay tren Turso, phai LOC DONG chu thich truoc roi moi tach theo `;`, neu loc theo `startsWith('--')` se bo het moi lenh.
 - Production co the len song nhung van khong dung duoc: Plan09 doi xac minh email truoc khi dang nhap, nen thieu cau hinh mail la khong ai vao duoc. Kiem `RESEND_API_KEY`/`EMAIL_FROM` truoc khi tuyen bo san sang.
+
+## Mail tren Production 2026-09-17
+
+- Bien Vercel loai `sensitive` tao qua `vercel env add` trong du an nay luu GIA TRI RONG (CLI van bao "Added"). Bang chung hanh vi: Resend tra `upstream_unauthorized` du khoa that gui truc tiep thi 200. Phai tao lai bang `POST /v10/projects/{id}/env` voi `type:'encrypted'` thi gia tri moi thuc su ap dung.
+- Resend khi CHUA xac thuc ten mien chi cho gui toi DUNG dia chi chu tai khoan. Bi danh dau cong (`user+tag@gmail.com`) BI TU CHOI 403 `validation_error`. App map 403 thanh `upstream_unauthorized`, de bi hieu nham la sai khoa.
+- Do do dang ky thu tren production phai dung dung `tuanank2112@gmail.com`, khong dung bi danh. Muon mo cho nguoi hoc that thi bat buoc mua ten mien va xac thuc tai resend.com/domains, roi doi `EMAIL_FROM` sang ten mien do.
