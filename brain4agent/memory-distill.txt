@@ -1,6 +1,6 @@
-# ListenAI kernel -- project 0.5.0 accepted (candidate P120-P126 committed 9325ca2) / brain template 1.4.0
-# CURRENT CHECKPOINT 2026-09-17: Ung vien P120-P126 da commit (9325ca2). Root review 7 findings (F1-F7) DA DUOC WORKER XU LY HOAN TAT VA KIEM DINH: F1/F2 shouldSerializeLocally dung resolveDatabaseConfig() + 4 test mutex; F3 clearOwnerIntents noi vao dang xuat + test 6/6; F4 anonymous fallback da go bo; F5/F6/F7 cau chu changelog+ledger da chuan hoa; version ve 0.5.0. Toan bo gate local dat 100%: 494 test/93 files vitest, 24/24 Playwright E2E, type-check 0 loi, eslint 0 loi/32 canh bao, build 42 routes PASS, eval:learning 12/12 PASS, dev.db nguyen ven.
-# Luong tiep theo: D1/D4 dat local cho CI (gh auth); D2/D3/D5 cho dau vao user (provider/budget, pilot consent, phe duyet cutover).
+# ListenAI kernel -- project 0.6.0 accepted (D1 integrity local+CI qualified) / brain template 1.4.0
+# CURRENT CHECKPOINT 2026-09-17: Bac 0.6.0 dat chuan (D1 local + CI 15/15 PASS, GitHub Actions run 35187260657, SHA f408433). Root review 7 findings (F1-F7) da giai quyet hoan tat & kiem dinh. Plan10 P102/103/106 requalified; Plan11 local integrity/UI + CI khep lai. Toan bo gate local dat 100%: 494 test/93 files vitest, 24/24 Playwright E2E, type-check 0 loi, eslint 0 loi/32 canh bao, build 42 routes PASS, eval:learning 12/12 PASS, dev.db nguyen ven.
+# Luong tiep theo: Bac 0.7.0 (Preview disabled/enabled + mail); D2/D3/D5 cho dau vao user (provider/budget, pilot consent, phe duyet cutover).
 # Master plan: planning/12_2026-09-17_project-completion-release/plan.md. Contract ky thuat: Plan11. Hosted/mail: Plan07/09.
 
 <agent_startup_protocol>

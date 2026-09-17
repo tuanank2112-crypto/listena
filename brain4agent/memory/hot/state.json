@@ -1,7 +1,7 @@
 {
-  "current_version": "0.5.0",
+  "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "p120_p126_candidate_committed_root_findings_resolved_local_qualified",
+  "system_status": "p122_ci_qualified_d1_integrity_closed_v0.6.0",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -66,7 +66,7 @@
     "build": "PASS (42 routes)",
     "eval": "12/12 cases PASS (156/156 checks)",
     "prisma_migrate_status": "10 migrations, 1 pending on dev.db (not applied)",
-    "ci": "UNVERIFIED; gh unauthenticated",
+    "ci": "PASS; GitHub Actions run 35187260657 (15/15 steps success, SHA f408433)",
     "source_review": "all 7 root review findings resolved and verified",
     "hosted_gates": "Plan07/09 Preview disabled/enabled, Production, cutover, rollback, mail remain OPEN"
   },

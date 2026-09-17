@@ -128,5 +128,12 @@ Worker đã hoàn thành xử lý toàn bộ 7 findings theo đúng hợp đồn
    - `npm run build`: exit 0, 42 routes biên dịch thành công.
    - `npm run eval:learning`: 12/12 cases PASS (156/156 checks), `eval/report.md` nguyên vẹn.
    - `npx prisma migrate status`: dev.db nguyên vẹn, không bị apply migration.
-8. **Commit ứng viên hoàn thiện:**
-   - Commit `0b057c7d1b22264e8320210e0452e4099c9315b9`: "fix(plan12): resolve root code review findings F1-F7 and sync brain documentation" (21 files, +345/-128, new test `src/components/app-shell.test.tsx`).
+8. **Commit ứng viên hoàn thiện & Push GitHub:**
+   - Commit `0b057c7`: "fix(plan12): resolve root code review findings F1-F7 and sync brain documentation"
+   - Commit `f408433`: "fix(ci): synchronize package-lock for Node 24 and set E2E writable flag"
+   - Push thành công lên `origin/codex/vercel-turso-migration`.
+9. **Xác nhận CI Remote GitHub Actions & Nâng cấp Version 0.6.0:**
+   - Run ID: `35187260657`, SHA: `f4084333753a68316a27763775a58fc846490e6f`, Conclusion: `success`.
+   - 15/15 bước kiểm thử PASS: TypeScript 0 lỗi, ESLint 0 lỗi, Vitest 93 files, Python TTS 7 tests, Next build 42 routes, offline quality eval 30/30, Playwright 24/24 E2E.
+   - Hoàn tất Definition of Done D1 (Local + CI).
+   - Nâng phiên bản toàn dự án lên `0.6.0` theo đúng bậc thang Plan12 01-CONTRACTS (`package.json`, `package-lock.json`, `state.json`, `changelog.md`, `memory-distill.txt`, `TESTING-ACCEPTANCE.md`).

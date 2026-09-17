@@ -7,10 +7,10 @@
 - F3: `clearOwnerIntents` nối vào đăng xuất và đổi tài khoản trong `app-shell.tsx`, 6/6 unit tests PASS.
 - F4: Bỏ fallback `"anonymous"` ở 4 file UI, yêu cầu xác thực đầy đủ.
 - F5/F6/F7: Câu chữ changelog & ledger chuẩn hóa.
-- Version: `package.json` hạ về `0.5.0` đúng hợp đồng ladder.
+- Version: Đã nâng lên `0.6.0` sau khi D1 đạt cả local và CI remote GitHub Actions (Run ID 35187260657, 15/15 bước PASS).
 - Toàn bộ cổng kiểm thử cục bộ: 494 tests vitest qua 93 files (100%), 24/24 Playwright E2E, type-check 0 lỗi, lint 0 lỗi/32 cảnh báo, build 42 routes PASS, eval 12/12 PASS, dev.db nguyên vẹn.
 
-D1 và D4 đạt ở local và chờ CI; D2, D3, D5 chờ đầu vào của user (đăng nhập `gh`, phê duyệt cửa sổ Preview và cutover, provider kèm hạn mức chi, đồng thuận pilot).
+D1 hoàn tất (local + CI); D4 đạt ở local; các cổng D2 (Preview 0.7.0 / Prod 1.0.0), D3 (Live AI 0.8.0), D5 (Pilot 0.9.0) chờ đầu vào của user (phê duyệt cửa sổ Preview/cutover, provider kèm hạn mức chi, đồng thuận pilot).
 
 ## Current master plan
 [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md), PLANNED 2026-09-17: hoàn thiện dự án tới 1.0.0 theo Definition of Done D1–D6 (integrity, hosted+rollback+mail, live AI có reviewer, causal next action, pilot đã đánh giá, handover). Contract kỹ thuật vẫn ở [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md); hosted/mail vẫn Plan07/09.

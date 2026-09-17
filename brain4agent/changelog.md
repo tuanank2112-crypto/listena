@@ -1,6 +1,13 @@
 # Changelog
 
-## 0.5.0 — 2026-09-17 (Ứng viên hoàn thiện P120–P126; kiểm định cục bộ; CHƯA PHÁT HÀNH)
+## 0.6.0 — 2026-09-17 (D1 Mutation Integrity Local + GitHub Actions CI)
+- **Đạt bậc 0.6.0 theo bậc thang phiên bản Plan12 01-CONTRACTS:**
+  - Hoàn tất Definition of Done D1 (Tính toàn vẹn giao dịch học tập & soạn bài): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc; scoped intent theo chủ sở hữu (owner-scoped) và dọn dẹp intent khi đăng xuất/đổi tài khoản.
+  - Sửa lỗi gating mutex (Root Review F1/F2): `libsql-batch.ts` suy ra việc kích hoạt mutex cục bộ từ `resolveDatabaseConfig()`, chỉ bật trên SQLite file cục bộ (`file:`) và tắt trên Turso hosted (`APP_RUNTIME=vercel`); được bảo vệ bởi 4 test case hồi quy.
+  - Sửa lỗi intent cleanup (F3): kết nối `clearOwnerIntents` vào luồng đăng xuất và đổi tài khoản trong `app-shell.tsx` kèm 6 unit test.
+  - Bỏ fallback anonymous (F4) trên các màn hình flashcards, lessons, lesson detail và teacher authoring.
+  - **Chứng nhận CI Remote trên GitHub Actions:** Workflow CI chạy thành công 100% trên runner Linux Node 24 (Run ID `35187260657`, SHA `f408433`, 15/15 bước PASS: TypeScript, ESLint, Vitest + coverage 93 files, Python TTS sidecar, Next.js build 42 routes, offline quality eval, Playwright 24/24 E2E).
+  - Khóa gates: Plan10 P102/P103/P106 được requalified; Plan11 local integrity/UI + CI chính thức khép lại.
 - **Đã chứng minh thực tế (Proven):**
   - Tính toàn vẹn giao dịch (P120/P121): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc bất kể bài học bị unpublish; chặn tạo client-intent mới khi intent đang pending; scoped intent theo chủ sở hữu (owner-scoped) và dọn dẹp intent khi đăng xuất hoặc đổi tài khoản.
   - Sửa lỗi gating mutex (Finding F1/F2): `libsql-batch.ts` suy ra việc kích hoạt mutex cục bộ từ `resolveDatabaseConfig()`, chỉ bật trên SQLite file cục bộ (`file:`) và tắt trên Turso hosted (`APP_RUNTIME=vercel`); được bảo vệ bởi 4 test case hồi quy.
@@ -10,7 +17,7 @@
   - Vận hành & bài tập khôi phục cục bộ (P126): Tài liệu [docs/RUNBOOK_INCIDENT.md](docs/RUNBOOK_INCIDENT.md) ứng phó 4 kịch bản sự cố; script `scripts/verify-backup-restore.ts` chứng minh bài tập sao lưu / khôi phục dữ liệu đạt 100% data fidelity trong phạm vi SQLite cục bộ với schema tổng hợp (bài tập khôi phục Turso thật trên hosted vẫn là điều kiện Go của P126 trước khi cutover).
   - Bộ kiểm thử toàn diện: Vitest unit/integration tests qua 93 files PASS (100%), 24/24 Playwright E2E tests PASS, 0 lỗi TypeScript, 0 lỗi ESLint (32 cảnh báo <= 33). Database `prisma/dev.db` được bảo toàn nguyên vẹn 100%.
 - **Những gì KHÔNG claim (Explicit Non-claims):**
-  - Không claim phiên bản 1.0.0 phát hành: Dự án giữ nguyên `current_version` là 0.5.0 theo bậc thang phiên bản trong Plan12 01-CONTRACTS; 1.0.0 chỉ được gắn sau khi mọi cổng Production đạt và người dùng phê duyệt cutover.
+  - Không claim các bậc cao hơn (0.7.0 -> 1.0.0): Cổng Preview disabled/enabled, live AI provider, pilot và Production cutover tiếp tục chờ đầu vào người dùng.
   - Không tuyên bố chấm điểm phát âm (pronunciation scoring) hay Speech-to-Text (STT) thời gian thực.
   - Không tuyên bố chứng chỉ CEFR hay hiệu quả học tập nhân quả (causal pedagogical efficacy) ngoài các số liệu pilot khả thi có sự đồng thuận.
   - Không cam kết SLA thời gian phản hồi của nhà cung cấp AI bên thứ ba khi xảy ra sự cố mạng diện rộng.

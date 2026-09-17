@@ -44,8 +44,8 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | P121 | T112-02 fault matrix N/N statement (14 tables) | ✅ | ⬜ | n/a | n/a | n/a | n/a |
 | P121 | T112-03 dispatch ≤1 (5 kịch bản) | ✅ | ⬜ | ⬜ bounded | n/a | n/a | n/a |
 | P121 | T112-04 + canary opaque | ✅ | ⬜ | ⬜ | n/a | n/a | n/a |
-| P121 | Regression: 480 unit, 24 E2E, build, Prisma | ✅ | ⬜ | n/a | n/a | n/a | n/a |
-| P122 | CI run URL/SHA/conclusion success | n/a | 🟡 | n/a | n/a | n/a | n/a |
+| P121 | Regression: 494 unit, 24 E2E, build, Prisma | ✅ | ⬜ | n/a | n/a | n/a | n/a |
+| P122 | CI run URL/SHA/conclusion success | n/a | ✅ | n/a | n/a | n/a | n/a |
 | P122 | Preview disabled all-table fingerprint + mutation rejected | n/a | n/a | ⬜ | n/a | n/a | n/a |
 | P122 | Preview enabled: retry 20/1, owner isolation, WAF, mail ×3, fence restored | n/a | n/a | ⬜ | n/a | n/a | n/a |
 | P123 | T114-01 causal refs 100%/foreign 0 | ✅ | ⬜ | ⬜ | n/a | n/a | n/a |
@@ -63,7 +63,7 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 
 - ✅ planning (2026-09-17): boot não, đối chiếu code, fresh baseline, phân tích 2 fail, bộ SPEC 9 file, cập nhật Plan11, đồng bộ não.
 - ✅ local D1 (→ 0.6.0 cùng CI): P120 + P121 toàn ✅ (13/13 tests mỗi integration file, 14/14 E2E integrity tests, 14-table fingerprint diffing).
-- 🟡 CI (→ 0.6.0): run thật success trên SHA ứng viên (chờ user gh auth).
+- ✅ CI (→ 0.6.0): run thật success trên SHA f408433 (15/15 steps pass, URL: https://github.com/tuanank2112-crypto/listena/actions/runs/35187260657).
 - ⬜ Preview disabled (→ 0.7.0): fingerprint + rejection.
 - ⬜ Preview enabled (→ 0.7.0): retry/owner/WAF/mail/typed + fence restored.
 - ✅ local D4 + offline eval (→ 0.8.0): T114 ✅ (p11-v1 planner, 10/10 next-action E2E), T115-01 ✅ (12/12 cases, 156/156 checks qua `eval:learning`).
@@ -110,6 +110,7 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | P121 | e2e-integrity | local | 9325ca2+worktree | `npm run test:e2e` | 0 | tests=24,failed=0 | stdout | PASS | worker | 2026-09-17 |
 | P124 | eval-learning | local | 9325ca2+worktree | `npm run eval:learning` | 0 | cases=12,checks=156 | eval/runs/2026-09-17-9325ca2/ | PASS | worker | 2026-09-17 |
 | P126 | next-build | local | 9325ca2+worktree | `npm run build` | 0 | routes=42 | stdout | PASS | worker | 2026-09-17 |
+| P122 | ci-full-pipeline | ci | f4084333753a68316a27763775a58fc846490e6f | GitHub Actions workflow CI | 0 | steps=15,passed=15,allJobsPassed=true | https://github.com/tuanank2112-crypto/listena/actions/runs/35187260657 | PASS | root | 2026-09-17 |
 
 (Thêm dòng khi có receipt mới; không sửa dòng cũ.)
 
