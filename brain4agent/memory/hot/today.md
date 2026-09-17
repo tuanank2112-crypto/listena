@@ -273,8 +273,12 @@ User yeu cau commit va thuc thi toan bo plan.
 
 **Bài học:** (1) lint Next 16 cấm setState trong effect và đọc ref khi render → dùng `useSyncExternalStore` cho "supported"/"voice description"; (2) thứ tự pipeline văn bản nói quan trọng: bold `**` phải xử lý trước stage direction `*…*`, viết tắt có dấu chấm phải mở rộng trước khi tách câu, `___` trước khi xoá ký tự markdown; (3) câu không dấu trong coach message tiếng Việt là tiếng Anh (ví dụ "Try: I lost my bag.") — detect theo dấu, không theo fallback; (4) heredoc bash trong phiên này hỏng khi nội dung có backtick → viết script ra file scratchpad rồi chạy.
 
-**Thực hiện theo yêu cầu user (2026-09-18 00:39+07):** commit toàn bộ Plan 14 và push lên `origin/codex/vercel-turso-migration`.
+**Thực hiện theo yêu cầu user (2026-09-18 00:39–00:45+07):**
+- Commit toàn bộ Plan 14 (SHA `8d8c3e6`) và push lên `origin/codex/vercel-turso-migration`.
+- Triển khai Vercel Production (`npx vercel deploy --prod --yes`): Deployment `dpl_HG9B1q4egrpBkts46We7gskZQdzu`, status `READY`, alias `https://listena.vercel.app`.
+- Kiểm chứng thực tế: `Permissions-Policy: microphone=(self)` active; `GET /api/health` 200 OK (turso runtime); `POST /api/voice/pronunciation` 401 Unauthorized (được bảo vệ bởi auth session).
 
-**Mở:** CI, deploy, smoke thủ công theo trình duyệt (OPERATIONS §3), quyết định bump 0.8.0.
+**Mở:** CI, smoke thủ công theo trình duyệt (OPERATIONS §3), quyết định bump 0.8.0.
+
 
 

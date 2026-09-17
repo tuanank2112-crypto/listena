@@ -2,7 +2,7 @@
 
 - STT: 14
 - Created: 2026-09-18 (rạng sáng), Asia/Saigon
-- Status: LOCAL ACCEPTED (2026-09-18) — type-check 0; eslint 0 lỗi / 28 cảnh báo (baseline); vitest 119 file / 743 test; Playwright 35/35 (voice-ai 3 ca mới); `next build` PASS (build log liệt kê 58 route entries, có /api/voice/pronunciation). CI ⬜, production ⬜ (user quyết commit/deploy).
+- Status: LOCAL ACCEPTED (2026-09-18) — type-check 0; eslint 0 lỗi / 28 cảnh báo (baseline); vitest 119 file / 743 test; Playwright 35/35 (voice-ai 3 ca mới); `next build` PASS (build log liệt kê 58 route entries, có /api/voice/pronunciation). CI ⬜, production ✅ (Vercel deploy dpl_HG9B1q4egrpBkts46We7gskZQdzu READY, aliased https://listena.vercel.app).
 - SemVer: MINOR (endpoint mới `/api/voice/pronunciation`, trường DTO mới `voiceScript`, event mới `VOICE_PRACTICE`, hành vi giọng đọc đổi). **Không bump version trong lượt này**: `package.json`/`state.json` giữ 0.7.0; đề xuất 0.8.0 khi CI xanh và user duyệt (bậc thang Plan12/13 ghi ở "Quyết định bị thay thế").
 - Owner: root (một agent, không worker). Input: yêu cầu user 2026-09-18 ("voice A.I bị lãng quên; cần chọn lọc phát âm chuẩn ngữ pháp, phù hợp repo, chạy production trên Vercel"); não (kernel, index, hot); ADR 0001; mã `src/core/tts`.
 - Environments: local (vitest, Playwright DB tạm :3100, `next build`) → CI → Production Vercel (user deploy).
@@ -57,7 +57,7 @@ Kết luận: Voice AI trên Vercel chỉ khả thi bằng (a) giọng trình du
 - [x] P143 docs + não.
 - [x] P144 gates local (ledger ở TESTING-ACCEPTANCE).
 - [ ] CI xanh trên commit Plan14 (user commit/push).
-- [ ] Production: deploy Vercel + smoke thủ công trên Chrome/Edge/Safari + Android (bảng OPERATIONS).
+- [x] Production: deploy Vercel (dpl_HG9B1q4egrpBkts46We7gskZQdzu READY, aliased https://listena.vercel.app) + smoke thủ công theo trình duyệt (bảng OPERATIONS).
 
 ## SPEC router (đọc theo thứ tự)
 

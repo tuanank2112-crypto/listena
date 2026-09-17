@@ -391,11 +391,16 @@
       "playwright": "35/35 (3 new voice-ai cases)"
     },
     "version": "kept 0.7.0; propose 0.8.0 after CI + user approval",
-    "commit": "committed; pushed to origin/codex/vercel-turso-migration",
+    "commit": "committed; pushed to origin/codex/vercel-turso-migration (SHA 8d8c3e6)",
+    "deployment": {
+      "id": "dpl_HG9B1q4egrpBkts46We7gskZQdzu",
+      "url": "https://listena-b4r5sp8y4-n-listen-ai.vercel.app",
+      "alias": "https://listena.vercel.app",
+      "readyState": "READY",
+      "permissions_policy_verified": "microphone=(self)"
+    },
     "open": [
-      "commit/push",
       "CI",
-      "deploy",
       "manual browser smoke (OPERATIONS §3)"
     ]
   }
