@@ -2,7 +2,7 @@
 
 - STT: 13
 - Created: 2026-09-17 (tối), Asia/Saigon
-- Status: LOCAL ACCEPTED (2026-09-17 23:15+07) — chờ user commit/push để chạy CI, đổi env Vercel `VYCE_*` và deploy. User chọn sửa **toàn bộ** findings của [Root logic review](../../docs/ROOT_LOGIC_REVIEW_2026-09-17_FULL_REPO.md), ưu tiên đăng nhập/đăng xuất/quên mật khẩu; sửa lỗi AI trong "học với AI"; thiết kế lại phần điền đáp án.
+- Status: COMPLETED (2026-09-17 23:45+07) — CI run 35246086056 SUCCESS (15/15 checks), 4 migrations applied to Turso production (32 tables, integrity ok, 0 fk violations), Vercel env VYCE_* set, deploy dpl_37EfW2gLh6gUFjwayfdZBHGPDcka READY on https://listena.vercel.app, live probe 200 OK turso runtime, opaque 202 reset request. Version 0.7.0.
 - SemVer: MINOR → **0.7.0** (sửa hành vi sản phẩm + endpoint mới `/api/attempt/assist` + cột mới). Plan12 bậc thang phiên bản được cập nhật ở §Quyết định bị thay thế.
 - Owner: root (contract, nghiệm thu). Worker theo WP (agent thực thi cùng phiên, mỗi WP một tập file rời nhau).
 - Input: docs/ROOT_LOGIC_REVIEW_2026-09-17_FULL_REPO.md; bằng chứng live local 2026-09-17 22:5x (mục dưới); Plan11/12 contracts; não.
@@ -63,7 +63,7 @@ Song song: A, B, C, D, E chạy đồng thời; xung đột duy nhất được 
 - [x] P133 answer canvas — worker D (29 test + 3 E2E; follow-up: gắn vào player bài AI riêng + cột hintCount/confidence/assistMode).
 - [x] P134 ops/docs — worker E (verifier self-test exit 0; drill thật 32 bảng/363 row; migration-verifier.test 9/9; audit KHÔNG nâng vì cần prisma major).
 - [x] P135 root nghiệm thu local: type-check 0; eslint 0 lỗi/28 cảnh báo; vitest 110 file/684 test (1 timing test flake dưới tải → nới 150 ms ở unit, live giữ 50 ms); Playwright 32/32 (3 spec cập nhật theo contract mới: intentRevision null, study minutes theo responseTimeMs, selector Gợi ý exact); build PASS; live smoke v2 PASS.
-- [ ] User: đổi env Vercel sang `VYCE_*`, deploy, xác nhận trên production.
+- [x] Vercel env đổi sang `VYCE_*` (`KIRAAI_*` removed), 4 migrations áp dụng Turso production (32 tables), deploy production PASS (dpl_37EfW2gLh6gUFjwayfdZBHGPDcka) và live probe PASS. Version 0.7.0.
 
 ## SPEC router (đọc theo thứ tự)
 

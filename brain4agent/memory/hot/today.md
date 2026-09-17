@@ -249,3 +249,15 @@ User chon sua HET findings (uu tien login/logout/forgot password), bao AI "hoc v
 ## Plan13 nghiem thu local (2026-09-17T23:15+07:00)
 
 5 worker + 4 follow-up xong. Root: type-check 0; eslint 0/28; vitest 110 file/684 test (1 timing test flake duoi tai -> noi 150ms o unit, live giu 50ms); Playwright 32/32 sau khi cap nhat 3 spec theo contract moi (intentRevision null, study minutes theo responseTimeMs, selector "Goi y" exact); build PASS; live-smoke-v2 PASS: TTFB quen mat khau known/unknown chenh <=32ms, lockout auth_locked sau 5 lan sai, register email cu 202, abandon, 409 + activeSessionId, replaceActive, personalized 202 -> READY (vocab 20s, listening 42s), assist SKELETON/TILES, attempt idempotent theo exercise, logout 307. Chua commit. Viec user: commit/push (CI), doi env Vercel VYCE_*, precheck duplicate PersonalizedLessonAttempt truoc migrate, deploy. Temp server :3100 da tat.
+
+## Plan13 commit, CI, Turso migration, Vercel deploy hoan tat (2026-09-17T23:45+07:00)
+
+User yeu cau commit va thuc thi toan bo plan.
+1. **Commit & Push:** Commit 887f299 (161 files, 10519 insertions, 1708 deletions) bao toan cac file untracked (`foo`, `test.xlsx`, `\uF05C`, `dev.db.bak-plan10`). Push origin/codex/vercel-turso-migration thanh cong.
+2. **GitHub Actions CI:** Run 35246086056 ket luan SUCCESS (15/15 steps PASS: type-check, eslint, vitest 110 files/684 tests, python tts, build 43 routes, offline eval, playwright 32/32 E2E).
+3. **Vercel Env:** Set `AI_PROVIDER=vyce`, `VYCE_API_KEY`, `VYCE_MODEL=claude-sonnet-4-6`, `VYCE_BASE_URL=https://vyceai.com/v1` cho ca Production va Preview. Xoa sach cac bien `KIRAAI_*` cu de phong fail-closed stale.
+4. **Turso Production Migrations:** Ket noi `listena-production-20260917`. Precheck duplicate PersonalizedLessonAttempt = 0. Ap 4 migration moi (auth_throttle, ai_reliability, learning_correctness, answer_canvas). Integrity check ok, foreign_key_check 0 violations, tong so bang tang len 32 (them AuthAttempt), index partial PersonalizedLessonAttempt_one_graded_per_exercise thanh cong.
+5. **Vercel Deploy Production:** Deploy dpl_37EfW2gLh6gUFjwayfdZBHGPDcka thanh cong, READY, aliased ve https://listena.vercel.app.
+6. **Live Probe:** `GET /api/health` tra 200 OK, databaseRuntime="turso", CSP va HSTS active. `POST /api/account/password-reset/request` tra 202 Accepted opaque envelope.
+7. **Version Bump:** CI xanh + deploy thanh cong -> nang version len 0.7.0 tren package.json, package-lock.json, state.json, memory-distill.txt, changelog.md, plan.md, TESTING-ACCEPTANCE.md.
+

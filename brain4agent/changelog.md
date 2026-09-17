@@ -1,6 +1,16 @@
 # Changelog
 
-## Unreleased — Khac phuc su co AI provider (2026-09-17)
+## 0.7.0 — 2026-09-17 (Plan13 Logic Remediation, AI Reliability, Answer Canvas)
+- **Đạt bậc 0.7.0 theo bậc thang phiên bản Plan13 (MINOR):**
+  - **Khắc phục toàn bộ phát hiện Root Logic Review 2026-09-17:**
+    - P130 (Auth): Ngăn chặn timing enumeration trên các route password-reset và verification request bằng bộ đệm cân bằng CPU (chênh lệch $\le 32\text{ms}$); bổ sung login throttling và khóa tài khoản (`auth_locked`) sau 5 lần sai; phản hồi mờ đục 202; dọn dẹp intent khi đăng xuất; bảo vệ teacher routes owner-scoped.
+    - P131 (AI Reliability): Gỡ bỏ hoàn toàn Kira cũ, chuyển sang Vyce Chat Completions (`claude-sonnet-4-6`); khắc phục lỗi HTTP 524/503 timeout gateway bằng kiến trúc compact (~1.300 tokens) + bất đồng bộ (202 Accepted + row GENERATING + client polling); bổ sung endpoint `/abandon` và cờ `replaceActive` thoát khỏi bẫy kẹt `409 ACTIVE_SESSION_EXISTS`; nâng AI lease lên $\ge 210\text{s}$.
+    - P132 (Learning Correctness): Sửa lỗi công thức mastery (chia nhầm /100); loại bỏ việc để lộ đáp án qua trường `Exercise.metadata.answers`; chuẩn hóa CEFR progression; xử lý UTC nhất quán; pool distractor game không trùng lặp.
+    - P133 (Answer Canvas): Thay thế ô nhập truyền thống bằng canvas 3 chế độ (Gõ tự do, Khung chữ Skeleton, Ghép mảnh Tiles) kèm cược độ tự tin (Confidence betting); bổ sung endpoint `/api/attempt/assist` server-authoritative áp dụng điểm phạt hint. Chấm điểm 100% server.
+    - P134 (Ops & Docs): 4 migration mới additive (`20260917230100_plan13_auth_throttle`, `20260917230200_plan13_ai_reliability`, `20260917230300_plan13_learning_correctness`, `20260917230500_plan13_answer_canvas`) đã áp dụng thành công lên Turso production (`listena-production-20260917`, 32 bảng, 0 vi phạm khóa ngoại, integrity ok); verifier cập nhật tự động từ Prisma schema.
+  - **Xác nhận GitHub Actions Remote CI:** Run ID `35246086056` (SHA `887f299`) kết luận `success` (15/15 checks PASS).
+  - **Triển khai Production thành công:** Deployment `dpl_37EfW2gLh6gUFjwayfdZBHGPDcka` trên Vercel Ready và gán alias `https://listena.vercel.app`. Biến môi trường `VYCE_*` hoạt động, `KIRAAI_*` đã được xóa sạch; live probe `/api/health` 200 OK với runtime Turso và CSP kết nối tới Vyce; luồng auth mờ đục trả 202 Accepted.
+
 - **Sua loi lam chet toan bo tinh nang AI:** `KIRAAI_MODEL` tro toi model khong ton tai (`qwen3.8-flash-free` trong `.env`, `glm-5.3-flash-free` trong `.env.example`), khien provider tra 404 `model_not_found` moi lan goi va nguoi hoc luon thay "Gia su AI hien chua san sang". Doi sang `ling-3.0-flash-free` va bo sung canh bao + lenh kiem tra danh muc vao `.env.example`.
 - **Chung minh bang hoi thoai that:** tao phien Mission 201 va gui luot hoc vien 201; AI phat hien loi thi qua khu, coach bang tieng Viet, score 0.8/confidence 0.9. Day la lan dau vong AI-native duoc quan sat chay that trong repo nay.
 - **Ghi nhan ba van de con mo:** thong bao gop sai-cau-hinh voi qua tai; free tier rate-limit gat va khong co retry co gioi han; so `LearningSessionStartRequest` tich luy dong UNKNOWN khong co duong phuc hoi. Chi tiet: [bao cao](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md).
