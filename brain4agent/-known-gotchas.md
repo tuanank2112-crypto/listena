@@ -99,3 +99,10 @@
 - Bien Vercel loai `sensitive` tao qua `vercel env add` trong du an nay luu GIA TRI RONG (CLI van bao "Added"). Bang chung hanh vi: Resend tra `upstream_unauthorized` du khoa that gui truc tiep thi 200. Phai tao lai bang `POST /v10/projects/{id}/env` voi `type:'encrypted'` thi gia tri moi thuc su ap dung.
 - Resend khi CHUA xac thuc ten mien chi cho gui toi DUNG dia chi chu tai khoan. Bi danh dau cong (`user+tag@gmail.com`) BI TU CHOI 403 `validation_error`. App map 403 thanh `upstream_unauthorized`, de bi hieu nham la sai khoa.
 - Do do dang ky thu tren production phai dung dung `tuanank2112@gmail.com`, khong dung bi danh. Muon mo cho nguoi hoc that thi bat buoc mua ten mien va xac thuc tai resend.com/domains, roi doi `EMAIL_FROM` sang ten mien do.
+
+## Vercel env: LUAT QUAN TRONG NHAT (2026-09-17)
+
+- `PATCH` gia tri cua mot bien loai `sensitive` BAO "ok" NHUNG KHONG THUC SU AP DUNG. Da mac hai lan: Resend van `upstream_unauthorized`, roi AI van `provider_not_configured`, du PATCH deu tra ok.
+- Cach DUY NHAT dung duoc: `vercel env rm <KEY> production --yes` roi `POST /v10/projects/{id}/env` voi `type:'encrypted'`. Sau do doc lai bang `GET ...?decrypt=true`: dung thi `type=encrypted` va `len>0`.
+- Quy tac kiem tra nhanh: bat ky bien production nao hien `type=sensitive` va `len=0` deu phai coi la RONG cho den khi chung minh nguoc lai. Bien `encrypted` co `len>0` moi la co gia tri that.
+- Trieu chung nguoi dung thay khi KIRAAI_* rong: "Gia su AI hien chua san sang. Vui long thu lai sau." (reason `provider_not_configured`), KHAC voi thong bao sai cau hinh cua `AI_MISCONFIGURED`. Dung trieu chung nay de phan biet bien rong voi model sai.
