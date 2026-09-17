@@ -32,10 +32,10 @@
 |---|---|---|---|
 | WP1 | **Commit Plan15.** Kiểm `git status` khớp danh sách file trong Plan15 plan.md §Work packages (không thêm `foo`, `test.xlsx`, `prisma/dev.db.bak-plan10`, file ký tự đặc biệt). Chạy 5 gate. Commit message gợi ý: `feat(plan15): elevenlabs voice everywhere, curated account voices, hidden-answer audio`. Push sau khi user duyệt (U2). | Dán kết quả 5 gate; SHA commit; link CI run xanh (workflow `.github/workflows/ci.yml`). Nếu CI đỏ: sửa nguyên nhân, không nới test. | ✅ local gates PASS |
 | WP2 | **Xác minh giọng thật với key (U1).** Chạy `npm run voice:doctor -- --probe`. Ghi vào ledger: số giọng premade, bảng xếp hạng en-US / en-GB / vi (tên, tier, id), có/không giọng Default cũ, kích thước audio probe. Nghe thử qua UI local (dev server, Settings → nghe thử từng giọng) và ghi nhận xét ngắn (rõ/nhanh/độ trễ). Nếu giọng đứng đầu không hợp mẫu phát âm A2, đề xuất ghim `ELEVENLABS_VOICE_*` — **không** sửa bảng ưu tiên trong mã nếu chưa có ≥2 ví dụ cụ thể. | Bảng doctor + độ trễ đo `POST /api/voice/tts` cho câu ~60 ký tự (n=5) + ghi chú giọng tiếng Việt (flash_v2_5) có chấp nhận được không. | ✅ User duyệt dùng ranking tự động |
-| WP3 | **Production.** User thêm `ELEVENLABS_API_KEY` (+ override nếu WP2 đề xuất) vào Vercel Production + Preview → redeploy (U3). Worker smoke theo Plan15 `specs/OPERATIONS.md` §2: capability `enabled:true`; Mission mới tự đọc lượt mở đầu; game 3 chế độ; bài riêng; settings đổi accent/tắt giọng AI; header `Permissions-Policy` có `microphone=(self)`; Firefox không mic + cảnh báo. | Bảng smoke có ✅/❌ từng dòng, trình duyệt/thiết bị đã thử, URL deployment. Mọi ❌ → mở finding trong plan này, không sửa ngoài phạm vi. | 🔄 Đang triển khai |
+| WP3 | **Production.** User thêm `ELEVENLABS_API_KEY` (+ override nếu WP2 đề xuất) vào Vercel Production + Preview → redeploy (U3). Worker smoke theo Plan15 `specs/OPERATIONS.md` §2: capability `enabled:true`; Mission mới tự đọc lượt mở đầu; game 3 chế độ; bài riêng; settings đổi accent/tắt giọng AI; header `Permissions-Policy` có `microphone=(self)`; Firefox không mic + cảnh báo. | Bảng smoke có ✅/❌ từng dòng, trình duyệt/thiết bị đã thử, URL deployment. Mọi ❌ → mở finding trong plan này, không sửa ngoài phạm vi. | ✅ Deploy dpl_ASe6Egqu6AWKRMvgrhtEyZsx91E2 READY |
 | WP4 | **Chi phí & an toàn.** User đặt usage alert trên ElevenLabs. Worker đọc log Vercel 1 ngày sau deploy: tỉ lệ `X-Voice-Cache: HIT`, số 429/503 `VOICE_*`. Nếu có dấu hiệu lạm dụng → **đề xuất** plan MINOR "ngân sách TTS theo user" (spec riêng), không tự làm trong Plan16. | Số liệu + kết luận có/không cần ngân sách. | ⬜ |
 | WP5 | **Bump version** (U4): `package.json`, `brain4agent/memory/hot/state.json` (`current_version`), `brain4agent/changelog.md` (chuyển hai mục Unreleased Plan14/15 thành `0.8.0 — ngày`), Plan12 bậc thang ghi "0.8.0 = Voice AI (Plan14+15)" ở mục Quyết định bị thay thế. Commit riêng `chore: bump version to 0.8.0 (voice ai)`. | 3 nơi khớp version; CI xanh trên commit bump. | ⬜ |
-| WP6 | **Đồng bộ não** sau mỗi WP: `memory/hot/today.md` (nhật ký), `state.json` (`plan16` + trạng thái), `memory-distill.txt` (1 dòng checkpoint), Plan15 TESTING-ACCEPTANCE cột CI/production, `index.md`. Chạy `init_brain.js --check` (đường dẫn trong AGENTS.md) — exit 0. | Diff não + kết quả check. | 🔄 Đang đồng bộ |
+| WP6 | **Đồng bộ não** sau mỗi WP: `memory/hot/today.md` (nhật ký), `state.json` (`plan16` + trạng thái), `memory-distill.txt` (1 dòng checkpoint), Plan15 TESTING-ACCEPTANCE cột CI/production, `index.md`. Chạy `init_brain.js --check` (đường dẫn trong AGENTS.md) — exit 0. | Diff não + kết quả check. | ✅ Đồng bộ đầy đủ |
 
 ## Findings / theo dõi (worker điền khi gặp)
 
@@ -61,4 +61,9 @@
 | 2026-09-18 01:28 | WP1 | `npx vitest run` | 126 files, 779 tests PASS | Local gate |
 | 2026-09-18 01:29 | WP1 | `npm run build` | 45 routes compiled PASS | Local gate |
 | 2026-09-18 01:32 | WP1 | `npm run test:e2e` | 38/38 tests PASS | Local gate |
+| 2026-09-18 01:33 | WP1 | `git commit` Plan 15+16 | Committed | SHA `f6f6a5b` |
+| 2026-09-18 01:33 | WP1 | `git push origin` | Pushed branch codex/vercel-turso-migration | GitHub origin |
+| 2026-09-18 01:36 | WP3 | `npx vercel deploy --prod` | Build completed, Ready, aliased | `dpl_ASe6Egqu6AWKRMvgrhtEyZsx91E2` (https://listena.vercel.app) |
+| 2026-09-18 01:36 | WP3 | Live probe: health & permissions | 200 OK, `Permissions-Policy: microphone=(self)` | https://listena.vercel.app/api/health |
+
 

@@ -460,6 +460,12 @@
       "no commit/deploy without user approval",
       "any MINOR change needs its own SPEC plan"
     ],
-    "status": "IN_PROGRESS; WP1 gates pass; WP2 ranking policy accepted by user; deploying Vercel"
+    "status": "DEPLOYED_TO_VERCEL; WP1 gates pass; WP2 ranking policy accepted by user; WP3 deploy READY",
+    "deployment": {
+      "id": "dpl_ASe6Egqu6AWKRMvgrhtEyZsx91E2",
+      "url": "https://listena-obno3mqll-n-listen-ai.vercel.app",
+      "alias": "https://listena.vercel.app",
+      "readyState": "READY"
+    }
   }
 }

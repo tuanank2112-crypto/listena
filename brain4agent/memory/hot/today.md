@@ -300,10 +300,11 @@ User yeu cau commit va thuc thi toan bo plan.
 
 User: "tạo planning nhỏ rồi cập nhật não; sẽ để agent worker làm theo". Root lập [Plan16](../../../planning/16_2026-09-18_voice-rollout/plan.md) dạng PATCH (chỉ plan.md): WP1 commit Plan15 + CI → WP2 `voice:doctor --probe` với key thật + nghe thử → WP3 env Vercel + deploy + smoke → WP4 usage alert/log → WP5 bump 0.8.0 → WP6 đồng bộ não.
 
-**Triển khai theo lệnh user (2026-09-18 01:26+07):**
+**Triển khai theo lệnh user (2026-09-18 01:26–01:37+07):**
 User: "tiếp tục triển khai theo plan 16. tôi cho phép bạn chọn voice theo rankking không cần đợi tôi duyệt. xong việc thì tự commit và push cervel".
-- WP1: Nghiệm thu 5 gate local PASS 100% (type-check 0, eslint 0/28, vitest 126/779, build PASS 45 routes, playwright 38/38). Commit Plan15 + Plan16 và push origin/codex/vercel-turso-migration.
+- WP1: Nghiệm thu 5 gate local PASS 100% (type-check 0, eslint 0/28, vitest 126/779, build PASS 45 routes, playwright 38/38). Commit Plan15 + Plan16 (SHA `f6f6a5b`) và push origin/codex/vercel-turso-migration.
 - WP2: Chấp thuận chọn voice theo ranking tự động theo `elevenlabs-voice-policy.ts` (không cần duyệt thủ công).
-- WP3: Đang triển khai Vercel Production và kiểm chứng trực tiếp.
+- WP3: Triển khai Vercel Production thành công: deployment `dpl_ASe6Egqu6AWKRMvgrhtEyZsx91E2`, status `READY`, aliased `https://listena.vercel.app`.
+- Live probe: `GET /api/health` 200 OK, `Permissions-Policy: microphone=(self)` active; các route âm thanh mới (`/api/voice/tts`, `/api/game-runs/[runId]/rounds/[roundId]/audio`, `/api/learner/personalized-lessons/[lessonId]/exercises/[exerciseId]/audio`) hoạt động đúng theo auth boundary.
 
 
