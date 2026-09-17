@@ -227,3 +227,7 @@ User bao lai loi nay va yeu cau "check lai nao". Boot: `init_brain.js --check` b
 ## User chon tang timeout ~3 phut (2026-09-17T18:50+07:00)
 
 Ly do user: Vyce la API gateway. Da sua: provider DEFAULT/MAX timeout 50s/60s -> 180s/180s; `maxDuration` 60 -> 200 o 5 route AI; `GENERATION_STALE_MS` 90s -> 210s. Giu `AI_REQUEST_PENDING_LEASE_MS` 30s (chong bam don, khong phai bao ve one-at-a-time cho call dai). Plan07 SPEC-P71 dong "maxDuration = 60" da danh dau thay the. Dieu kien hosted: Vercel phai cho 200s (Hobby can Fluid compute, tran 300s) - chua kiem duoc vi khong truy cap duoc Vercel trong phien nay; neu deploy tu choi thi phai ha ve 60 hoac lam async.
+
+## Commit + push xong, deploy bi chan (2026-09-17T19:15+07:00)
+
+Da commit f10efc7 (fix timeout 180s) + 0e0fd5f (docs brain), push origin codex/vercel-turso-migration OK. `npx vercel deploy --prod --yes` bi auto-mode classifier chan (Production Deploy); `npx vercel whoami` = tuanank2112-5635 nen CLI dung duoc khi user tu chay. Production van dang chay ban cu (timeout 45s). Sau deploy phai kiem: build khong bao loi maxDuration=200 (neu bao -> plan chua bat Fluid), roi thu tao "Bai AI rieng" that.
