@@ -54,7 +54,18 @@ const DEFAULT_MODEL = "ling-3.0-flash-free";
 // Free-tier upstreams can queue a valid generation longer than the 20-second
 // default used by the direct OpenAI provider. HTTP wall time does not consume
 // Serverless execution time, while the cap keeps a stalled learner request bounded.
-const DEFAULT_TIMEOUT_MS = 45_000;
+/**
+ * Sized against the 60s route budget, not picked round.
+ *
+ * Every AI route declares `maxDuration = 60`, and a full lesson generation was
+ * measured at about 34s against the configured provider. At 45s a normal
+ * generation that ran slightly long was aborted by us rather than completing:
+ * production recorded `AI_CALL_FAILED:personalized_lesson:timeout` while the
+ * same request succeeded locally. 50s keeps roughly ten seconds for schema
+ * validation and the commit, so the platform limit still arrives after ours and
+ * the learner gets a typed state instead of a cut connection.
+ */
+const DEFAULT_TIMEOUT_MS = 50_000;
 const MAX_TIMEOUT_MS = 60_000;
 const MAX_OUTPUT_TOKENS = 4_000;
 const MAX_INPUT_CHARS = 32_000;
