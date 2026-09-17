@@ -55,3 +55,9 @@
 - Một hàm có unit test vẫn có thể là code chết. `clearOwnerIntents` xanh trong unit test nhưng không nơi nào trong ứng dụng gọi. Ô nghiệm thu nhắc tới hành vi sản phẩm thì phải kiểm ở tầng sản phẩm, không phải tầng hàm thuần.
 - Bộ eval gọi orchestrator thật vẫn có thể chỉ kiểm hình dạng hợp đồng. Check "reply không rỗng, score trong [0,1], act thuộc enum" chạy với provider tất định KHÔNG đo chất lượng dạy; đừng gọi là kiểm định sư phạm.
 - Version bump là hành vi phát hành, không phải bookkeeping. Không bump khi cổng môi trường tương ứng còn trống, kể cả khi local đã xanh hết.
+
+## Root verify lan 2 — 2026-09-17
+
+- `e2e/timeline.spec.ts:27` **flaky** khi chay full suite (1 fail / 3 lan), chay rieng luon pass. Truoc khi dung E2E lam cong chan phai on dinh case nay, dung retry mu.
+- `prisma/dev.db` cua nguoi dung KHONG tu dong theo kip migration moi. Sau Plan11 no thieu `Attempt.resultJson`, `Attempt.enrichmentState`, `ReviewLog.resultJson`, nen chay app that se loi khi cham bai hoac on the du toan bo test xanh (test dung DB tam). Luon kiem `npx prisma migrate status` truoc khi test thu cong, va sao luu truoc khi apply.
+- CI co the xac minh doc lap qua trang GitHub Actions bang WebFetch khi `gh` chua dang nhap. "Chua dang nhap gh" khong dong nghia "khong kiem duoc CI".

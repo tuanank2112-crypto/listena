@@ -27,7 +27,18 @@ Các finding đã được xử lý và kiểm định:
 - **F5 & F6 & F7 (Doc):** Làm rõ mô tả trong changelog (kiểm thử hợp đồng orchestration offline với provider tất định; chất lượng dạy thực tế thuộc T115-02 live reviewer); giới hạn bài tập khôi phục trong phạm vi SQLite cục bộ; cập nhật counts trong ledger (`templateParticipants=6` với limitation synthetic).
 - **Version ladder:** Hạ `package.json` về `0.5.0` (khớp với `state.json.current_version`), tiêu đề changelog định dạng ứng viên chưa phát hành theo đúng hợp đồng 01-CONTRACTS.
 
-## Ma trận gate tổng (theo môi trường)
+## Root verify lan 2 — 2026-09-17 (sau khi worker xu ly F1–F7)
+
+Bay finding F1–F7 da duoc xu ly va root **xac minh lai tren HEAD `34d554a`**: 494 test/93 files PASS, type-check 0, lint 0 loi/32 canh bao, build PASS, E2E 24/24. CI duoc xac minh **doc lap qua web** (khong qua `gh`): CI #16 tren dung `34d554a` ket luan **success**. Bac 0.6.0 do do hop le theo version ladder.
+
+Hai van de moi, khong phai loi logic:
+
+| Van de | Chi tiet | Anh huong |
+|---|---|---|
+| E2E flaky | `e2e/timeline.spec.ts:27` fail 1 trong 3 lan chay full suite; chay rieng luon pass | Khong phai regression; can on dinh truoc khi dua vao E2E lam cong chan |
+| `prisma/dev.db` lech schema | Migration `20260916120000_plan11_integrity_receipts` chua apply; thieu `Attempt.resultJson`, `Attempt.enrichmentState`, `ReviewLog.resultJson` | **Chan test thu cong**: cham bai va on the se loi database. Root bi chan quyen nen khong sao luu/apply duoc; can user tu chay |
+
+## Ma tran gate tong (theo moi truong)
 
 Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không áp dụng. Case ID trỏ sang Plan11 TESTING-ACCEPTANCE trừ khi ghi Plan12.
 
@@ -111,6 +122,15 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | P124 | eval-learning | local | 9325ca2+worktree | `npm run eval:learning` | 0 | cases=12,checks=156 | eval/runs/2026-09-17-9325ca2/ | PASS | worker | 2026-09-17 |
 | P126 | next-build | local | 9325ca2+worktree | `npm run build` | 0 | routes=42 | stdout | PASS | worker | 2026-09-17 |
 | P122 | ci-full-pipeline | ci | f4084333753a68316a27763775a58fc846490e6f | GitHub Actions workflow CI | 0 | steps=15,passed=15,allJobsPassed=true | https://github.com/tuanank2112-crypto/listena/actions/runs/35187260657 | PASS | root | 2026-09-17 |
+
+| ROOT2 | verify-on-HEAD | local | 34d554a | `npx vitest run` | 0 | tests=494,failed=0,files=93 | stdout | PASS | root-review | 2026-09-17 |
+| ROOT2 | verify-on-HEAD | local | 34d554a | `npm run type-check` | 0 | errors=0 | stdout | PASS | root-review | 2026-09-17 |
+| ROOT2 | verify-on-HEAD | local | 34d554a | `npx eslint .` | 0 | errors=0,warnings=32 | stdout | PASS | root-review | 2026-09-17 |
+| ROOT2 | verify-on-HEAD | local | 34d554a | `npm run build` | 0 | build ok | stdout | PASS | root-review | 2026-09-17 |
+| ROOT2 | verify-on-HEAD | local | 34d554a | `npm run test:e2e` x3 | 0/1/0 | pass=24 hai lan, mot lan fail timeline.spec.ts | stdout | PASS with FLAKE | root-review | 2026-09-17 |
+| ROOT2 | ci-independent | ci | 34d554a | WebFetch GitHub Actions CI #16 | — | conclusion=success, job Build/Lint/Test passed | github.com/tuanank2112-crypto/listena/actions | PASS | root-review | 2026-09-17 |
+| ROOT2 | ci-independent | ci | f408433 | WebFetch GitHub Actions CI #15 | — | conclusion=success | actions/runs/35187260657 | PASS | root-review | 2026-09-17 |
+| ROOT2 | local-db-drift | local | 34d554a | PRAGMA table_info tren prisma/dev.db | — | resultJson=false, enrichmentState=false | stdout | BLOCKER cho test thu cong | root-review | 2026-09-17 |
 
 (Thêm dòng khi có receipt mới; không sửa dòng cũ.)
 

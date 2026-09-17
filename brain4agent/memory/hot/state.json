@@ -130,5 +130,22 @@
       "F7_doc": "RESOLVED: ledger counts aligned (93 files / 494 tests) and pilot synthetic template noted"
     },
     "commit_status": "candidate committed in 0b057c7"
+  },
+  "root_verify_2026_09_17_second_pass": {
+    "head": "34d554a",
+    "findings_f1_f7": "all resolved by worker and re-verified by root",
+    "independently_verified": {
+      "unit": "494/494 across 93 files",
+      "type_check": "0 errors",
+      "lint": "0 errors / 32 warnings",
+      "build": "PASS",
+      "e2e": "24/24 (1 flake observed across 3 runs)",
+      "ci": "CI #16 success on 34d554a, verified via web, not via gh"
+    },
+    "new_issues": {
+      "e2e_flake": "e2e/timeline.spec.ts:27 fails about 1 in 3 full-suite runs; passes in isolation",
+      "dev_db_drift": "prisma/dev.db missing Attempt.resultJson/enrichmentState and ReviewLog.resultJson; migration 20260916120000 not applied; blocks manual testing; root lacked permission to back up or apply"
+    },
+    "version_0_6_0": "legitimate: D1 local + real CI success on HEAD"
   }
 }

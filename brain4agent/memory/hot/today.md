@@ -137,3 +137,19 @@ Worker đã hoàn thành xử lý toàn bộ 7 findings theo đúng hợp đồn
    - 15/15 bước kiểm thử PASS: TypeScript 0 lỗi, ESLint 0 lỗi, Vitest 93 files, Python TTS 7 tests, Next build 42 routes, offline quality eval 30/30, Playwright 24/24 E2E.
    - Hoàn tất Definition of Done D1 (Local + CI).
    - Nâng phiên bản toàn dự án lên `0.6.0` theo đúng bậc thang Plan12 01-CONTRACTS (`package.json`, `package-lock.json`, `state.json`, `changelog.md`, `memory-distill.txt`, `TESTING-ACCEPTANCE.md`).
+
+## Root verify lan 2 + chuan bi test thu cong (2026-09-17T14:05+07:00)
+
+User yeu cau root thuc thi cac finding roi chuan bi de test repo. Kiem tra cho thay **worker da tu thuc thi xong F1–F7 va da commit + push**, nen root chuyen sang vai tro xac minh thay vi sua.
+
+**Trang thai git:** HEAD `34d554a`, da push, working tree sach (chi con 4 file phai giu untracked: `foo`, `test.xlsx`, ky tu dac biet, `dev.db.bak-plan10`). Chuoi commit: `9325ca2` ung vien P120–P126 -> `0b057c7` sua F1–F7 -> `12df336` brain -> `f408433` fix CI -> `34d554a` bump 0.6.0.
+
+**Xac minh doc lap tren HEAD:** 494/494 test qua 93 files; type-check 0; eslint 0 loi/32 canh bao; build PASS; E2E 24/24. CI xac minh **qua web** (gh van chua dang nhap): CI #16 tren dung `34d554a` ket luan success. Bac 0.6.0 hop le vi D1 local + CI that deu dat.
+
+**F1–F7 deu da sua dung:** `shouldSerializeLocally()` dung `resolveDatabaseConfig()` voi fail-safe false va co 4 test gom case hosted-Turso ky vong false; `clearOwnerIntents` da noi vao dang xuat va doi chu so huu, co `app-shell.test.tsx`; fallback `anonymous` da bo; cau chu changelog va ledger da thu hep dung pham vi.
+
+**Hai van de moi root phat hien:**
+1. `e2e/timeline.spec.ts:27` flaky, fail 1 trong 3 lan chay full suite, chay rieng luon pass. Khong phai regression.
+2. `prisma/dev.db` chua apply migration `20260916120000_plan11_integrity_receipts`. Toan bo test xanh vi test dung DB tam, nhung **chay app that se loi khi cham bai hoac on the**. Root bi auto-mode chan quyen nen khong sao luu va khong apply duoc; user phai tu chay.
+
+**Viec con lai theo Plan12:** D1 va D4 dat local + CI; D2 (Preview/Production/mail), D3 (live + reviewer), D5 (pilot) van cho dau vao user. Khong co finding logic moi nao mo.
