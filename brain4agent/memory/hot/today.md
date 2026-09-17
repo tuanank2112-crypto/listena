@@ -153,3 +153,23 @@ User yeu cau root thuc thi cac finding roi chuan bi de test repo. Kiem tra cho t
 2. `prisma/dev.db` chua apply migration `20260916120000_plan11_integrity_receipts`. Toan bo test xanh vi test dung DB tam, nhung **chay app that se loi khi cham bai hoac on the**. Root bi auto-mode chan quyen nen khong sao luu va khong apply duoc; user phai tu chay.
 
 **Viec con lai theo Plan12:** D1 va D4 dat local + CI; D2 (Preview/Production/mail), D3 (live + reviewer), D5 (pilot) van cho dau vao user. Khong co finding logic moi nao mo.
+
+## Su co AI provider: chan doan va khac phuc (2026-09-17T14:35+07:00)
+
+User bao moi lan bam "Hoc cung AI" deu nhan "Gia su AI hien chua san sang", va nhac dung rang day la repo hoc tieng Anh AI-native nen AI moi la thu quan trong nhat, trong khi ca chuoi phien truoc chi lo integrity/quy trinh. Nhan xet nay dung.
+
+**Nguyen nhan goc:** `KIRAAI_MODEL` tro toi model khong ton tai. `.env` co `qwen3.8-flash-free`, `.env.example` (tracked) co `glm-5.3-flash-free`; ca hai deu khong nam trong danh muc. Provider tra 404 `model_not_found` moi lan goi. Da loai tru bang do dac: key hop le (`GET /models` -> 200, 46 model), base URL dung, than request dung.
+
+**Danh muc:** 46 model, 4 free, chi `ling-3.0-flash-free` vua free vua `active`; 3 model free con lai dang `maintenance`.
+
+**Da sua:** `.env` -> `ling-3.0-flash-free`; `.env.example` sua model + them canh bao va lenh `curl /models` de kiem truoc khi doi.
+
+**Bang chung chay that (khong phai test):** `POST /api/learning-sessions` 201 voi log `kira ling-3.0-flash-free status=stop latencyMs=1606`; `POST /turns` 201, turnCount=1, successfulTurns=1, trust=45, evidence=5. Hoi thoai: AI mo "What does your suitcase look like?"; hoc vien "It is big and blue."; AI coach npcReply hoi so hieu chuyen bay, coachMessage tieng Viet "Hay dung thi qua khu de mo ta kich thuoc va mau sac", score 0.8, confidence 0.9, detectedError grammar. Dung vong AI-native.
+
+**Ba van de con mo:** (P1) app gop sai-cau-hinh-vinh-vien va qua-tai-tam-thoi vao cung mot thong bao, khong validate model luc khoi dong, khong log than loi cua provider; (P2) free tier rate-limit gat, khong co retry co gioi han o server, pilot phai dung model tra phi; (P3) moi lan AI hong de lai mot dong UNKNOWN trong so `LearningSessionStartRequest`, khong co duong phuc hoi.
+
+**Vi sao loi song sot qua nhieu plan:** moi test deu dung provider tat dinh nen khong bao gio cham danh muc model that. 494 test xanh van khong phat hien lo san pham chet.
+
+**Bay moi truong:** chay `npm run build` khi `next dev` dang chay lam hong `.next`, cac route API long nhau (`/turns`, `/events`, `/complete`) tra 404 HTML du file ton tai. Sua bang dung dev, xoa `.next`, chay lai.
+
+**Canh bao hosted:** Preview va Production van mang model cu, se hong y het cho toi khi doi.

@@ -12,6 +12,14 @@
 
 D1 hoàn tất (local + CI); D4 đạt ở local; các cổng D2 (Preview 0.7.0 / Prod 1.0.0), D3 (Live AI 0.8.0), D5 (Pilot 0.9.0) chờ đầu vào của user (phê duyệt cửa sổ Preview/cutover, provider kèm hạn mức chi, đồng thuận pilot).
 
+## Uu tien moi phat sinh 2026-09-17 — lo AI
+
+Tinh nang AI da chet hoan toan do `KIRAAI_MODEL` tro toi model khong ton tai; da sua va chung minh bang hoi thoai that ([bao cao](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md)). Ba viec nen lam truoc khi tinh den pilot:
+
+1. Phan biet sai cau hinh voi qua tai trong tang provider; validate model luc doc cau hinh; log than loi cua provider. Khong de mot loi vinh vien nup duoi thong bao "thu lai sau".
+2. Chot model tra phi va han muc chi; free tier rate-limit gat nen khong dung cho nguoi hoc that.
+3. Them mot smoke that cham provider vao quy trinh; toan bo test hien dung provider tat dinh nen khong bao gio bat duoc loai loi nay.
+
 ## Current master plan
 [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md), PLANNED 2026-09-17: hoàn thiện dự án tới 1.0.0 theo Definition of Done D1–D6 (integrity, hosted+rollback+mail, live AI có reviewer, causal next action, pilot đã đánh giá, handover). Contract kỹ thuật vẫn ở [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md); hosted/mail vẫn Plan07/09.
 

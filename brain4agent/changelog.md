@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — Khac phuc su co AI provider (2026-09-17)
+- **Sua loi lam chet toan bo tinh nang AI:** `KIRAAI_MODEL` tro toi model khong ton tai (`qwen3.8-flash-free` trong `.env`, `glm-5.3-flash-free` trong `.env.example`), khien provider tra 404 `model_not_found` moi lan goi va nguoi hoc luon thay "Gia su AI hien chua san sang". Doi sang `ling-3.0-flash-free` va bo sung canh bao + lenh kiem tra danh muc vao `.env.example`.
+- **Chung minh bang hoi thoai that:** tao phien Mission 201 va gui luot hoc vien 201; AI phat hien loi thi qua khu, coach bang tieng Viet, score 0.8/confidence 0.9. Day la lan dau vong AI-native duoc quan sat chay that trong repo nay.
+- **Ghi nhan ba van de con mo:** thong bao gop sai-cau-hinh voi qua tai; free tier rate-limit gat va khong co retry co gioi han; so `LearningSessionStartRequest` tich luy dong UNKNOWN khong co duong phuc hoi. Chi tiet: [bao cao](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md).
+- Khong doi code runtime, khong doi version, khong dung toi cau hinh hosted. `.env` khong duoc theo doi boi git nen chi `.env.example` va tai lieu duoc commit.
+
 ## 0.6.0 — 2026-09-17 (D1 Mutation Integrity Local + GitHub Actions CI)
 - **Đạt bậc 0.6.0 theo bậc thang phiên bản Plan12 01-CONTRACTS:**
   - Hoàn tất Definition of Done D1 (Tính toàn vẹn giao dịch học tập & soạn bài): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc; scoped intent theo chủ sở hữu (owner-scoped) và dọn dẹp intent khi đăng xuất/đổi tài khoản.

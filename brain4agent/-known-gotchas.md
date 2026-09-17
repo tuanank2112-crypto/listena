@@ -61,3 +61,12 @@
 - `e2e/timeline.spec.ts:27` **flaky** khi chay full suite (1 fail / 3 lan), chay rieng luon pass. Truoc khi dung E2E lam cong chan phai on dinh case nay, dung retry mu.
 - `prisma/dev.db` cua nguoi dung KHONG tu dong theo kip migration moi. Sau Plan11 no thieu `Attempt.resultJson`, `Attempt.enrichmentState`, `ReviewLog.resultJson`, nen chay app that se loi khi cham bai hoac on the du toan bo test xanh (test dung DB tam). Luon kiem `npx prisma migrate status` truoc khi test thu cong, va sao luu truoc khi apply.
 - CI co the xac minh doc lap qua trang GitHub Actions bang WebFetch khi `gh` chua dang nhap. "Chua dang nhap gh" khong dong nghia "khong kiem duoc CI".
+
+## Su co AI provider 2026-09-17 — model khong ton tai
+
+- `KIRAAI_MODEL` phai la id CO THAT trong danh muc nha cung cap. `qwen3.8-flash-free` va `glm-5.3-flash-free` KHONG ton tai; provider tra 404 `model_not_found` va app do ve thong bao chung "Gia su AI hien chua san sang". Kiem bang `curl -H "Authorization: Bearer $KIRAAI_API_KEY" https://kiraai.vn/api/v1/models` truoc khi doi.
+- Key hop le va base URL dung KHONG dam bao AI chay. Phai kiem rieng tung yeu to: /models cho biet auth+base URL, /chat/completions cho biet model.
+- Toan bo test dung provider tat dinh nen khong bao gio cham danh muc model that. Suite xanh 100% van de lot loi cau hinh lam chet lo san pham. Can mot smoke that cham provider.
+- App KHONG phan biet sai cau hinh (404 vinh vien) voi qua tai (429/503 tam thoi): cung mot thong bao. Nguoi dung thu lai vo han, nguoi van hanh khong biet minh cau hinh sai.
+- `ling-3.0-flash-free` la model duy nhat vua free vua active (2026-09-17) nhung rate-limit gat: 3 lan goi lien tiep cho 429/200/200. Pilot phai dung model tra phi.
+- CAM chay `npm run build` khi `next dev` dang chay: hong thu muc `.next` dung chung, cac route API long nhau tra 404 HTML du file ton tai. Sua: dung dev, `rm -rf .next`, chay lai.

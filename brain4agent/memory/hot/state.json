@@ -147,5 +147,28 @@
       "dev_db_drift": "prisma/dev.db missing Attempt.resultJson/enrichmentState and ReviewLog.resultJson; migration 20260916120000 not applied; blocks manual testing; root lacked permission to back up or apply"
     },
     "version_0_6_0": "legitimate: D1 local + real CI success on HEAD"
+  },
+  "ai_provider_incident_2026_09_17": {
+    "report": "docs/AI_PROVIDER_OUTAGE_2026-09-17.md",
+    "status": "FIXED locally, proven with a real conversation; hosted config untouched",
+    "root_cause": "KIRAAI_MODEL pointed at a non-existent model (qwen3.8-flash-free in .env, glm-5.3-flash-free in .env.example) -> provider returned 404 model_not_found on every tutor call",
+    "ruled_out": [
+      "api key valid: GET /models -> 200 with 46 models",
+      "base url correct",
+      "provider request body correct"
+    ],
+    "fix": "KIRAAI_MODEL=ling-3.0-flash-free (only free+active model); .env.example corrected with a verification command",
+    "proof": {
+      "session_start": "POST /api/learning-sessions -> 201, kira status=stop latencyMs=1606",
+      "turn": "POST /api/learning-sessions/<id>/turns -> 201, turnCount=1 successfulTurns=1",
+      "coaching": "AI detected past-tense grammar error and coached in Vietnamese, score 0.8 confidence 0.9"
+    },
+    "open_issues": {
+      "P1": "app collapses permanent misconfiguration (404 model_not_found) and transient overload (429/503) into one generic message; no startup validation; provider error body not logged",
+      "P2": "free tier rate-limits hard (429/200/200 across 3 calls); no server-side bounded retry; a paid model is required for pilot",
+      "P3": "each AI failure leaves a status=UNKNOWN row in LearningSessionStartRequest with no UI recovery path"
+    },
+    "why_it_survived": "every test uses a deterministic provider, so no test ever touched the real model catalogue",
+    "hosted_warning": "Preview/Production still carry the old model id and will fail identically until updated"
   }
 }

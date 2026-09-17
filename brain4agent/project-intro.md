@@ -11,3 +11,5 @@ Current master plan is [Plan12](../planning/12_2026-09-17_project-completion-rel
 Plan07 owns remaining hosted ownership/retry/read-only fingerprint, final export/Production/cutover/reconciliation-aware rollback. Plan09 real mail is still open. Successful live coaching, reviewed teaching quality and consented learner efficacy are not established. Render/PostgreSQL is not the supported target. Pilot A1-A2 everyday communication is an assumption pending user confirmation.
 
 Trạng thái 2026-09-17: Đạt bậc phiên bản 0.6.0 theo bậc thang Plan12 01-CONTRACTS sau khi hoàn tất Definition of Done D1 (tính toàn vẹn giao dịch học tập/soạn bài ở cả local và CI remote GitHub Actions run 35187260657, 15/15 bước PASS). Toàn bộ 7 findings từ Root Code Review đã giải quyết (F1-F7). Phiên bản dự án chính thức nâng lên 0.6.0, sẵn sàng cho các cổng Preview và Production cutover.
+
+Cap nhat 2026-09-17: tinh nang AI tung chet hoan toan vi `KIRAAI_MODEL` tro toi model khong ton tai; da sua va vong AI-native da duoc quan sat chay that (AI coach phat hien loi ngu phap va huong dan bang tieng Viet). Xem [bao cao su co](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md). Cau hinh hosted chua sua.
