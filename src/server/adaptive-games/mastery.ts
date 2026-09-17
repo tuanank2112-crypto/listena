@@ -1,4 +1,8 @@
 import { processReview } from "@/core/srs/sm2";
+import {
+  applySkillMasteryUpdate,
+  SKILL_MASTERY_DEFAULT,
+} from "@/core/learner-model/skill-mastery";
 
 export function gameReviewRating(correct: boolean, responseTimeMs?: number) {
   if (!correct) return "AGAIN" as const;
@@ -17,14 +21,21 @@ export function nextVocabularyMastery(input: {
   return Math.min(1, Math.max(0, current + delta));
 }
 
+/**
+ * Game skill mastery step: the unified Plan13 §8 formula with source "game"
+ * (alpha 0.18). `difficulty` defaults to 1 for callers that have no run.
+ */
 export function nextSkillMastery(input: {
   existingScore?: number;
   score: number;
-  confidence?: number;
+  difficulty?: number;
 }) {
-  const current = input.existingScore ?? 0.5;
-  const learningRate = 0.18 * (input.confidence ?? 1);
-  return Math.min(1, Math.max(0, current + (input.score - current) * learningRate));
+  return applySkillMasteryUpdate({
+    old: input.existingScore ?? SKILL_MASTERY_DEFAULT,
+    score: input.score,
+    difficulty: input.difficulty ?? 1,
+    source: "game",
+  });
 }
 
 export { processReview };

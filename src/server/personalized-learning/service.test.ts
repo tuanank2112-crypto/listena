@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AIRequestBudgetError, AIUnavailableError } from "@/server/ai/errors";
 
 const mocks = vi.hoisted(() => ({
   findUniqueLesson: vi.fn(),
@@ -7,6 +8,8 @@ const mocks = vi.hoisted(() => ({
   updateLesson: vi.fn(),
   updateManyLesson: vi.fn(),
   findUniqueAttempt: vi.fn(),
+  findFirstAttempt: vi.fn(),
+  createLesson: vi.fn(),
   profile: vi.fn(),
   skills: vi.fn(),
   dueVocabulary: vi.fn(),
@@ -29,13 +32,14 @@ vi.mock("@/lib/prisma", () => ({
       findMany: mocks.findManyLessons,
       update: mocks.updateLesson,
       updateMany: mocks.updateManyLesson,
+      create: mocks.createLesson,
     },
     learnerProfile: { findUnique: mocks.profile },
     skillMastery: { findMany: mocks.skills },
     vocabularyMastery: { findMany: mocks.dueVocabulary },
     lessonVocabulary: { findMany: mocks.curriculumVocabulary },
     adaptiveEvidence: { findMany: mocks.evidence },
-    personalizedLessonAttempt: { findUnique: mocks.findUniqueAttempt },
+    personalizedLessonAttempt: { findUnique: mocks.findUniqueAttempt, findFirst: mocks.findFirstAttempt },
     aIInteraction: { findMany: mocks.interactions },
   },
 }));
@@ -53,11 +57,28 @@ vi.mock("@/server/ai/request-budget", () => ({
 }));
 
 import {
+  claimPersonalizedLessonGeneration,
   getOwnedPersonalizedLesson,
+  getOwnedPersonalizedLessonStatus,
+  masteryPerformance,
   PersonalizedLearningError,
-  provisionPersonalizedLesson,
+  runPersonalizedLessonGeneration,
   submitPersonalizedLessonAttempt,
+  type PersonalizedGenerationClaim,
 } from "./service";
+import { PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS } from "./contracts";
+
+/** Plan13: claim then run, the way the route does it (claim -> 202 -> after()). */
+async function provisionPersonalizedLesson(userId: string, skill?: "vocabulary") {
+  const claim = await claimPersonalizedLessonGeneration(userId, skill);
+  if (claim.kind === "ready") return { lesson: claim.lesson, reused: true, claim };
+  if (claim.kind !== "claimed") throw new Error(`unexpected claim ${claim.kind}`);
+  const result = await runPersonalizedLessonGeneration(claim);
+  if (result.status === "FAILED") {
+    throw Object.assign(new Error("generation failed"), { code: result.failureCode });
+  }
+  return { lesson: result.lesson, reused: false, claim };
+}
 
 const publicContent = {
   introVi: "Bài này tập trung vào từ vựng bạn cần ôn.",
@@ -290,6 +311,8 @@ describe("personalized lesson ownership and reuse", () => {
       }),
     );
     mocks.updateManyLesson.mockResolvedValue({ count: 1 });
+    mocks.findFirstAttempt.mockResolvedValue(null);
+    mocks.createLesson.mockResolvedValue({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
   });
 
   it("keeps the owner predicate when reading a private artifact", async () => {
@@ -338,14 +361,14 @@ describe("personalized lesson ownership and reuse", () => {
       .mockResolvedValueOnce(readyLesson());
     mocks.findFirstLesson.mockResolvedValue(null);
     mocks.provider.mockReturnValue({
-      providerName: "kira",
-      modelName: "glm-5.3-flash-free",
+      providerName: "vyce",
+      modelName: "claude-sonnet-4-6",
       generateJson: mocks.generateJson,
     });
     mocks.generateJson.mockResolvedValue({
       output: generatedDraft(),
-      provider: "kira",
-      model: "glm-5.3-flash-free",
+      provider: "vyce",
+      model: "claude-sonnet-4-6",
       requestId: "request-1",
     });
     mocks.executeAtomicBatch.mockImplementation(
@@ -362,20 +385,28 @@ describe("personalized lesson ownership and reuse", () => {
     const result = await provisionPersonalizedLesson("learner-1", "vocabulary");
 
     expect(result.reused).toBe(false);
+    // Compact contract (Plan13 SPEC-P131 §4): 1,400 output tokens, 4 exercises, 4-5 words.
+    expect(mocks.generateJson).toHaveBeenCalledWith(expect.objectContaining({
+      maxOutputTokens: PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS,
+      input: expect.objectContaining({
+        constraints: expect.objectContaining({ exerciseCount: "exactly 4", vocabularyCount: "4 to 5", transcriptMaxChars: 700 }),
+      }),
+    }));
+    expect(PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS).toBe(1_400);
     expect(mocks.reserveAICall).toHaveBeenCalledWith(
       expect.objectContaining({
         userId: "learner-1",
         purpose: "personalized_lesson",
-        provider: "kira",
-        model: "glm-5.3-flash-free",
+        provider: "vyce",
+        model: "claude-sonnet-4-6",
       }),
     );
     expect(mocks.settleAICall).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         success: true,
-        provider: "kira",
-        model: "glm-5.3-flash-free",
+        provider: "vyce",
+        model: "claude-sonnet-4-6",
       }),
     );
     const statements = mocks.executeAtomicBatch.mock.calls[0]![0] as Array<{
@@ -407,8 +438,8 @@ describe("personalized lesson ownership and reuse", () => {
     mocks.findUniqueLesson.mockResolvedValue(generatingLesson());
     mocks.findFirstLesson.mockResolvedValue(null);
     mocks.provider.mockReturnValue({
-      providerName: "kira",
-      modelName: "glm-5.3-flash-free",
+      providerName: "vyce",
+      modelName: "claude-sonnet-4-6",
       generateJson: mocks.generateJson,
     });
     mocks.generateJson.mockRejectedValue(new Error("upstream unavailable"));
@@ -417,12 +448,17 @@ describe("personalized lesson ownership and reuse", () => {
       provisionPersonalizedLesson("learner-1", "vocabulary"),
     ).rejects.toMatchObject({ code: "AI_UNAVAILABLE" });
 
+    // The row is marked FAILED under its generation key so the client poll ends.
+    expect(mocks.updateManyLesson).toHaveBeenLastCalledWith(expect.objectContaining({
+      where: expect.objectContaining({ status: "GENERATING" }),
+      data: { status: "FAILED", failureCode: "AI_UNAVAILABLE" },
+    }));
     expect(mocks.settleAICall).toHaveBeenCalledWith(
       expect.anything(),
       expect.objectContaining({
         success: false,
-        provider: "kira",
-        model: "glm-5.3-flash-free",
+        provider: "vyce",
+        model: "claude-sonnet-4-6",
         failureReason: "unknown",
       }),
     );
@@ -471,6 +507,47 @@ describe("personalized lesson ownership and reuse", () => {
         statement.sql.includes('WITH "recentEvidence"'),
       ),
     ).toBe(true);
+    // SPEC-P132 §8 mirror: new = old + 0.2 * (performance - old), never 0.8*old + contribution.
+    const mastery = statements.find((statement) => statement.sql.includes('UPDATE "SkillMastery"'))!;
+    expect(mastery.sql).toContain('"masteryScore" + (? - "masteryScore") * ?');
+    expect((mastery as { values?: unknown[] }).values?.slice(2, 4)).toEqual([masteryPerformance(1, 1), 0.2]);
+    expect(masteryPerformance(1, 0.5)).toBe(1);
+    expect(masteryPerformance(0.5, 2)).toBeCloseTo(0.5 / 1.8);
+    // PL2: the insert refuses a second graded attempt for the same exercise.
+    expect(statements[0]?.sql).toContain('"exerciseId" = ? AND "userId" = ?');
+  });
+
+  it("persists Answer Canvas hintCount/confidence/assistMode on the attempt insert and defaults them", async () => {
+    mocks.findFirstLesson.mockResolvedValue(readyAttemptLesson());
+    mocks.findUniqueAttempt.mockResolvedValue(null);
+    mocks.executeAtomicBatch.mockImplementation(
+      async (statements: Array<unknown>) => statements.map(() => ({ changes: 1 })),
+    );
+
+    await submitPersonalizedLessonAttempt({
+      userId: "learner-1",
+      lessonId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      exerciseId: "exercise-1",
+      answer: "ticket",
+      clientAttemptId: "client-attempt-canvas",
+      responseTimeMs: 800,
+      hintCount: 2,
+      confidence: 3,
+      assistMode: "TILES",
+    });
+    const withCanvas = (mocks.executeAtomicBatch.mock.calls.at(-1)![0] as Array<{ sql: string; values: unknown[] }>)[0]!;
+    expect(withCanvas.sql).toContain('"responseTimeMs", "hintCount", "confidence", "assistMode", "createdAt"');
+    expect(withCanvas.values.slice(10, 14)).toEqual([800, 2, 3, "TILES"]);
+
+    await submitPersonalizedLessonAttempt({
+      userId: "learner-1",
+      lessonId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      exerciseId: "exercise-1",
+      answer: "ticket",
+      clientAttemptId: "client-attempt-plain",
+    });
+    const plain = (mocks.executeAtomicBatch.mock.calls.at(-1)![0] as Array<{ sql: string; values: unknown[] }>)[0]!;
+    expect(plain.values.slice(10, 14)).toEqual([null, 0, null, null]);
   });
 
   it("returns the original attempt when an atomic conditional insert loses the client ID race", async () => {
@@ -507,5 +584,124 @@ describe("personalized lesson ownership and reuse", () => {
     expect(statements[0]?.sql).toContain(
       'ON CONFLICT("lessonId", "clientAttemptId") DO NOTHING',
     );
+  });
+});
+
+
+// Plan13 SPEC-P131 §4: async claim/run, PL1 lease, PL2 per-exercise idempotency.
+describe("Plan13 personalized async generation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.reserveAICall.mockResolvedValue({ id: "reservation-1", userId: "learner-1", purpose: "personalized_lesson" });
+    mocks.settleAICall.mockResolvedValue(undefined);
+    mocks.profile.mockResolvedValue({ estimatedCefrLevel: "A2", calibrationStatus: "UNASSESSED", preferredTopics: "travel" });
+    mocks.skills.mockResolvedValue([{ skillKey: "vocabulary", masteryScore: 0.35 }]);
+    mocks.dueVocabulary.mockResolvedValue([]);
+    mocks.curriculumVocabulary.mockResolvedValue([]);
+    mocks.evidence.mockResolvedValue([]);
+    mocks.interactions.mockResolvedValue([]);
+    mocks.findFirstLesson.mockResolvedValue(null);
+    mocks.findFirstAttempt.mockResolvedValue(null);
+    mocks.updateManyLesson.mockResolvedValue({ count: 1 });
+    mocks.createLesson.mockResolvedValue({ id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa" });
+    mocks.provider.mockReturnValue({ providerName: "vyce", modelName: "claude-sonnet-4-6", generateJson: mocks.generateJson });
+  });
+
+  it("claims a new row with a generation lease and reservation without calling the provider", async () => {
+    mocks.findUniqueLesson.mockResolvedValue(null);
+
+    const claim = await claimPersonalizedLessonGeneration("learner-1", "vocabulary");
+
+    expect(claim.kind).toBe("claimed");
+    expect(mocks.createLesson).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({ status: "GENERATING", generationAttempt: 1, generationStartedAt: expect.any(Date) }),
+    }));
+    expect(mocks.reserveAICall).toHaveBeenCalledOnce();
+    expect(mocks.generateJson).not.toHaveBeenCalled();
+    expect(claim.kind === "claimed" && claim.retryAfterSeconds).toBe(3);
+  });
+
+  it("reclaims a FAILED row by CAS on its old key, bumping the attempt and restarting the lease (PL1)", async () => {
+    // Regression: the old stale check used createdAt, so a reused FAILED row
+    // was "stale" immediately and a second claim overwrote the first key.
+    mocks.findUniqueLesson.mockResolvedValue({ ...generatingLesson(), status: "FAILED", generationKey: "old-key", createdAt: new Date(Date.now() - 60 * 60_000), generationStartedAt: null });
+
+    const claim = await claimPersonalizedLessonGeneration("learner-1", "vocabulary");
+
+    expect(claim.kind).toBe("claimed");
+    expect(mocks.updateManyLesson).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", generationKey: "old-key" },
+      data: expect.objectContaining({ status: "GENERATING", generationAttempt: { increment: 1 }, generationStartedAt: expect.any(Date) }),
+    }));
+    expect(claim.kind === "claimed" && claim.generationKey).not.toBe("old-key");
+  });
+
+  it("reports in-progress for a GENERATING row whose generation lease is still fresh", async () => {
+    mocks.findUniqueLesson.mockResolvedValue({ ...generatingLesson(), createdAt: new Date(Date.now() - 60 * 60_000), generationStartedAt: new Date(Date.now() - 10_000) });
+
+    await expect(claimPersonalizedLessonGeneration("learner-1", "vocabulary")).resolves.toMatchObject({ kind: "in-progress", lessonId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", retryAfterSeconds: 3 });
+    expect(mocks.reserveAICall).not.toHaveBeenCalled();
+    expect(mocks.updateManyLesson).not.toHaveBeenCalled();
+  });
+
+  it("marks the claimed row FAILED and rethrows when the AI reservation is refused", async () => {
+    mocks.findUniqueLesson.mockResolvedValue(null);
+    mocks.reserveAICall.mockRejectedValue(new AIRequestBudgetError({ reason: "DAILY_LIMIT", retryAfterSeconds: 3600 }));
+
+    await expect(claimPersonalizedLessonGeneration("learner-1", "vocabulary")).rejects.toMatchObject({ code: "AI_REQUEST_LIMIT" });
+    expect(mocks.updateManyLesson).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "FAILED", failureCode: "AI_REQUEST_LIMIT" } }));
+  });
+
+  it("runs the generation to READY after the claim and settles the reservation once", async () => {
+    mocks.findUniqueLesson.mockResolvedValueOnce(null).mockResolvedValueOnce(readyLesson());
+    mocks.generateJson.mockResolvedValue({ output: generatedDraft(), provider: "vyce", model: "claude-sonnet-4-6", requestId: "r-1" });
+    mocks.executeAtomicBatch.mockImplementation(async (statements: Array<{ sql: string }>) =>
+      statements.map((statement) => ({ changes: statement.sql.includes("SET \"status\" = 'READY'") || statement.sql.includes('SET "failureCode" = NULL') ? 1 : 0 })));
+
+    const claim = await claimPersonalizedLessonGeneration("learner-1", "vocabulary") as Extract<PersonalizedGenerationClaim, { kind: "claimed" }>;
+    const result = await runPersonalizedLessonGeneration(claim);
+
+    expect(result).toMatchObject({ status: "READY", lesson: { id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", status: "READY" } });
+    expect(mocks.settleAICall).toHaveBeenCalledTimes(1);
+    expect(mocks.settleAICall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ success: true }));
+  });
+
+  it("never throws from run: a provider failure becomes a FAILED row the client can poll", async () => {
+    mocks.findUniqueLesson.mockResolvedValue(null);
+    mocks.generateJson.mockRejectedValue(new AIUnavailableError({ reason: "timeout" }));
+
+    const claim = await claimPersonalizedLessonGeneration("learner-1", "vocabulary") as Extract<PersonalizedGenerationClaim, { kind: "claimed" }>;
+    await expect(runPersonalizedLessonGeneration(claim)).resolves.toEqual({ status: "FAILED", failureCode: "AI_UNAVAILABLE" });
+    expect(mocks.settleAICall).toHaveBeenCalledTimes(1);
+    expect(mocks.settleAICall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ success: false, failureReason: "timeout" }));
+  });
+
+  it("exposes GENERATING/FAILED status without content and treats an expired lease as FAILED", async () => {
+    mocks.findFirstLesson.mockResolvedValueOnce({ ...generatingLesson(), generationStartedAt: new Date(), generationAttempt: 2 });
+    await expect(getOwnedPersonalizedLessonStatus("learner-1", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).resolves.toMatchObject({
+      status: "GENERATING", generationAttempt: 2, retryAfterSeconds: 3, targetSkill: "vocabulary",
+    });
+
+    mocks.findFirstLesson.mockResolvedValueOnce({ ...generatingLesson(), generationStartedAt: new Date(Date.now() - 300_000), generationAttempt: 1 });
+    await expect(getOwnedPersonalizedLessonStatus("learner-1", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).resolves.toMatchObject({
+      status: "FAILED", failureCode: "GENERATION_TIMEOUT",
+    });
+
+    mocks.findFirstLesson.mockResolvedValueOnce(null);
+    await expect(getOwnedPersonalizedLessonStatus("someone-else", "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa")).rejects.toMatchObject({ code: "PRIVATE_NOT_FOUND" });
+  });
+
+  it("replays the stored result for an exercise that was already graded instead of minting new evidence (PL2)", async () => {
+    mocks.findFirstLesson.mockResolvedValue(readyAttemptLesson());
+    mocks.findUniqueAttempt.mockResolvedValue(null);
+    mocks.findFirstAttempt.mockResolvedValue({ id: "graded-1", score: 0, correct: false, feedbackVi: "Chưa đúng. Ticket là vé đi lại." });
+
+    const result = await submitPersonalizedLessonAttempt({
+      userId: "learner-1", lessonId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", exerciseId: "exercise-1", answer: "ticket", clientAttemptId: "second-try-uuid",
+    });
+
+    expect(result.attempt).toEqual({ id: "graded-1", score: 0, correct: false, feedbackVi: "Chưa đúng. Ticket là vé đi lại.", idempotent: true });
+    expect(mocks.executeAtomicBatch).not.toHaveBeenCalled();
+    expect(mocks.findFirstAttempt).toHaveBeenCalledWith(expect.objectContaining({ where: { lessonId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa", userId: "learner-1", exerciseId: "exercise-1" } }));
   });
 });

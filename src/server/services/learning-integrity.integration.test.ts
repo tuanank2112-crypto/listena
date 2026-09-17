@@ -157,7 +157,7 @@ describe("Plan 11 — Real SQLite Learning & Authoring Integrity (P111/P112)", (
         active: true,
       },
     });
-  });
+  }, 60_000);
 
   afterAll(async () => {
     await prisma.$disconnect();

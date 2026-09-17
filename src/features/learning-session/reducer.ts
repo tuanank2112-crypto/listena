@@ -1,5 +1,5 @@
 import type { LearningDecision } from "@/server/learning/decision";
-import type { PublicLearningSession, TurnSubmission } from "./types";
+import type { PublicLearningSession, SessionOutcome, TurnSubmission } from "./types";
 
 export type PlayerPhase = "loading" | "ready" | "submitting" | "completing" | "completed" | "fatal-error";
 
@@ -13,6 +13,12 @@ export interface LearningSessionPlayerState {
   turnStartedAt: number;
   pendingSubmission: TurnSubmission | null;
   nextAction: LearningDecision | null;
+  /**
+   * Set whenever the session is terminal. ABANDONED renders the completed
+   * view with an explicit "cancelled" outcome instead of being mistaken for
+   * an active conversation (Plan13 SPEC-P132 §9).
+   */
+  outcome: SessionOutcome | null;
 }
 
 export type LearningSessionPlayerAction =
@@ -41,7 +47,27 @@ export function createInitialPlayerState(now = Date.now()): LearningSessionPlaye
     turnStartedAt: now,
     pendingSubmission: null,
     nextAction: null,
+    outcome: null,
   };
+}
+
+/** A session is terminal once it is COMPLETED or ABANDONED; only ACTIVE accepts turns. */
+export function isTerminalSession(session: PublicLearningSession) {
+  return session.status === "COMPLETED" || session.status === "ABANDONED";
+}
+
+/**
+ * Older completed rows predate the additive outcome field. Only a persisted
+ * DEBRIEF state is safe legacy evidence of a successful outcome; every other
+ * missing value is shown as a partial stop so the UI never invents a trophy.
+ */
+export function resolveSessionOutcome(session: PublicLearningSession): SessionOutcome | null {
+  if (session.status === "ABANDONED") return "ABANDONED";
+  if (session.status !== "COMPLETED") return null;
+  if (session.completionOutcome === "COMPLETED" || session.completionOutcome === "PARTIAL") {
+    return session.completionOutcome;
+  }
+  return session.state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL";
 }
 
 export function learningSessionPlayerReducer(
@@ -51,15 +77,18 @@ export function learningSessionPlayerReducer(
   switch (action.type) {
     case "LOAD_START":
       return { ...state, phase: "loading", error: "" };
-    case "LOAD_SUCCESS":
+    case "LOAD_SUCCESS": {
+      const terminal = isTerminalSession(action.session);
       return {
         ...state,
-        phase: action.session.status === "COMPLETED" ? "completed" : "ready",
+        phase: terminal ? "completed" : "ready",
         session: action.session,
         error: "",
         turnStartedAt: action.now,
-        nextAction: action.session.status === "COMPLETED" ? action.nextAction : null,
+        nextAction: terminal ? action.nextAction : null,
+        outcome: resolveSessionOutcome(action.session),
       };
+    }
     case "LOAD_FAILURE":
       return { ...state, phase: "fatal-error", error: action.error };
     case "SET_DRAFT":
@@ -70,10 +99,11 @@ export function learningSessionPlayerReducer(
       return { ...state, replayCount: state.replayCount + 1 };
     case "SUBMIT_START":
       return { ...state, phase: "submitting", error: "", pendingSubmission: action.submission };
-    case "SUBMIT_SUCCESS":
+    case "SUBMIT_SUCCESS": {
+      const terminal = isTerminalSession(action.session);
       return {
         ...state,
-        phase: action.session.status === "COMPLETED" ? "completed" : "ready",
+        phase: terminal ? "completed" : "ready",
         session: action.session,
         draft: "",
         error: "",
@@ -81,14 +111,24 @@ export function learningSessionPlayerReducer(
         replayCount: 0,
         turnStartedAt: action.now,
         pendingSubmission: null,
-        nextAction: action.session.status === "COMPLETED" ? action.nextAction : null,
+        nextAction: terminal ? action.nextAction : null,
+        outcome: resolveSessionOutcome(action.session),
       };
+    }
     case "SUBMIT_FAILURE":
       return { ...state, phase: "ready", error: action.error };
     case "COMPLETE_START":
       return { ...state, phase: "completing", error: "" };
     case "COMPLETE_SUCCESS":
-      return { ...state, phase: "completed", session: action.session, error: "", pendingSubmission: null, nextAction: action.nextAction };
+      return {
+        ...state,
+        phase: "completed",
+        session: action.session,
+        error: "",
+        pendingSubmission: null,
+        nextAction: action.nextAction,
+        outcome: resolveSessionOutcome(action.session),
+      };
     case "COMPLETE_FAILURE":
       return { ...state, phase: "ready", error: action.error };
     case "CLEAR_ERROR":

@@ -20,6 +20,7 @@ import {
   Target,
   Trophy,
   Volume2,
+  XCircle,
 } from "lucide-react";
 import { speak } from "@/core/tts/speech";
 import { InterventionRenderer } from "@/features/learning-session/intervention-renderer";
@@ -28,7 +29,9 @@ import { makeClientId } from "@/features/learning-session/client-id";
 import type { LearningDecision } from "@/server/learning/decision";
 import {
   createInitialPlayerState,
+  isTerminalSession,
   learningSessionPlayerReducer,
+  resolveSessionOutcome,
 } from "@/features/learning-session/reducer";
 import {
   extractAiMessages,
@@ -38,6 +41,7 @@ import {
   type PublicLearningSession,
   type CompletionOutcome,
   type LearningSessionEnvelope,
+  type SessionOutcome,
   type SessionPhase,
   type SessionTurn,
   type TurnSubmission,
@@ -69,7 +73,8 @@ interface TurnEnvelope {
  * missing value is shown as a partial stop so the UI never invents a trophy.
  */
 export function resolveCompletionOutcome(session: PublicLearningSession): CompletionOutcome {
-  if (session.completionOutcome) return session.completionOutcome;
+  const outcome = resolveSessionOutcome(session);
+  if (outcome === "COMPLETED" || outcome === "PARTIAL") return outcome;
   return session.state.phase === "DEBRIEF" ? "COMPLETED" : "PARTIAL";
 }
 
@@ -208,6 +213,25 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
     }
   }
 
+  /**
+   * Plan13 SPEC-P131 §3: the learner always has an exit. With evidence the
+   * session is completed (PARTIAL debrief); without evidence it is abandoned,
+   * which never depends on the AI provider being available.
+   */
+  async function endSession() {
+    if (!session || busy) return;
+    if (session.evidence.length >= 1) return completeSession();
+    dispatch({ type: "COMPLETE_START" });
+    try {
+      const response = await fetch(`/api/learning-sessions/${sessionId}/abandon`, { method: "POST" });
+      const payload = (await response.json()) as LearningSessionEnvelope;
+      if (!response.ok || !payload.session) throw new Error(payload.error || "Chưa thể kết thúc phiên.");
+      dispatch({ type: "COMPLETE_SUCCESS", session: payload.session, nextAction: payload.nextAction ?? null });
+    } catch (caught) {
+      dispatch({ type: "COMPLETE_FAILURE", error: caught instanceof Error ? caught.message : "Chưa thể kết thúc phiên." });
+    }
+  }
+
   function replay(text: string) {
     dispatch({ type: "COUNT_REPLAY" });
     void recordEvent("REPLAY");
@@ -236,8 +260,8 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
     );
   }
 
-  if (player.phase === "completed" || session.status === "COMPLETED") {
-    return <Debrief session={session} nextAction={player.nextAction} onTargetUnavailable={() => void loadSession()} />;
+  if (player.phase === "completed" || isTerminalSession(session)) {
+    return <Debrief session={session} outcome={player.outcome ?? resolveSessionOutcome(session)} nextAction={player.nextAction} onTargetUnavailable={() => void loadSession()} />;
   }
 
   const mission = session.state;
@@ -253,9 +277,13 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
           <p className="truncate text-[11px] font-black uppercase tracking-[.15em] text-[#ef765d]">AI Mission · {phaseLabels[mission.phase]}</p>
           <h1 className="truncate text-xl font-black tracking-[-.04em] sm:text-2xl">{mission.scenarioTitle}</h1>
         </div>
-        {shouldOfferCompletion(session) && (
+        {shouldOfferCompletion(session) ? (
           <button onClick={() => void completeSession()} disabled={busy} className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white disabled:opacity-50 sm:flex">
             <Flag className="h-4 w-4 text-[#f7d779]" /> Kết thúc
+          </button>
+        ) : (
+          <button onClick={() => void endSession()} disabled={busy} aria-label="Kết thúc phiên" className="inline-flex min-h-11 items-center gap-2 rounded-2xl border-2 border-[#ded8cc] bg-[#fffdf8] px-3 text-xs font-black text-[#748079] disabled:opacity-50">
+            <XCircle className="h-4 w-4" /> <span className="hidden sm:inline">Kết thúc phiên</span>
           </button>
         )}
       </header>
@@ -348,7 +376,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
           </div>
         </main>
 
-        <MissionSidebar session={session} learnerTurns={learnerTurns} onComplete={() => void completeSession()} completing={player.phase === "completing"} />
+        <MissionSidebar session={session} learnerTurns={learnerTurns} onComplete={() => void completeSession()} onEnd={() => void endSession()} completing={player.phase === "completing"} />
       </div>
     </div>
   );
@@ -409,7 +437,7 @@ function Meter({ label, value, icon: Icon, color }: { label: string; value: numb
   );
 }
 
-function MissionSidebar({ session, learnerTurns, onComplete, completing }: { session: PublicLearningSession; learnerTurns: number; onComplete: () => void; completing: boolean }) {
+function MissionSidebar({ session, learnerTurns, onComplete, onEnd, completing }: { session: PublicLearningSession; learnerTurns: number; onComplete: () => void; onEnd: () => void; completing: boolean }) {
   const state = session.state;
   const currentPhaseIndex = phaseOrder.indexOf(state.phase);
   return (
@@ -442,33 +470,48 @@ function MissionSidebar({ session, learnerTurns, onComplete, completing }: { ses
         </div>
       </div>
 
-      {(shouldOfferCompletion(session) || learnerTurns >= 3) && (
+      {(shouldOfferCompletion(session) || learnerTurns >= 3) ? (
         <button onClick={onComplete} disabled={completing} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#18332d] bg-[#fffdf8] px-4 text-sm font-black disabled:opacity-50">
           {completing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Flag className="h-4 w-4" />} Kết thúc & xem debrief
         </button>
+      ) : (
+        <button onClick={onEnd} disabled={completing} className="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border-2 border-[#ded8cc] bg-[#fffdf8] px-4 text-sm font-black text-[#748079] disabled:opacity-50">
+          {completing ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Kết thúc phiên
+        </button>
       )}
+      <p className="px-1 text-[11px] font-bold leading-5 text-[#9aa39d]">Bạn có thể rời phiên bất cứ lúc nào; phiên chưa có câu trả lời sẽ được huỷ, phiên đã có câu trả lời sẽ được lưu lại.</p>
     </aside>
   );
 }
 
 function Debrief({
   session,
+  outcome,
   nextAction,
   onTargetUnavailable,
 }: {
   session: PublicLearningSession;
+  outcome: SessionOutcome | null;
   nextAction: LearningDecision | null;
   onTargetUnavailable: () => void;
 }) {
   const state = session.state;
-  const completionOutcome = resolveCompletionOutcome(session);
+  const completionOutcome = outcome ?? resolveCompletionOutcome(session);
+  const isAbandoned = completionOutcome === "ABANDONED";
   const isPartial = completionOutcome === "PARTIAL";
   return (
     <div className="mx-auto flex min-h-[78vh] max-w-3xl items-center px-4 py-10 sm:px-6">
       <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="paper-card relative w-full overflow-hidden rounded-[34px] p-6 sm:p-9">
-        <div className={`absolute -right-16 -top-16 h-52 w-52 rounded-full ${isPartial ? "bg-[#dff2e8]/70" : "bg-[#f7d779]/55"}`} />
+        <div className={`absolute -right-16 -top-16 h-52 w-52 rounded-full ${isPartial || isAbandoned ? "bg-[#dff2e8]/70" : "bg-[#f7d779]/55"}`} />
         <div className="relative">
-          {isPartial ? (
+          {isAbandoned ? (
+            <>
+              <span aria-label="Phiên đã huỷ" className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#eee7da] text-[#748079]"><XCircle className="h-8 w-8" /></span>
+              <p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-[#748079]">Phiên đã huỷ</p>
+              <h1 className="mt-2 max-w-xl text-3xl font-black tracking-[-.05em] sm:text-5xl">Phiên đã huỷ. Bạn có thể bắt đầu lại bất cứ lúc nào.</h1>
+              <p className="mt-4 max-w-2xl text-sm font-bold leading-7 text-[#65746c]">{session.summary || "Không có kết quả nào bị mất. Chọn một bước tiếp theo bên dưới hoặc quay về trang hôm nay."}</p>
+            </>
+          ) : isPartial ? (
             <>
               <span aria-label="Phiên luyện tập chưa hoàn thành" className="flex h-16 w-16 items-center justify-center rounded-[22px] bg-[#dff2e8] text-[#176b55]"><Flag className="h-8 w-8" /></span>
               <p className="mt-6 text-xs font-black uppercase tracking-[.18em] text-[#176b55]">Practice pause</p>
@@ -496,7 +539,7 @@ function Debrief({
           {nextAction && <NextActionCard action={nextAction} onTargetUnavailable={onTargetUnavailable} />}
 
           <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-            <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">{isPartial ? "Luyện tiếp" : "Tiếp tục học"} <ArrowRight className="h-4 w-4" /></Link>
+            <Link href={session.lessonId ? `/learner/lessons/${session.lessonId}` : "/learner/dashboard"} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white">{isAbandoned ? "Bắt đầu lại" : isPartial ? "Luyện tiếp" : "Tiếp tục học"} <ArrowRight className="h-4 w-4" /></Link>
             <Link href="/learner/dashboard" className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-[#eee7da] px-5 text-sm font-black">Về trang hôm nay</Link>
           </div>
         </div>

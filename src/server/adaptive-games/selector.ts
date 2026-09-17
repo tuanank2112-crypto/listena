@@ -6,6 +6,7 @@ import type {
   PublicAdaptiveGameRoundPayload,
 } from "./contracts";
 import { serializeRound } from "./contracts";
+import { createSeededRandom, seededShuffle } from "./seeded-random";
 
 export const ADAPTIVE_GAME_MIN_ROUNDS = 6;
 export const ADAPTIVE_GAME_MAX_ROUNDS = 8;
@@ -100,9 +101,16 @@ export function buildAdaptiveGameRounds(input: {
   difficulty: number;
   tokenFactory?: () => string;
   random?: () => number;
+  /**
+   * Run seed (the run id). Distractors for round N are drawn with a PRNG
+   * seeded by `hash(seed + ":" + N)`, so consecutive rounds with the same
+   * target no longer share one alphabetical distractor set (Plan13 G1).
+   */
+  seed?: string;
 }): SerializedAdaptiveGameRound[] {
   const tokenFactory = input.tokenFactory ?? (() => crypto.randomUUID());
   const random = input.random ?? Math.random;
+  const seed = input.seed ?? crypto.randomUUID();
   return input.selected.map((candidate, position) => {
     const { content, validator } = buildRound({
       mode: input.mode,
@@ -111,6 +119,7 @@ export function buildAdaptiveGameRounds(input: {
       difficulty: input.difficulty,
       tokenFactory,
       random,
+      distractorRandom: createSeededRandom(`${seed}:${position}`),
     });
     const serialized = serializeRound(content, validator);
     return {
@@ -129,6 +138,7 @@ function buildRound(input: {
   difficulty: number;
   tokenFactory: () => string;
   random: () => number;
+  distractorRandom: () => number;
 }): {
   content: PublicAdaptiveGameRoundPayload;
   validator: AdaptiveGameAnswerValidator;
@@ -142,7 +152,7 @@ function buildRound(input: {
     // approachable at a low level without ever revealing a single obvious
     // pair.
     const optionCount = difficulty < 0.45 ? 2 : difficulty < 0.75 ? 3 : 4;
-    const options = quizOptions(candidate, input.candidatePool, optionCount, input.random);
+    const options = quizOptions(candidate, input.candidatePool, optionCount, input.random, input.distractorRandom);
     if (options.length < 2) {
       throw new Error("Not enough distinct matching options to issue a round");
     }
@@ -188,7 +198,7 @@ function buildRound(input: {
   }
 
   const optionCount = difficulty < 0.45 ? 3 : difficulty < 0.75 ? 4 : 5;
-  const options = quizOptions(candidate, input.candidatePool, optionCount, input.random);
+  const options = quizOptions(candidate, input.candidatePool, optionCount, input.random, input.distractorRandom);
   if (options.length < 3) {
     throw new Error("Not enough distinct quiz options to issue a round");
   }
@@ -211,17 +221,20 @@ function buildRound(input: {
   };
 }
 
-function quizOptions(
+export function quizOptions(
   target: AdaptiveGameCandidate,
   candidatePool: AdaptiveGameCandidate[],
   optionCount: number,
   random: () => number,
+  distractorRandom: () => number = random,
 ) {
   const targetMeaning = cleanVocabularyMeaning(target.meaningVi, target.exampleSentence);
   const seen = new Set([normalizeText(targetMeaning)]);
   const distractors: string[] = [];
 
-  for (const candidate of candidatePool) {
+  // Walk the pool in a seeded random order (not alphabetical) so the N-1
+  // distinct meanings differ from round to round.
+  for (const candidate of seededShuffle(candidatePool, distractorRandom)) {
     if (candidate.id === target.id) continue;
     const meaning = cleanVocabularyMeaning(candidate.meaningVi, candidate.exampleSentence);
     const normalized = normalizeText(meaning);

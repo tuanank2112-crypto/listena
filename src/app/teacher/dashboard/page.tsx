@@ -5,15 +5,19 @@ import { ChevronRight, BookOpen, PlusCircle, Users, BarChart3, FileText, CheckCi
 
 export default async function TeacherDashboardPage() {
   const session = await auth();
-  const userId = session?.user?.id;
+  const userId = session?.user?.id ?? "";
+  const isAdmin = session?.user?.role === "ADMIN";
 
-  const totalLessons = await prisma.lesson.count();
-  const publishedLessons = await prisma.lesson.count({ where: { status: "PUBLISHED" } });
-  const draftLessons = await prisma.lesson.count({ where: { status: "DRAFT" } });
-  const totalLearners = await prisma.user.count({ where: { role: "LEARNER" } });
-  const totalAttempts = await prisma.attempt.count();
+  // Owner-scoped like the API (Plan13 P130 §6). Only ADMIN sees platform-wide
+  // numbers such as the learner count.
+  const ownerScope = isAdmin ? {} : { createdById: userId };
+  const totalLessons = await prisma.lesson.count({ where: ownerScope });
+  const publishedLessons = await prisma.lesson.count({ where: { ...ownerScope, status: "PUBLISHED" } });
+  const draftLessons = await prisma.lesson.count({ where: { ...ownerScope, status: "DRAFT" } });
+  const totalLearners = isAdmin ? await prisma.user.count({ where: { role: "LEARNER" } }) : null;
 
   const recentLessons = await prisma.lesson.findMany({
+    where: ownerScope,
     orderBy: { createdAt: "desc" },
     take: 5,
     select: { id: true, title: true, status: true, createdAt: true },
@@ -27,12 +31,14 @@ export default async function TeacherDashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-4">
+      <div className={`mb-10 grid grid-cols-2 gap-4 ${totalLearners === null ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
         {[
           { icon: FileText, label: "Tổng bài học", value: totalLessons, color: "from-indigo-500 to-cyan-500" },
           { icon: CheckCircle, label: "Đã xuất bản", value: publishedLessons, color: "from-green-500 to-emerald-500" },
           { icon: Clock, label: "Bản nháp", value: draftLessons, color: "from-amber-500 to-orange-500" },
-          { icon: Users, label: "Học viên", value: totalLearners, color: "from-purple-500 to-pink-500" },
+          ...(totalLearners === null
+            ? []
+            : [{ icon: Users, label: "Học viên", value: totalLearners, color: "from-purple-500 to-pink-500" }]),
         ].map((stat, i) => (
           <div key={i} className="group relative overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur-sm transition-all hover:bg-white/[0.07]">
             <div className={`absolute inset-0 bg-gradient-to-br ${stat.color} opacity-[0.03]`} />

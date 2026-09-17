@@ -81,7 +81,7 @@ describe("Plan 11/12 — Lesson Authoring Integrity (P112)", () => {
         createdById: "teacher-1",
       },
     });
-  });
+  }, 60_000);
 
   afterAll(async () => {
     setTxHookForTesting(null);

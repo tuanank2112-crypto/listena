@@ -15,6 +15,10 @@ export type PasswordResetEmailInput = EmailTemplateBase & {
   resetUrl: string;
 };
 
+export type AccountExistsEmailInput = EmailTemplateBase & {
+  resetUrl: string;
+};
+
 export type FeedbackReceiptEmailInput = EmailTemplateBase;
 
 export type FeedbackNotificationEmailInput = {
@@ -58,6 +62,28 @@ export function renderPasswordResetEmail(
     body: "Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản ListenAI của bạn. Liên kết này có hiệu lực trong một giờ.",
     ignoreNotice:
       "Nếu bạn không yêu cầu đặt lại mật khẩu, bạn có thể bỏ qua email này. Mật khẩu hiện tại sẽ không thay đổi.",
+  });
+}
+
+/**
+ * Sent when someone registers with an address that already has a verified
+ * account. The web response is identical to a fresh registration, so this
+ * message is the only place the account owner learns about the attempt. It
+ * carries a one-time password-reset link because "I forgot I had an account"
+ * is the common benign cause.
+ */
+export function renderAccountExistsEmail(
+  input: AccountExistsEmailInput,
+): OutboundEmail {
+  return renderActionEmail({
+    ...input,
+    actionUrl: input.resetUrl,
+    subject: "Tài khoản ListenAI của bạn đã tồn tại",
+    headline: "Bạn đã có tài khoản ListenAI",
+    actionLabel: "Đặt lại mật khẩu",
+    body: "Vừa có yêu cầu tạo tài khoản mới với địa chỉ email này, nhưng tài khoản đã tồn tại. Nếu đó là bạn và bạn quên mật khẩu, hãy dùng liên kết dưới đây để đặt lại. Liên kết có hiệu lực trong một giờ.",
+    ignoreNotice:
+      "Nếu bạn không thực hiện yêu cầu này, bạn có thể bỏ qua email. Tài khoản và mật khẩu hiện tại sẽ không thay đổi.",
   });
 }
 

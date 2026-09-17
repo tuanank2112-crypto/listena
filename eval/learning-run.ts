@@ -259,7 +259,7 @@ async function main() {
     }
     console.log(`Configured limits: maxCalls=${options.maxCalls}, maxCostUsd=$${options.maxCostUsd}`);
 
-    const hasLiveKey = Boolean(process.env.OPENAI_API_KEY || process.env.KIRA_API_KEY);
+    const hasLiveKey = Boolean(process.env.OPENAI_API_KEY || process.env.VYCE_API_KEY);
     if (!hasLiveKey) {
       console.warn(
         "Notice: No live provider API key configured in environment. Exiting with UNVERIFIED / REQUIRES_CREDENTIALS safely without unapproved charges.",

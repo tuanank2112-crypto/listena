@@ -1,20 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  KiraChatCompletionsProvider,
-  resolveKiraBaseUrl,
-} from "./kira-chat-completions-provider";
+  VyceChatCompletionsProvider,
+  parseRetryAfter,
+  resolveVyceBaseUrl,
+} from "./vyce-chat-completions-provider";
 
-describe("KiraChatCompletionsProvider", () => {
+describe("VyceChatCompletionsProvider", () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
   });
 
-  it("uses Kira's documented Chat Completions payload and keeps identifiers local", async () => {
+  it("uses the plain Chat Completions payload and keeps identifiers local", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          id: "chatcmpl_kira_123",
+          id: "chatcmpl_vyce_123",
           choices: [
             {
               finish_reason: "stop",
@@ -22,14 +23,14 @@ describe("KiraChatCompletionsProvider", () => {
             },
           ],
         }),
-        { status: 200, headers: { "x-request-id": "req_kira_123" } },
+        { status: 200, headers: { "x-request-id": "req_vyce_123" } },
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({
-      apiKey: "test-kira-key",
-      model: "glm-5.3-flash-free",
-      baseUrl: "https://kiraai.vn/api/v1/",
+    const provider = new VyceChatCompletionsProvider({
+      apiKey: "test-vyce-key",
+      model: "claude-sonnet-4-6",
+      baseUrl: "https://vyceai.com/v1/",
     });
 
     const result = await provider.generateJson<{ answer: string }>({
@@ -49,21 +50,21 @@ describe("KiraChatCompletionsProvider", () => {
 
     expect(result).toEqual({
       output: { answer: "Xin chào" },
-      provider: "kira",
-      model: "glm-5.3-flash-free",
-      requestId: "req_kira_123",
+      provider: "vyce",
+      model: "claude-sonnet-4-6",
+      requestId: "req_vyce_123",
     });
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://kiraai.vn/api/v1/chat/completions");
+    expect(url).toBe("https://vyceai.com/v1/chat/completions");
     expect(init.headers).toMatchObject({
       "Content-Type": "application/json",
-      Authorization: "Bearer test-kira-key",
+      Authorization: "Bearer test-vyce-key",
     });
     expect(init.redirect).toBe("manual");
     const body = JSON.parse(String(init.body)) as Record<string, unknown>;
     expect(Object.keys(body).sort()).toEqual(["max_tokens", "messages", "model"]);
     expect(body).toMatchObject({
-      model: "glm-5.3-flash-free",
+      model: "claude-sonnet-4-6",
       max_tokens: 700,
       messages: [
         {
@@ -77,37 +78,32 @@ describe("KiraChatCompletionsProvider", () => {
       ],
     });
     expect(JSON.stringify(body)).not.toContain("learner-42");
-    expect(JSON.stringify(body)).not.toContain("test-kira-key");
+    expect(JSON.stringify(body)).not.toContain("test-vyce-key");
   });
 
-  it("accepts every allowlisted provider endpoint and no other", () => {
-    expect(resolveKiraBaseUrl("https://vyceai.com/v1")).toBe("https://vyceai.com/v1");
-    expect(resolveKiraBaseUrl("https://vyceai.com/v1/")).toBe("https://vyceai.com/v1");
-    // A supported origin does not make an arbitrary path on it supported.
-    expect(() => resolveKiraBaseUrl("https://vyceai.com/api/v1")).toThrow();
-    // Nor does a supported path on the wrong origin.
-    expect(() => resolveKiraBaseUrl("https://attacker.example/v1")).toThrow();
-  });
-
-  it("only permits Kira's documented API origin before attaching credentials", () => {
-    expect(resolveKiraBaseUrl("https://kiraai.vn/api/v1/")).toBe(
-      "https://kiraai.vn/api/v1",
-    );
+  it("only permits the documented Vyce API endpoint before attaching credentials", () => {
+    expect(resolveVyceBaseUrl(undefined)).toBe("https://vyceai.com/v1");
+    expect(resolveVyceBaseUrl("https://vyceai.com/v1")).toBe("https://vyceai.com/v1");
+    expect(resolveVyceBaseUrl("https://vyceai.com/v1/")).toBe("https://vyceai.com/v1");
     for (const unsafeBaseUrl of [
-      "https://attacker.example/api/v1",
-      "http://kiraai.vn/api/v1",
-      "https://kiraai.vn/api/v1?redirect=https://attacker.example",
-      "https://kiraai.vn/api/v1#fragment",
-      "https://user:password@kiraai.vn/api/v1",
-      "https://kiraai.vn/api/v2",
+      // The removed Kira endpoint must no longer be accepted.
+      "https://kiraai.vn/api/v1",
+      "https://attacker.example/v1",
+      // A supported origin does not make an arbitrary path on it supported.
+      "https://vyceai.com/api/v1",
+      "https://vyceai.com/v2",
+      "http://vyceai.com/v1",
+      "https://vyceai.com/v1?redirect=https://attacker.example",
+      "https://vyceai.com/v1#fragment",
+      "https://user:password@vyceai.com/v1",
     ]) {
-      expect(() => resolveKiraBaseUrl(unsafeBaseUrl)).toThrow(
+      expect(() => resolveVyceBaseUrl(unsafeBaseUrl)).toThrow(
         "Gia sư AI hiện chưa sẵn sàng",
       );
     }
   });
 
-  it("maps Kira rate limits to a bounded typed retry response", async () => {
+  it("maps upstream rate limits to a bounded typed retry response", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
@@ -117,7 +113,7 @@ describe("KiraChatCompletionsProvider", () => {
         }),
       ),
     );
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson({
@@ -135,7 +131,7 @@ describe("KiraChatCompletionsProvider", () => {
     });
   });
 
-  // Regression for the 2026-09-17 outage: a non-existent KIRAAI_MODEL made
+  // Regression for the 2026-09-17 outage: a non-existent model id made
   // every tutor call fail with 404 model_not_found, but the app reported the
   // generic retry-later state, so the misconfiguration stayed invisible.
   it("reports a missing model as a permanent misconfiguration, not an outage", async () => {
@@ -152,8 +148,8 @@ describe("KiraChatCompletionsProvider", () => {
       ),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({
-      apiKey: "test-kira-key",
+    const provider = new VyceChatCompletionsProvider({
+      apiKey: "test-vyce-key",
       model: "ghost-model",
     });
 
@@ -180,7 +176,7 @@ describe("KiraChatCompletionsProvider", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson({
@@ -205,7 +201,7 @@ describe("KiraChatCompletionsProvider", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson({
@@ -230,7 +226,7 @@ describe("KiraChatCompletionsProvider", () => {
       }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson({
@@ -246,7 +242,7 @@ describe("KiraChatCompletionsProvider", () => {
       details: { reason: "upstream_failure" },
     });
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://kiraai.vn/api/v1/chat/completions",
+      "https://vyceai.com/v1/chat/completions",
       expect.objectContaining({ redirect: "manual" }),
     );
   });
@@ -264,7 +260,7 @@ describe("KiraChatCompletionsProvider", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     const pending = provider.generateJson<{ answer: string }>({
       purpose: "lesson_tutor",
@@ -300,8 +296,8 @@ describe("KiraChatCompletionsProvider", () => {
         }),
     );
     vi.stubGlobal("fetch", fetchMock);
-    const provider = new KiraChatCompletionsProvider({
-      apiKey: "test-kira-key",
+    const provider = new VyceChatCompletionsProvider({
+      apiKey: "test-vyce-key",
       timeoutMs: 600_000,
     });
 
@@ -324,7 +320,7 @@ describe("KiraChatCompletionsProvider", () => {
     const error = await settled;
     expect(error).toMatchObject({
       code: "AI_UNAVAILABLE",
-      details: { reason: "timeout", provider: "kira" },
+      details: { reason: "timeout", provider: "vyce" },
     });
   });
 
@@ -345,7 +341,7 @@ describe("KiraChatCompletionsProvider", () => {
         ),
       ),
     );
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson<{ answer: string }>({
@@ -371,7 +367,7 @@ describe("KiraChatCompletionsProvider", () => {
         ),
       ),
     );
-    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
 
     await expect(
       provider.generateJson({
@@ -386,5 +382,66 @@ describe("KiraChatCompletionsProvider", () => {
       code: "AI_UNAVAILABLE",
       details: { reason: "invalid_json" },
     });
+  });
+});
+
+// Plan13 SPEC-P131 §2: a per-request 400 is retryable, and a header-less 429
+// must not collapse to a 1 second wait.
+describe("VyceChatCompletionsProvider Plan13 retry classification", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("treats an upstream 400 as a retryable invalid request, not a permanent misconfiguration", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: { type: "invalid_request_error", code: "context_length_exceeded" } }), {
+          status: 400,
+          headers: { "content-type": "application/json" },
+        }),
+      ),
+    );
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "upstream_invalid_request", retryAfterSeconds: 15 },
+    });
+  });
+
+  it("falls back to a 15 second Retry-After when the 429 carries no header", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("too many", { status: 429 })),
+    );
+    const provider = new VyceChatCompletionsProvider({ apiKey: "test-vyce-key" });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_RATE_LIMITED",
+      details: { retryAfterSeconds: 15 },
+    });
+    expect(parseRetryAfter(null)).toBe(15);
+    expect(parseRetryAfter("")).toBe(15);
+    expect(parseRetryAfter("abc")).toBe(15);
+    expect(parseRetryAfter("7")).toBe(7);
   });
 });

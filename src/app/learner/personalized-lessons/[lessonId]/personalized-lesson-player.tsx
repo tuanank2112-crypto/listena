@@ -3,8 +3,10 @@
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, ChevronRight, CircleAlert, LoaderCircle, Sparkles, Volume2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronRight, CircleAlert, Sparkles, Volume2 } from "lucide-react";
 import { speak } from "@/core/tts/speech";
+import { AnswerCanvas } from "@/features/answer-canvas/answer-canvas";
+import { AssistRequestError, type AssistMode, type AssistPayload, type CanvasSubmission } from "@/features/answer-canvas/types";
 import type { PublicPersonalizedLesson } from "@/server/personalized-learning/service";
 
 function createClientAttemptId() {
@@ -34,7 +36,29 @@ export function PersonalizedLessonPlayer({ lesson }: { lesson: PublicPersonalize
     setError("");
   }
 
-  async function submit(value = answer) {
+  // Plan13 P133: the Answer Canvas assist seed is derived from the same
+  // clientAttemptId the eventual attempt will carry.
+  async function fetchAssist(mode: AssistMode): Promise<AssistPayload> {
+    if (!exercise) throw new AssistRequestError("NO_EXERCISE", "Không có bài tập.");
+    const clientAttemptId = pendingAttemptIds.current[exercise.id] ?? createClientAttemptId();
+    pendingAttemptIds.current[exercise.id] = clientAttemptId;
+    const response = await fetch(`/api/learner/personalized-lessons/${lesson.id}/assist`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseId: exercise.id, clientAttemptId, mode }),
+    });
+    const payload = await response.json().catch(() => ({})) as { code?: string; error?: string };
+    if (!response.ok) {
+      const code = payload.code ?? "ASSIST_FAILED";
+      const message = code === "ASSIST_LIMIT"
+        ? "Bạn đã dùng hết trợ giúp cho bài này."
+        : response.status === 404 ? "Bài này không hỗ trợ trợ giúp." : payload.error || "Không lấy được trợ giúp. Thử lại nhé.";
+      throw new AssistRequestError(code, message, response.status);
+    }
+    return payload as AssistPayload;
+  }
+
+  async function submit(value = answer, canvas?: Pick<CanvasSubmission, "hintCount" | "confidence" | "assistMode">) {
     if (!exercise || !value.trim() || loading) return;
     setLoading(true);
     setError("");
@@ -48,6 +72,9 @@ export function PersonalizedLessonPlayer({ lesson }: { lesson: PublicPersonalize
           exerciseId: exercise.id,
           answer: value,
           clientAttemptId,
+          hintCount: canvas?.hintCount ?? 0,
+          ...(canvas?.confidence ? { confidence: canvas.confidence } : {}),
+          ...(canvas?.assistMode ? { assistMode: canvas.assistMode } : {}),
         }),
       });
       const payload = await response.json() as { attempt?: { feedbackVi: string; correct: boolean | null }; error?: string };
@@ -69,7 +96,7 @@ export function PersonalizedLessonPlayer({ lesson }: { lesson: PublicPersonalize
     <header className="mb-5 flex items-center gap-3"><Link href="/learner/personalized-lessons" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#fffdf8] shadow-sm"><ArrowLeft className="h-5 w-5" /></Link><div className="min-w-0 flex-1"><p className="truncate text-xs font-black uppercase tracking-[.13em] text-[#ef765d]">AI riêng · {lesson.cefrLevel} · độ khó {lesson.difficulty.toFixed(1)}</p><h1 className="truncate text-xl font-black tracking-[-.04em] sm:text-2xl">{lesson.title}</h1></div><span className="hidden rounded-full bg-[#dff2e8] px-3 py-1 text-[10px] font-black uppercase tracking-[.12em] text-[#176b55] sm:block">private artifact</span></header>
     <div className="paper-card mb-5 rounded-[24px] p-4 sm:p-5"><div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#ffe5dc] text-[#ef765d]"><Sparkles className="h-5 w-5" /></span><div><p className="text-sm font-black">Vì sao bài này là của bạn?</p><p className="mt-1 text-sm font-bold leading-6 text-[#758078]">{lesson.content.introVi}</p></div></div><ul className="mt-4 grid gap-2 border-t border-[#ded8cc] pt-4 sm:grid-cols-2">{lesson.objectives.map((objective) => <li className="flex gap-2 text-xs font-bold leading-5 text-[#596960]" key={objective}><Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#176b55]" />{objective}</li>)}</ul></div>
     <div className="mb-5 flex items-center gap-3"><div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ded8cc]"><div className="h-full rounded-full bg-[#176b55] transition-all" style={{ width: `${progress}%` }} /></div><span className="text-xs font-black text-[#758078]">{index + 1}/{lesson.content.exercises.length}</span></div>
-    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"><main className="paper-card rounded-[30px] p-5 sm:p-8"><p className="text-xs font-black uppercase tracking-[.18em] text-[#d18b25]">{exercise.type === "CHOICE" ? "Chọn đáp án" : exercise.type === "SPELL" ? "Viết chính tả" : "Điền từ"}</p><h2 className="mt-4 text-2xl font-black leading-snug tracking-[-.04em] sm:text-3xl">{exercise.prompt}</h2>{exercise.type === "CHOICE" && exercise.options ? <div className="mt-8 grid gap-3 sm:grid-cols-2">{exercise.options.map((option) => <button disabled={Boolean(feedback) || loading} onClick={() => void submit(option)} className={`min-h-16 rounded-2xl border-2 px-4 text-left text-sm font-black transition ${answer === option ? "border-[#176b55] bg-[#dff2e8]" : "border-[#ded8cc] bg-white hover:border-[#176b55]"}`} key={option}>{option}</button>)}</div> : <><label className="mt-8 block text-sm font-black" htmlFor="personal-answer">Câu trả lời</label><input id="personal-answer" value={answer} disabled={Boolean(feedback)} onChange={(event) => setAnswer(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void submit(); }} className="mt-2 min-h-14 w-full rounded-2xl border-2 border-[#ded8cc] bg-white px-4 text-lg font-black outline-none focus:border-[#176b55]" placeholder="Nhập câu trả lời…" /><button onClick={() => void submit()} disabled={!answer.trim() || loading || Boolean(feedback)} className="mt-3 flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white disabled:opacity-40">{loading && <LoaderCircle className="h-4 w-4 animate-spin" />}{loading ? "Đang chấm…" : "Kiểm tra"}</button></>}{feedback && <div className="mt-6 rounded-2xl bg-[#dff2e8] p-4"><p className="text-sm font-bold leading-6 text-[#245340]">{feedback}</p><button onClick={next} className="mt-4 flex min-h-11 items-center gap-1 rounded-xl bg-[#176b55] px-4 text-sm font-black text-white">{index === lesson.content.exercises.length - 1 ? "Hoàn thành" : "Câu tiếp"}<ChevronRight className="h-4 w-4" /></button></div>}{error && <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl bg-[#ffe5dc] px-4 py-3 text-sm font-bold text-[#a33f3a]"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>}</main>
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]"><main className="paper-card rounded-[30px] p-5 sm:p-8"><p className="text-xs font-black uppercase tracking-[.18em] text-[#d18b25]">{exercise.type === "CHOICE" ? "Chọn đáp án" : exercise.type === "SPELL" ? "Viết chính tả" : "Điền từ"}</p><h2 className="mt-4 text-2xl font-black leading-snug tracking-[-.04em] sm:text-3xl">{exercise.prompt}</h2>{/* BEGIN answer-input (Plan13 P133: Answer Canvas for FILL/SPELL; CHOICE unchanged; submit(value, canvas) is the only exit) */}{exercise.type === "CHOICE" && exercise.options ? <div className="mt-8 grid gap-3 sm:grid-cols-2">{exercise.options.map((option) => <button disabled={Boolean(feedback) || loading} onClick={() => void submit(option)} className={`min-h-16 rounded-2xl border-2 px-4 text-left text-sm font-black transition ${answer === option ? "border-[#176b55] bg-[#dff2e8]" : "border-[#ded8cc] bg-white hover:border-[#176b55]"}`} key={option}>{option}</button>)}</div> : feedback ? <div className="mt-8"><p className="text-sm font-black">Câu trả lời đã gửi</p><p id="personal-answer" className="mt-2 min-h-14 rounded-2xl border-2 border-[#ded8cc] bg-[#f4efe5] px-4 py-3 text-lg font-black">{answer}</p></div> : <AnswerCanvas key={exercise.id} exerciseKey={exercise.id} hasAudio={false} allowAssist fetchAssist={fetchAssist} onSubmit={(submission) => submit(submission.answer, submission)} submitting={loading} />}{/* END answer-input */}{feedback && <div className="mt-6 rounded-2xl bg-[#dff2e8] p-4"><p className="text-sm font-bold leading-6 text-[#245340]">{feedback}</p><button onClick={next} className="mt-4 flex min-h-11 items-center gap-1 rounded-xl bg-[#176b55] px-4 text-sm font-black text-white">{index === lesson.content.exercises.length - 1 ? "Hoàn thành" : "Câu tiếp"}<ChevronRight className="h-4 w-4" /></button></div>}{error && <p role="alert" className="mt-4 flex items-start gap-2 rounded-xl bg-[#ffe5dc] px-4 py-3 text-sm font-bold text-[#a33f3a]"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" />{error}</p>}</main>
       <aside className="paper-card rounded-[28px] p-5 xl:sticky xl:top-6"><p className="text-xs font-black uppercase tracking-[.15em] text-[#176b55]">Từ trong bài</p><p className="mt-1 text-sm font-bold text-[#758078]">Nhấn để nghe từ; đáp án vẫn được giữ ở server.</p><div className="mt-4 space-y-2">{vocabulary.map((word) => <button key={word.id} onClick={() => void speak({ text: word.displayText, lang: "en", quality: "high" })} className="flex min-h-14 w-full items-center gap-3 rounded-2xl bg-[#f4efe5] px-3 text-left"><Volume2 className="h-4 w-4 shrink-0 text-[#176b55]" /><span className="min-w-0"><span className="block truncate text-sm font-black">{word.displayText}</span><span className="block truncate text-xs font-bold text-[#7b857f]">{word.meaningVi}</span></span></button>)}</div></aside></div>
   </div>;
 }

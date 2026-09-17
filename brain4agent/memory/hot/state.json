@@ -1,9 +1,9 @@
 {
   "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "production_live_timeout_raised_to_180s_pending_deploy",
-  "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
-  "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
+  "system_status": "plan13_local_accepted__uncommitted__ci_pending__vercel_env_rename_and_deploy_pending",
+  "active_plan": "planning/13_2026-09-17_logic-review-remediation/plan.md",
+  "checkpoint": "planning/13_2026-09-17_logic-review-remediation/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -317,5 +317,58 @@
       "pending_lease_ms": "kept 30000",
       "hosted_condition": "Vercel must allow 200s (Hobby needs Fluid compute, cap 300s); unverified this session"
     }
+  },
+  "ai_provider": {
+    "decision": "2026-09-17 21:50 user: Vyce only, Kira removed",
+    "provider_name": "vyce",
+    "file": "src/server/ai/vyce-chat-completions-provider.ts",
+    "env": [
+      "AI_PROVIDER=vyce",
+      "VYCE_API_KEY",
+      "VYCE_MODEL=claude-sonnet-4-6",
+      "VYCE_BASE_URL=https://vyceai.com/v1"
+    ],
+    "stale_config_behaviour": "AI_PROVIDER=kira or KIRAAI_API_KEY -> undefined provider + logger.error stale",
+    "vercel_env": "STILL KIRAAI_* on Production/Preview; user must rename before next deploy",
+    "committed": false
+  },
+  "full_logic_review_2026_09_17": {
+    "report": "docs/ROOT_LOGIC_REVIEW_2026-09-17_FULL_REPO.md",
+    "method": "6 read-only agents by subsystem, root re-verified all P1 on code",
+    "p1": [
+      "L1 mastery /100 on 0-1 fractions (services/learning.ts:315,322)",
+      "L2 Exercise.metadata.answers shipped to learner page",
+      "P1a CEFR level bumps every personalized attempt (service.ts:943-958)",
+      "S1 ACTIVE session with 0 evidence + AI failure = no exit (no ABANDON in client)",
+      "A1 timing enumeration on password-reset/verification request routes"
+    ],
+    "p2_count": 17,
+    "fixed": "none (awaiting user ordering; proposes Plan13)",
+    "data_layer": "schema vs 10 migrations: no drift; release_hardening migration DROP/recreates VocabularyMastery (non-additive); verify-turso-migration hard-codes 27 tables so it always fails now; backup drill is synthetic"
+  },
+  "plan13": {
+    "created": "2026-09-17 23:05+07",
+    "scope": "fix all review findings (auth first), AI reliability (524 on 2200-token personalized generation -> compact+async; ACTIVE_SESSION_EXISTS trap -> abandon/replaceActive), Answer Canvas (FREE/SKELETON/TILES/CONFIDENCE/PREDICT)",
+    "live_evidence_before": "mission 8.5s, turn 7.4s, tutor 7.1s OK; coach 409 ACTIVE_SESSION_EXISTS; personalized 503 after 125s upstream 524",
+    "workers": "A auth, B learning correctness, C AI reliability, D answer canvas, E ops/docs; disjoint file sets; root accepts",
+    "live_harness": "scratchpad live-up.sh (temp DB :3100, real Vyce) + live-smoke-v2.sh",
+    "status": "LOCAL ACCEPTED 2026-09-17 23:15",
+    "gates": {
+      "type_check": "0",
+      "eslint": "0 errors / 28 warnings",
+      "vitest": "110 files / 684 tests",
+      "playwright": "32/32",
+      "build": "PASS",
+      "live": "auth timing <=32ms, lockout, register-exists 202, abandon, 409+activeSessionId, replaceActive, personalized 202->READY (20s vocab, 42s listening), assist SKELETON/TILES, idempotent attempt, logout 307"
+    },
+    "new_migrations": [
+      "20260917230100_plan13_auth_throttle",
+      "20260917230200_plan13_ai_reliability",
+      "20260917230300_plan13_learning_correctness",
+      "20260917230500_plan13_answer_canvas"
+    ],
+    "production_migration_precheck": "PersonalizedLessonAttempt partial unique index fails if duplicate graded attempts exist; run the GROUP BY precheck from Worker C report before migrate deploy",
+    "open_cosmetic": "personalized feedbackVi concatenates 'Chua dung.' with model text starting 'Dung!'",
+    "commit": "not committed; user decides"
   }
 }

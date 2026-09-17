@@ -23,6 +23,15 @@ describe("withCompletedNextAction", () => {
     expect(mocks.plan).not.toHaveBeenCalled();
   });
 
+  it("treats an ABANDONED session as terminal and attaches a next action (Plan13)", async () => {
+    const decision = { kind: "EMPTY" as const, reasonCode: "NO_CONTENT" as const, reasonVi: "", evidenceRefs: [], estimatedMinutes: 10, decisionVersion: "p11-v1" as const, basis: { kind: "INSUFFICIENT_EVIDENCE" as const } };
+    mocks.plan.mockResolvedValue(decision);
+
+    const result = await withCompletedNextAction("learner-1", { session: session("ABANDONED") });
+
+    expect(result.nextAction).toEqual(decision);
+  });
+
   it("returns the completed session when recommendation computation fails", async () => {
     mocks.plan.mockRejectedValue(new Error("storage unavailable"));
 

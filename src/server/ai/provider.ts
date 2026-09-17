@@ -226,9 +226,10 @@ export function createAIProviderFromEnv(
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    VYCE_API_KEY: process.env.VYCE_API_KEY,
+    VYCE_MODEL: process.env.VYCE_MODEL,
+    VYCE_BASE_URL: process.env.VYCE_BASE_URL,
     KIRAAI_API_KEY: process.env.KIRAAI_API_KEY,
-    KIRAAI_MODEL: process.env.KIRAAI_MODEL,
-    KIRAAI_BASE_URL: process.env.KIRAAI_BASE_URL,
   },
 ): AIProvider {
   const provider = createConfiguredStructuredAIProvider(env);

@@ -4,7 +4,7 @@ User direction reaffirmed2026-09-16: AI drives contextual practice, observes lea
 
 Current stack: Next16.3.5 App Router, React19.2.8, TypeScript, Tailwind4, Auth.js5, Prisma6/libSQL. Target hosting is Node/Vercel + explicit Turso; local/E2E SQLite. Partial hosted settings fail closed. Cloudflare Worker+D1 is the historical rollback asset. Retrieval is bounded keyword retrieval, not a vector DB. Optional Python FastAPI/VieNeu sidecar serves Vietnamese; English uses WebSpeech. Kokoro/Transformers were removed by Plan10.
 
-Live provider selection is Kira Chat Completions or explicit OpenAI Responses. Server owns validators, grading/state/evidence/mastery and learner memory. Unavailable provider has an honest typed state; no runtime mock fallback. Shared intent-aware planner already exists, no new agent framework/planner is required.
+Live provider is Vyce Chat Completions only (user decision 2026-09-17; Kira removed, stale KIRAAI_* fails closed) or explicit OpenAI Responses. Server owns validators, grading/state/evidence/mastery and learner memory. Unavailable provider has an honest typed state; no runtime mock fallback. Shared intent-aware planner already exists, no new agent framework/planner is required.
 
 Current master plan is [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md) (2026-09-17): Definition of Done D1–D6 and a single version ladder to 1.0.0. [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md) holds the technical contracts; its P110–P112 WIP has been qualified, repaired and committed in `9325ca2` under Plan12 P120. Plan10 P102/P103/P106 remain qualified per the [post-worker review](../docs/WORKER_REVIEW_2026-09-16.md). Actual CI run is unverified.
 
@@ -12,4 +12,4 @@ Plan07 owns remaining hosted ownership/retry/read-only fingerprint, final export
 
 Trạng thái 2026-09-17: Đạt bậc phiên bản 0.6.0 theo bậc thang Plan12 01-CONTRACTS sau khi hoàn tất Definition of Done D1 (tính toàn vẹn giao dịch học tập/soạn bài ở cả local và CI remote GitHub Actions run 35187260657, 15/15 bước PASS). Toàn bộ 7 findings từ Root Code Review đã giải quyết (F1-F7). Phiên bản dự án chính thức nâng lên 0.6.0, sẵn sàng cho các cổng Preview và Production cutover.
 
-Cap nhat 2026-09-17: tinh nang AI tung chet hoan toan vi `KIRAAI_MODEL` tro toi model khong ton tai; da sua va vong AI-native da duoc quan sat chay that (AI coach phat hien loi ngu phap va huong dan bang tieng Viet). Xem [bao cao su co](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md). Cau hinh hosted chua sua.
+Cap nhat 2026-09-17: tinh nang AI tung chet hoan toan vi `KIRAAI_MODEL` tro toi model khong ton tai; da sua va vong AI-native da duoc quan sat chay that (AI coach phat hien loi ngu phap va huong dan bang tieng Viet). Xem [bao cao su co](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md). Cau hinh hosted da doi sang Vyce chieu 17/09 nhung van mang ten bien KIRAAI_*; phai doi sang VYCE_* truoc deploy ke tiep.

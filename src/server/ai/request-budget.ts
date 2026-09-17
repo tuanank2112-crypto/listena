@@ -15,7 +15,13 @@ import {
 export const AI_REQUEST_MIN_INTERVAL_MS = 12_000;
 export const AI_REQUEST_DAILY_LIMIT = 40;
 export const AI_REQUEST_ROLLING_WINDOW_MS = 24 * 60 * 60 * 1_000;
-export const AI_REQUEST_PENDING_LEASE_MS = 30_000;
+/**
+ * A pending reservation must outlive the longest possible upstream call
+ * (180s provider timeout, 200s route budget). Plan13 SPEC-P131 §1: 210s.
+ * A shorter lease let a second call be dispatched and billed while the first
+ * was still running.
+ */
+export const AI_REQUEST_PENDING_LEASE_MS = 210_000;
 
 // Mission starts/turns are one learning sequence: after an AI reply or a
 // completed Mission, a learner must be able to continue without an arbitrary
@@ -27,6 +33,8 @@ const COOLDOWN_EXEMPT_PURPOSES = new Set(["start_mission", "evaluate_turn"]);
 type ReservationRow = {
   createdAt: Date;
   fallbackReason: string | null;
+  /** NULL for rows written before Plan13; callers fall back to createdAt + lease. */
+  leaseExpiresAt?: Date | null;
 };
 
 export type AICallReservation = {
@@ -137,21 +145,20 @@ export function evaluateAICallBudget(
     .map((row) => ({
       at: row.createdAt.getTime(),
       pending: row.fallbackReason?.startsWith("AI_CALL_PENDING:") ?? false,
+      leaseEndsAt: leaseExpiry(row),
       fallbackReason: row.fallbackReason,
     }))
     .filter((row) => Number.isFinite(row.at) && row.at > nowMs - AI_REQUEST_ROLLING_WINDOW_MS)
     .sort((left, right) => right.at - left.at);
 
   const pending = withinWindow.find(
-    (row) => row.pending && nowMs - row.at < AI_REQUEST_PENDING_LEASE_MS,
+    (row) => row.pending && row.leaseEndsAt > nowMs,
   );
   if (pending) {
     return {
       allowed: false,
       reason: "ACTIVE",
-      retryAfterSeconds: boundedRetry(
-        AI_REQUEST_PENDING_LEASE_MS - (nowMs - pending.at),
-      ),
+      retryAfterSeconds: boundedRetry(pending.leaseEndsAt - nowMs),
     };
   }
 
@@ -202,6 +209,9 @@ function atomicReservationInsert(input: {
   const pendingStart = libSqlTimestamp(
     new Date(input.now.getTime() - AI_REQUEST_PENDING_LEASE_MS),
   );
+  const leaseExpiresAt = libSqlTimestamp(
+    new Date(input.now.getTime() + AI_REQUEST_PENDING_LEASE_MS),
+  );
   const cooldownPredicate = cooldownApplies(input.purpose)
     ? `AND NOT EXISTS (
               SELECT 1 FROM "AIInteraction"
@@ -224,9 +234,11 @@ function atomicReservationInsert(input: {
       ]
     : [];
   return {
+    // The pending fence reads the explicit lease first and falls back to
+    // createdAt + lease for rows written before "leaseExpiresAt" existed.
     sql: `INSERT INTO "AIInteraction"
-            ("id", "userId", "purpose", "provider", "model", "inputHash", "fallbackReason", "schemaValid", "success", "createdAt")
-          SELECT ?, ?, 'ai_call_reservation', ?, ?, ?, ?, 0, 0, ?
+            ("id", "userId", "purpose", "provider", "model", "inputHash", "fallbackReason", "schemaValid", "success", "createdAt", "leaseExpiresAt")
+          SELECT ?, ?, 'ai_call_reservation', ?, ?, ?, ?, 0, 0, ?, ?
           WHERE
             (SELECT COUNT(*) FROM "AIInteraction"
              WHERE "userId" = ? AND "purpose" = 'ai_call_reservation'
@@ -235,7 +247,10 @@ function atomicReservationInsert(input: {
               SELECT 1 FROM "AIInteraction"
               WHERE "userId" = ? AND "purpose" = 'ai_call_reservation'
                 AND "fallbackReason" LIKE 'AI_CALL_PENDING:%'
-                AND "createdAt" > ?
+                AND (
+                  ("leaseExpiresAt" IS NOT NULL AND "leaseExpiresAt" > ?)
+                  OR ("leaseExpiresAt" IS NULL AND "createdAt" > ?)
+                )
             )
             ${cooldownPredicate}`,
     values: [
@@ -246,10 +261,12 @@ function atomicReservationInsert(input: {
       input.inputHash,
       pendingReason(input.purpose),
       createdAt,
+      leaseExpiresAt,
       input.userId,
       windowStart,
       AI_REQUEST_DAILY_LIMIT,
       input.userId,
+      createdAt,
       pendingStart,
       ...cooldownValues,
     ],
@@ -267,8 +284,15 @@ async function listRecentReservations(userId: string, now: Date) {
     },
     orderBy: { createdAt: "desc" },
     take: AI_REQUEST_DAILY_LIMIT,
-    select: { createdAt: true, fallbackReason: true },
+    select: { createdAt: true, fallbackReason: true, leaseExpiresAt: true },
   });
+}
+
+function leaseExpiry(row: ReservationRow) {
+  const explicit = row.leaseExpiresAt?.getTime();
+  return Number.isFinite(explicit)
+    ? (explicit as number)
+    : row.createdAt.getTime() + AI_REQUEST_PENDING_LEASE_MS;
 }
 
 function pendingReason(purpose: string) {

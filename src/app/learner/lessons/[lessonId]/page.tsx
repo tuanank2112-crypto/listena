@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import { LessonDetailClient } from "./lesson-client";
 import { getDatasetUnit, getUnitLearningContext } from "@/server/dataset/catalog";
+import { toPublicExerciseMetadataJson, toPublicLastAttemptMap } from "./public-exercise";
 
 export default async function LessonDetailPage({
   params,
@@ -30,20 +31,26 @@ export default async function LessonDetailPage({
     where: { userId, lessonId },
     orderBy: { createdAt: "desc" },
     distinct: ["exerciseId"],
+    select: { exerciseId: true, score: true },
   });
   const learningContext = getUnitLearningContext(getDatasetUnit(lesson.title));
   // Correct answers remain on the server for `/api/attempt`; the learner page
-  // receives only content needed to render the question.
+  // receives only content needed to render the question. `metadata` is
+  // projected through an allow-list (Plan13 L2) because the importer stores
+  // `answers` / `sourceAnswers` next to the rendering fields.
   const publicLesson = {
     ...lesson,
-    exercises: lesson.exercises.map(({ correctAnswer: _correctAnswer, ...exercise }) => exercise),
+    exercises: lesson.exercises.map(({ correctAnswer: _correctAnswer, metadata, ...exercise }) => ({
+      ...exercise,
+      metadata: toPublicExerciseMetadataJson(metadata),
+    })),
   };
 
   return (
     <LessonDetailClient
       userId={userId}
       lesson={JSON.parse(JSON.stringify(publicLesson))}
-      lastAttemptMap={Object.fromEntries(lastAttempts.map((attempt) => [attempt.exerciseId, attempt]))}
+      lastAttemptMap={toPublicLastAttemptMap(lastAttempts)}
       learningContext={learningContext}
     />
   );

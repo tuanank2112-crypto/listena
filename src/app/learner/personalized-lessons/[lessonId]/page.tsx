@@ -1,10 +1,11 @@
 import { notFound } from "next/navigation";
 import { auth } from "@/server/auth/config";
 import {
-  getOwnedPersonalizedLesson,
+  getOwnedPersonalizedLessonStatus,
   PersonalizedLearningError,
 } from "@/server/personalized-learning/service";
 import { PersonalizedLessonPlayer } from "./personalized-lesson-player";
+import { PersonalizedLessonProgress } from "./personalized-lesson-progress";
 
 export default async function PersonalizedLessonPage({
   params,
@@ -14,13 +15,15 @@ export default async function PersonalizedLessonPage({
   const session = await auth();
   if (!session?.user?.id) notFound();
   const { lessonId } = await params;
-  const lesson = await loadOwnedLesson(session.user.id, lessonId);
-  return <PersonalizedLessonPlayer lesson={lesson} />;
+  const lesson = await loadOwnedLessonStatus(session.user.id, lessonId);
+  if (lesson.status === "READY") return <PersonalizedLessonPlayer lesson={lesson} />;
+  // GENERATING/FAILED: the client polls the status endpoint (Plan13 async flow).
+  return <PersonalizedLessonProgress initial={lesson} />;
 }
 
-async function loadOwnedLesson(userId: string, lessonId: string) {
+async function loadOwnedLessonStatus(userId: string, lessonId: string) {
   try {
-    return await getOwnedPersonalizedLesson(userId, lessonId);
+    return await getOwnedPersonalizedLessonStatus(userId, lessonId);
   } catch (error) {
     if (error instanceof PersonalizedLearningError && error.code === "PRIVATE_NOT_FOUND") {
       notFound();

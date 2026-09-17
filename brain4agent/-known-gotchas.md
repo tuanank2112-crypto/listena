@@ -64,7 +64,7 @@
 
 ## Su co AI provider 2026-09-17 — model khong ton tai
 
-- `KIRAAI_MODEL` phai la id CO THAT trong danh muc nha cung cap. `qwen3.8-flash-free` va `glm-5.3-flash-free` KHONG ton tai; provider tra 404 `model_not_found` va app do ve thong bao chung "Gia su AI hien chua san sang". Kiem bang `curl -H "Authorization: Bearer $KIRAAI_API_KEY" https://kiraai.vn/api/v1/models` truoc khi doi.
+- (Lich su, provider Kira da go 17/09 toi; quy tac van dung cho `VYCE_MODEL`.) `KIRAAI_MODEL` phai la id CO THAT trong danh muc nha cung cap. `qwen3.8-flash-free` va `glm-5.3-flash-free` KHONG ton tai; provider tra 404 `model_not_found` va app do ve thong bao chung "Gia su AI hien chua san sang". Kiem bang `curl -H "Authorization: Bearer $KIRAAI_API_KEY" https://kiraai.vn/api/v1/models` truoc khi doi.
 - Key hop le va base URL dung KHONG dam bao AI chay. Phai kiem rieng tung yeu to: /models cho biet auth+base URL, /chat/completions cho biet model.
 - Toan bo test dung provider tat dinh nen khong bao gio cham danh muc model that. Suite xanh 100% van de lot loi cau hinh lam chet lo san pham. Can mot smoke that cham provider.
 - App KHONG phan biet sai cau hinh (404 vinh vien) voi qua tai (429/503 tam thoi): cung mot thong bao. Nguoi dung thu lai vo han, nguoi van hanh khong biet minh cau hinh sai.
@@ -105,7 +105,7 @@
 - `PATCH` gia tri cua mot bien loai `sensitive` BAO "ok" NHUNG KHONG THUC SU AP DUNG. Da mac hai lan: Resend van `upstream_unauthorized`, roi AI van `provider_not_configured`, du PATCH deu tra ok.
 - Cach DUY NHAT dung duoc: `vercel env rm <KEY> production --yes` roi `POST /v10/projects/{id}/env` voi `type:'encrypted'`. Sau do doc lai bang `GET ...?decrypt=true`: dung thi `type=encrypted` va `len>0`.
 - Quy tac kiem tra nhanh: bat ky bien production nao hien `type=sensitive` va `len=0` deu phai coi la RONG cho den khi chung minh nguoc lai. Bien `encrypted` co `len>0` moi la co gia tri that.
-- Trieu chung nguoi dung thay khi KIRAAI_* rong: "Gia su AI hien chua san sang. Vui long thu lai sau." (reason `provider_not_configured`), KHAC voi thong bao sai cau hinh cua `AI_MISCONFIGURED`. Dung trieu chung nay de phan biet bien rong voi model sai.
+- Trieu chung nguoi dung thay khi VYCE_* rong (truoc day KIRAAI_*): "Gia su AI hien chua san sang. Vui long thu lai sau." (reason `provider_not_configured`), KHAC voi thong bao sai cau hinh cua `AI_MISCONFIGURED`. Dung trieu chung nay de phan biet bien rong voi model sai.
 
 ## Chan doan AI tren Production: dung bang AIInteraction, dung doan (2026-09-17)
 
@@ -118,7 +118,7 @@
 ## Sinh bai hoc dai qua Vyce treo ngat quang (2026-09-17 18:45)
 
 - "Gia su AI hien chua san sang" tren duong `personalized_lesson` = `timeout` do PHAN BO thoi gian sinh 2200 token qua vyceai.com rat rong: do 5 lan claude-sonnet-4-6 khong cat: 27s, 28s, 74s, va 2 lan treo ~125s roi gateway tra trang HTML (khong phai JSON). deepseek-v4-flash 3/3 treo. Mission (1200 token) on dinh 5-11s. Tang timeout 45->50s (24f380a) khong du; route budget 60s cung khong du.
-- Tai hien tai local bang chinh `KiraChatCompletionsProvider` voi timeout 50s: cung input, lan 1 OK 25s, lan 2 timeout. Khi thay loi nay, chay lai probe do phan bo, dung doan cau hinh.
+- Tai hien tai local bang chinh provider Chat Completions (nay la `VyceChatCompletionsProvider`) voi timeout 50s: cung input, lan 1 OK 25s, lan 2 timeout. Khi thay loi nay, chay lai probe do phan bo, dung doan cau hinh.
 - `npm run ai:doctor` KHONG tu nap `.env` (tsx thuan): chay `set -a; . ./.env; set +a` truoc, neu khong no bao `AI_PROVIDER (unset)` va ket luan sai.
 - Trong phien auto-mode nay, classifier chan doc token Vercel (`%APPDATA%/com.vercel.cli/Data/auth.json`) va moi goi API production; `vercel`/`turso` CLI khong co tren PATH. Muon doc AIInteraction production phai co user cap quyen/CLI, khong lach.
 - Quyet dinh 18:50: timeout provider 180s, `maxDuration = 200`, `GENERATION_STALE_MS` 210s. Ba so nay phai doi cung nhau (provider < route < stale). Vercel Hobby chi cho >60s khi bat Fluid compute (tran 300s); deploy tu choi = plan chua cho, KHONG phai loi code.

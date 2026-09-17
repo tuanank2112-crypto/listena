@@ -46,7 +46,12 @@ export class AIProviderError extends Error {
 }
 
 export class AIUnavailableError extends AIProviderError {
-  constructor(options: Omit<AIProviderErrorOptions, "retryAfterSeconds">) {
+  /**
+   * `retryAfterSeconds` is optional: transient upstream failures (a rejected
+   * per-request 400, a 5xx, a timeout) carry a bounded hint so routes can send
+   * `Retry-After`; configuration failures leave it unset.
+   */
+  constructor(options: AIProviderErrorOptions) {
     super(
       "AI_UNAVAILABLE",
       "Gia sư AI hiện chưa sẵn sàng. Vui lòng thử lại sau.",

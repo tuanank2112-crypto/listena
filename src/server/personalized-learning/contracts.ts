@@ -14,6 +14,20 @@ export const PersonalizedLessonRequestSchema = z.object({
   targetSkill: SkillKeySchema.optional(),
 });
 
+/**
+ * Plan13 SPEC-P131 §4: the compact lesson shape. Measured on 2026-09-17, a
+ * 2,200-token generation hit the Vyce gateway 524 at ~125s every time while
+ * ~1,200-token outputs returned in 7-10s. The draft is therefore bounded to
+ * 4-5 vocabulary items, exactly 4 exercises, a transcript of at most 700
+ * characters, and 1,400 output tokens. Raising any of these is forbidden by
+ * the plan (vùng cấm) without a new measurement.
+ */
+export const PERSONALIZED_LESSON_VOCABULARY_MIN = 4;
+export const PERSONALIZED_LESSON_VOCABULARY_MAX = 5;
+export const PERSONALIZED_LESSON_EXERCISE_COUNT = 4;
+export const PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS = 700;
+export const PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS = 1_400;
+
 const CefrLevelSchema = z.enum(["A1", "A2", "B1", "B2", "C1", "C2"]);
 
 const LessonVocabularyDraftSchema = z.object({
@@ -83,9 +97,15 @@ export const PersonalizedLessonDraftSchema = z
     difficulty: z.number().min(0.6).max(1.8),
     objectives: z.array(z.string().trim().min(3).max(240)).min(2).max(4),
     introVi: z.string().trim().min(3).max(500),
-    transcript: z.string().trim().min(20).max(2_000),
-    vocabulary: z.array(LessonVocabularyDraftSchema).min(4).max(8),
-    exercises: z.array(LessonExerciseDraftSchema).min(4).max(6),
+    transcript: z.string().trim().min(20).max(PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS),
+    vocabulary: z
+      .array(LessonVocabularyDraftSchema)
+      .min(PERSONALIZED_LESSON_VOCABULARY_MIN)
+      .max(PERSONALIZED_LESSON_VOCABULARY_MAX),
+    exercises: z
+      .array(LessonExerciseDraftSchema)
+      .min(PERSONALIZED_LESSON_EXERCISE_COUNT)
+      .max(PERSONALIZED_LESSON_EXERCISE_COUNT),
   })
   .superRefine((draft, context) => {
     const ids = new Set(draft.exercises.map((exercise) => exercise.id));
@@ -162,6 +182,10 @@ export const PersonalizedLessonAttemptInputSchema = z.object({
   answer: z.string().trim().min(1).max(2_000),
   clientAttemptId: z.string().trim().min(8).max(120),
   responseTimeMs: z.number().int().min(0).max(30 * 60 * 1_000).optional(),
+  // Plan13 P133 Answer Canvas: assist cost paid, confidence bet and mode.
+  hintCount: z.number().int().min(0).max(20).default(0),
+  confidence: z.number().int().min(1).max(3).optional(),
+  assistMode: z.enum(["FREE", "SKELETON", "TILES"]).optional(),
 });
 
 export function normalizeAnswer(value: string): string {
@@ -220,10 +244,12 @@ export function toStoredPersonalizedLesson(draft: PersonalizedLessonDraft, vocab
   };
 }
 
-// JSON Schema supplied to the provider. The OpenAI strict subset requires all
-// declared object properties to be required and does not support cardinality/
-// string-bound keywords consistently, so nullable fields are explicit here and
-// Zod parsing above remains the final semantic/security boundary.
+// JSON Schema supplied to the provider. Cardinality/string-bound keywords are
+// not honoured consistently by the gateway, so the compact limits are stated
+// in the prompt and enforced by the Zod draft schema above. Optional
+// vocabulary fields (ipa/meaningEn/partOfSpeech/exampleSentence) are NOT in
+// `required` (Plan13): every extra field costs output tokens against the
+// gateway timeout; Zod still accepts them when present.
 export const PERSONALIZED_LESSON_JSON_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -260,12 +286,8 @@ export const PERSONALIZED_LESSON_JSON_SCHEMA = {
         required: [
           "lemma",
           "displayText",
-          "ipa",
           "meaningVi",
-          "meaningEn",
-          "partOfSpeech",
           "cefrLevel",
-          "exampleSentence",
           "isTarget",
           "importance",
         ],
@@ -314,3 +336,96 @@ export const PERSONALIZED_LESSON_JSON_SCHEMA = {
     },
   },
 } as const;
+
+
+/**
+ * Plan13 follow-up: lenient, deterministic normalization of the raw provider
+ * draft *before* Zod. The compact limits are stated in the prompt, but a
+ * model that overshoots (5 exercises, 6 words, an 800-char transcript, ids
+ * like "ex1") should not cost the learner a generation. Only shape is
+ * repaired here; answers/feedback are never invented, and Zod remains the
+ * authority afterwards.
+ */
+export function normalizePersonalizedLessonDraft(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const draft = { ...(raw as Record<string, unknown>) };
+
+  if (typeof draft.transcript === "string") {
+    draft.transcript = trimTranscript(draft.transcript, PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS);
+  }
+  if (Array.isArray(draft.vocabulary)) {
+    draft.vocabulary = draft.vocabulary
+      .slice(0, PERSONALIZED_LESSON_VOCABULARY_MAX)
+      .map((item) => normalizeVocabularyItem(item));
+  }
+  if (Array.isArray(draft.exercises)) {
+    draft.exercises = draft.exercises
+      .slice(0, PERSONALIZED_LESSON_EXERCISE_COUNT)
+      .map((item, index) => normalizeExercise(item, index));
+  }
+  return draft;
+}
+
+function normalizeVocabularyItem(item: unknown) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+  const word = { ...(item as Record<string, unknown>) };
+  for (const key of ["ipa", "meaningEn", "partOfSpeech", "exampleSentence"] as const) {
+    const value = word[key];
+    word[key] = typeof value === "string" && value.trim() ? value : null;
+  }
+  if (typeof word.isTarget !== "boolean") word.isTarget = true;
+  const importance = Number(word.importance);
+  word.importance = Number.isFinite(importance) && importance > 0
+    ? Math.min(2, Math.max(0.1, importance))
+    : 1;
+  return word;
+}
+
+function normalizeExercise(item: unknown, index: number) {
+  if (!item || typeof item !== "object" || Array.isArray(item)) return item;
+  const exercise = { ...(item as Record<string, unknown>) };
+  const expectedId = `exercise-${index + 1}`;
+  if (exercise.id !== expectedId) exercise.id = expectedId;
+  if (typeof exercise.type === "string") exercise.type = exercise.type.trim().toUpperCase();
+  if (exercise.type !== "CHOICE") {
+    delete exercise.options;
+  } else if (Array.isArray(exercise.options)) {
+    exercise.options = exercise.options.filter(
+      (option): option is string => typeof option === "string" && Boolean(option.trim()),
+    );
+  }
+  if (Array.isArray(exercise.answer)) {
+    exercise.answer = exercise.answer.filter(
+      (answer): answer is string => typeof answer === "string" && Boolean(answer.trim()),
+    );
+  }
+  return exercise;
+}
+
+/** Cuts at the last sentence boundary (. ! ?) that fits; falls back to a word boundary. */
+export function trimTranscript(text: string, maxChars: number) {
+  const trimmed = text.trim();
+  if (trimmed.length <= maxChars) return trimmed;
+  const window = trimmed.slice(0, maxChars);
+  const sentenceEnd = Math.max(window.lastIndexOf(". "), window.lastIndexOf("! "), window.lastIndexOf("? "));
+  if (sentenceEnd >= Math.floor(maxChars / 3)) return window.slice(0, sentenceEnd + 1).trim();
+  const lastPunctuation = Math.max(window.lastIndexOf("."), window.lastIndexOf("!"), window.lastIndexOf("?"));
+  if (lastPunctuation >= Math.floor(maxChars / 3)) return window.slice(0, lastPunctuation + 1).trim();
+  const wordEnd = window.lastIndexOf(" ");
+  return (wordEnd > 0 ? window.slice(0, wordEnd) : window).trim();
+}
+
+/**
+ * Machine summary of Zod issues for logs: paths and codes only, never values
+ * (learner content and answers must not reach the log). Example:
+ * "zod:exercises.2.answer:too_small;transcript:too_big".
+ */
+export function summarizeZodIssues(
+  issues: ReadonlyArray<{ path: PropertyKey[]; code: string }>,
+  limit = 8,
+) {
+  const parts = issues
+    .slice(0, limit)
+    .map((issue) => `${issue.path.map(String).join(".") || "<root>"}:${issue.code}`);
+  return `zod:${parts.join(";")}${issues.length > limit ? ";..." : ""}`;
+}

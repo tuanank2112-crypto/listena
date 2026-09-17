@@ -27,6 +27,13 @@ export const PedagogicalActSchema = z.enum([
   "REFLECT",
 ]);
 
+/**
+ * Client-minted identifiers must never collide with the namespaces the server
+ * reserves for derived rows: `ai:<turn>`, `event:<event>`, `system:<...>`
+ * (Plan13 SPEC-P132 §9).
+ */
+const RESERVED_CLIENT_ID_PREFIX = /^(?!(?:ai|event|system):)/i;
+
 export const CreateLearningSessionSchema = z.object({
   // This UUID belongs to one explicit learner action. It is intentionally not
   // derived from clientTurnId because session creation has its own replay
@@ -36,10 +43,20 @@ export const CreateLearningSessionSchema = z.object({
   mode: LearningSessionModeSchema,
   goal: z.string().trim().min(3).max(240).optional(),
   scenarioKey: z.string().trim().min(2).max(80).optional(),
+  /**
+   * Plan13 SPEC-P131 §3: the learner explicitly chose "start a new session"
+   * after an ACTIVE_SESSION_EXISTS answer. The server closes the open session
+   * (abandon when it has no evidence, PARTIAL completion otherwise) before
+   * creating this one. It is not part of the idempotency payload hash.
+   */
+  replaceActive: z.boolean().optional(),
 });
 
 export const SubmitLearningTurnSchema = z.object({
-  clientTurnId: z.string().trim().min(8).max(120),
+  clientTurnId: z.string().trim().min(8).max(120).regex(
+    RESERVED_CLIENT_ID_PREFIX,
+    "clientTurnId must not use a reserved namespace prefix",
+  ),
   content: z.string().trim().min(1).max(2000),
   responseTimeMs: z.number().int().min(0).max(30 * 60 * 1000).optional(),
   hintCount: z.number().int().min(0).max(20).default(0),
@@ -50,7 +67,10 @@ export const SubmitLearningTurnSchema = z.object({
 export const LearningEventSchema = z.object({
   type: z.enum(["HINT", "REPLAY", "PAUSE", "RESUME", "ABANDON"]),
   value: z.number().int().min(0).max(100).optional(),
-  clientEventId: z.string().trim().min(8).max(120),
+  clientEventId: z.string().trim().min(8).max(120).regex(
+    RESERVED_CLIENT_ID_PREFIX,
+    "clientEventId must not use a reserved namespace prefix",
+  ),
 });
 
 export const MissionStateSchema = z.object({

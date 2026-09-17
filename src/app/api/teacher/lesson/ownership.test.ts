@@ -137,9 +137,61 @@ describe("teacher content ownership", () => {
     await expect(response.json()).resolves.toMatchObject({ code: "DATABASE_UNAVAILABLE" });
   });
 
+  it.each([
+    ["missing id", { action: "publish" }],
+    ["non-uuid id", { id: "incomplete-lesson", action: "publish" }],
+    ["unknown action", { id: "00000000-0000-4000-8000-00000000a002", action: "delete" }],
+    ["missing action", { id: "00000000-0000-4000-8000-00000000a002" }],
+  ])("PUT rejects a body with %s as 400 VALIDATION_ERROR before any read", async (_label, body) => {
+    const response = await PUT(
+      new Request("http://localhost/api/teacher/lesson", {
+        method: "PUT",
+        body: JSON.stringify(body),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({ code: "VALIDATION_ERROR" });
+    expect(mocks.findLesson).not.toHaveBeenCalled();
+    expect(mocks.updateLesson).not.toHaveBeenCalled();
+  });
+
+  it("PUT rejects a non-JSON body as 400 VALIDATION_ERROR", async () => {
+    const response = await PUT(
+      new Request("http://localhost/api/teacher/lesson", { method: "PUT", body: "not json" })
+    );
+    expect(response.status).toBe(400);
+  });
+
+  it.each([
+    ["other", "TEACHER", 403],
+    ["teacher", "TEACHER", 200],
+    ["other", "ADMIN", 200],
+  ])("PUT review owner %s role %s -> %i", async (owner, role, status) => {
+    mocks.auth.mockResolvedValue({ user: { id: "teacher", role } });
+    mocks.findLesson.mockResolvedValue({ id: "00000000-0000-4000-8000-00000000a002", createdById: owner });
+    mocks.updateLesson.mockResolvedValue({ status: "REVIEWED" });
+
+    const response = await PUT(
+      new Request("http://localhost/api/teacher/lesson", {
+        method: "PUT",
+        body: JSON.stringify({ id: "00000000-0000-4000-8000-00000000a002", action: "review" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    expect(response.status).toBe(status);
+    if (status === 200) {
+      await expect(response.json()).resolves.toEqual({ status: "REVIEWED" });
+    } else {
+      expect(mocks.updateLesson).not.toHaveBeenCalled();
+    }
+  });
+
   it("PUT publish rejects incomplete graph with 409 LESSON_GRAPH_INCOMPLETE", async () => {
     mocks.findLesson.mockResolvedValue({
-      id: "incomplete-lesson",
+      id: "00000000-0000-4000-8000-00000000a001",
       createdById: "teacher",
       segments: [{ id: "seg-1" }],
       exercises: [], // no exercises!
@@ -149,7 +201,7 @@ describe("teacher content ownership", () => {
     const response = await PUT(
       new Request("http://localhost/api/teacher/lesson", {
         method: "PUT",
-        body: JSON.stringify({ id: "incomplete-lesson", action: "publish" }),
+        body: JSON.stringify({ id: "00000000-0000-4000-8000-00000000a001", action: "publish" }),
         headers: { "Content-Type": "application/json" },
       })
     );
@@ -160,18 +212,18 @@ describe("teacher content ownership", () => {
 
   it("PUT publish succeeds when graph meets preconditions", async () => {
     mocks.findLesson.mockResolvedValue({
-      id: "complete-lesson",
+      id: "00000000-0000-4000-8000-00000000a002",
       createdById: "teacher",
       segments: [{ id: "seg-1" }],
       exercises: [{ id: "ex-1" }],
       vocabulary: [{ vocabularyItemId: "vocab-1", isTarget: true }],
     });
-    mocks.updateLesson.mockResolvedValue({ id: "complete-lesson", status: "PUBLISHED" });
+    mocks.updateLesson.mockResolvedValue({ id: "00000000-0000-4000-8000-00000000a002", status: "PUBLISHED" });
 
     const response = await PUT(
       new Request("http://localhost/api/teacher/lesson", {
         method: "PUT",
-        body: JSON.stringify({ id: "complete-lesson", action: "publish" }),
+        body: JSON.stringify({ id: "00000000-0000-4000-8000-00000000a002", action: "publish" }),
         headers: { "Content-Type": "application/json" },
       })
     );
@@ -182,7 +234,7 @@ describe("teacher content ownership", () => {
 
   it("PUT publish rejects graph with only non-target vocabulary with 409 LESSON_GRAPH_INCOMPLETE", async () => {
     mocks.findLesson.mockResolvedValue({
-      id: "non-target-lesson",
+      id: "00000000-0000-4000-8000-00000000a003",
       createdById: "teacher",
       segments: [{ id: "seg-1" }],
       exercises: [{ id: "ex-1" }],
@@ -192,7 +244,7 @@ describe("teacher content ownership", () => {
     const response = await PUT(
       new Request("http://localhost/api/teacher/lesson", {
         method: "PUT",
-        body: JSON.stringify({ id: "non-target-lesson", action: "publish" }),
+        body: JSON.stringify({ id: "00000000-0000-4000-8000-00000000a003", action: "publish" }),
         headers: { "Content-Type": "application/json" },
       })
     );

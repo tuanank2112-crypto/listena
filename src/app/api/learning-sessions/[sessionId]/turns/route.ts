@@ -10,7 +10,7 @@ import {
 } from "@/app/api/learning-sessions/http";
 
 export const runtime = "nodejs";
-// Must exceed the 180s provider timeout in kira-chat-completions-provider.ts.
+// Must exceed the 180s provider timeout in vyce-chat-completions-provider.ts.
 export const maxDuration = 200;
 
 const SessionIdSchema = z.string().uuid();

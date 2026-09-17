@@ -10,6 +10,13 @@ export interface NormalizationOptions {
   unicodeNormalization: boolean;
 }
 
+/** U+2018 U+2019 U+02BC -> ASCII apostrophe. */
+const CURLY_APOSTROPHES = /[‘’ʼ]/g;
+/** U+201C U+201D -> ASCII double quote. */
+const CURLY_DOUBLE_QUOTES = /[“”]/g;
+/** Anything that is not a Unicode letter, number, whitespace or apostrophe. */
+const PUNCTUATION_PATTERN = /[^\p{L}\p{N}\s']/gu;
+
 export const DEFAULT_NORMALIZATION_OPTIONS: NormalizationOptions = {
   lowercase: true,
   removePunctuation: true,
@@ -29,15 +36,24 @@ export function normalizeText(
   let result = text;
 
   if (opts.unicodeNormalization) {
-    result = result.normalize("NFKC");
+    // NFKC does not fold typographic apostrophes/quotes (U+2018/2019/02BC,
+    // U+201C/201D) into their ASCII forms, so iOS "don’t" must be mapped
+    // explicitly before punctuation stripping (Plan13 L3).
+    result = result
+      .normalize("NFKC")
+      .replace(CURLY_APOSTROPHES, "'")
+      .replace(CURLY_DOUBLE_QUOTES, '"');
   }
 
   if (opts.lowercase) {
-    result = result.toLowerCase();
+    result = result.toLocaleLowerCase("en");
   }
 
   if (opts.removePunctuation) {
-    result = result.replace(/[^\w\s']/g, " ");
+    // Unicode-aware: keep every letter/number in any script (café, "thực
+    // đơn"), whitespace and the ASCII apostrophe; everything else is
+    // treated as punctuation.
+    result = result.replace(PUNCTUATION_PATTERN, " ");
   }
 
   if (opts.collapseWhitespace) {

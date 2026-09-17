@@ -81,6 +81,8 @@ export const SubmitAttemptSchema = z.object({
   hintCount: z.number().int().min(0).default(0),
   playbackRate: z.number().min(0.5).max(2).default(1.0),
   clientAttemptId: z.string().uuid(),
+  confidence: z.number().int().min(1).max(3).optional(),
+  assistMode: z.enum(["FREE", "SKELETON", "TILES"]).optional(),
 });
 
 export const ReviewFlashcardSchema = z.object({

@@ -4,12 +4,52 @@
  */
 import type { CefrLevel, ExerciseType } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
+import { resolveDatabaseConfig } from "../src/lib/database-config";
 import vocabularyData from "../dataset/vocabulary.json";
 import lessonsData from "../dataset/lessons.json";
 import grammarData from "../dataset/grammar-reference.json";
 import exercisesData from "../dataset/exercises.json";
 import { cleanVocabularyMeaning } from "../src/core/text/vocabulary";
 import danangLessonData from "../dataset/danang-getaway-lesson.json";
+
+/**
+ * Plan13 SPEC-P134 §4 (finding D8) — hosted import guard.
+ *
+ * This script force-publishes lessons and rewrites exercise content on every
+ * run. The repository runtime resolver is the only reader of APP_RUNTIME /
+ * TURSO_* / DATABASE_URL and fails closed (throws) for APP_RUNTIME=vercel
+ * without Turso, so the only hosted runtime that can reach a write here is
+ * "turso". Writing to it needs BOTH `--allow-hosted` and
+ * `IMPORT_CONFIRM=<turso database name>`; otherwise exit 2 before any query.
+ */
+function assertHostedImportConfirmed() {
+  let config: ReturnType<typeof resolveDatabaseConfig>;
+  try {
+    config = resolveDatabaseConfig();
+  } catch (error) {
+    console.error(error instanceof Error ? error.message : "Database configuration is missing or invalid.");
+    process.exit(1);
+  }
+  if (config.runtime !== "turso") return;
+
+  const allowHosted = process.argv.slice(2).includes("--allow-hosted");
+  const confirmation = process.env.IMPORT_CONFIRM?.trim() ?? "";
+  // Turso hostnames are `<database>-<org>[.<region>].turso.io`; the operator
+  // must repeat the database name. Never echo the URL or the token.
+  const hostLabel = new URL(config.url).hostname.split(".")[0] ?? "";
+  const confirmed =
+    confirmation.length > 0 && (hostLabel === confirmation || hostLabel.startsWith(`${confirmation}-`));
+  if (allowHosted && confirmed) {
+    console.warn(`Hosted import confirmed for Turso database "${confirmation}" (--allow-hosted).`);
+    return;
+  }
+  console.error(
+    "Refusing to import into a hosted (Turso) database. Re-run with --allow-hosted and IMPORT_CONFIRM=<turso database name> matching the configured database. Nothing was written."
+  );
+  process.exit(2);
+}
+
+assertHostedImportConfirmed();
 
 const COURSE_TITLE = "TATQHP1 - SOLUTIONS Pre-Intermediate";
 const DATASET_SOURCE = "Sách HDH TATQHP1 SOLUTIONS đã chỉnh sửa theo ý kiến hội đồng lần 2.docx";

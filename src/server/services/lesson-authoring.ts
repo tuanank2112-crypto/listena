@@ -20,6 +20,7 @@ import { isAIProviderError } from "@/server/ai/errors";
 import {
   reserveUserAICall,
   settleUserAICall,
+  type AICallReservation,
 } from "@/server/ai/request-budget";
 import {
   AILessonDraftSchema,
@@ -46,6 +47,48 @@ export type ReserveResult =
   | { kind: "replay"; lessonId: string }
   | { kind: "pending"; retryAfterSeconds: number };
 
+/**
+ * Plan13 SPEC-P131 §1/§5: the AI lease must outlive the 180s provider call.
+ * Manual creation has no upstream call and keeps a short lease.
+ */
+export const LESSON_CREATION_AI_LEASE_MS = 210_000;
+export const LESSON_CREATION_MANUAL_LEASE_MS = 30_000;
+
+/**
+ * AI4: a PENDING row whose lease expired can never be committed (every graph
+ * write requires PENDING under a live request), so it is reclaimed as FAILED
+ * by compare-and-swap. Returns the row as it should be treated afterwards.
+ */
+async function reclaimExpiredLease<T extends { id: string; status: string; leaseExpiresAt: Date }>(
+  existing: T,
+  now: Date,
+): Promise<T> {
+  if (existing.status !== "PENDING" || existing.leaseExpiresAt.getTime() >= now.getTime()) {
+    return existing;
+  }
+  const expired = await prisma.lessonCreationRequest.updateMany({
+    where: { id: existing.id, status: "PENDING", leaseExpiresAt: { lt: now } },
+    data: { status: "FAILED", errorCode: "LEASE_EXPIRED" },
+  });
+  return expired.count === 1 ? { ...existing, status: "FAILED", errorCode: "LEASE_EXPIRED" } : existing;
+}
+
+/** D5: ledger writes after a claim only ever move a row that is still PENDING. */
+async function markPendingRequest(
+  requestId: string,
+  status: "FAILED" | "UNKNOWN",
+  errorCode: string,
+) {
+  try {
+    await prisma.lessonCreationRequest.updateMany({
+      where: { id: requestId, status: "PENDING" },
+      data: { status, errorCode },
+    });
+  } catch (error) {
+    logger.warn({ err: error, requestId, status }, "Could not update lesson creation ledger");
+  }
+}
+
 export async function reserveLessonCreationRequest(input: {
   userId: string;
   clientRequestId: string;
@@ -53,7 +96,7 @@ export async function reserveLessonCreationRequest(input: {
   mode: "MANUAL" | "AI";
   now: Date;
 }): Promise<ReserveResult> {
-  const existing = await prisma.lessonCreationRequest.findUnique({
+  const found = await prisma.lessonCreationRequest.findUnique({
     where: {
       userId_clientRequestId: {
         userId: input.userId,
@@ -61,6 +104,7 @@ export async function reserveLessonCreationRequest(input: {
       },
     },
   });
+  const existing = found ? await reclaimExpiredLease(found, input.now) : null;
 
   if (existing) {
     if (existing.requestHash !== input.requestHash || existing.mode !== input.mode) {
@@ -87,7 +131,9 @@ export async function reserveLessonCreationRequest(input: {
   }
 
   const requestId = randomUUID();
-  const leaseDurationMs = input.mode === "AI" ? 120000 : 30000;
+  const leaseDurationMs = input.mode === "AI"
+    ? LESSON_CREATION_AI_LEASE_MS
+    : LESSON_CREATION_MANUAL_LEASE_MS;
   const leaseExpiresAt = new Date(input.now.getTime() + leaseDurationMs);
 
   // If previous request row was FAILED with same hash, update lease via CAS
@@ -119,7 +165,7 @@ export async function reserveLessonCreationRequest(input: {
     });
     return { kind: "reserved", requestId };
   } catch (error) {
-    const rechecked = await prisma.lessonCreationRequest.findUnique({
+    const recheckedRow = await prisma.lessonCreationRequest.findUnique({
       where: {
         userId_clientRequestId: {
           userId: input.userId,
@@ -127,6 +173,7 @@ export async function reserveLessonCreationRequest(input: {
         },
       },
     });
+    const rechecked = recheckedRow ? await reclaimExpiredLease(recheckedRow, input.now) : null;
     if (rechecked) {
       if (rechecked.requestHash !== input.requestHash || rechecked.mode !== input.mode) {
         throw new IdempotencyConflictError(
@@ -148,6 +195,13 @@ export async function reserveLessonCreationRequest(input: {
           15,
           "Lesson creation outcome uncertain; do not retry automatically"
         );
+      }
+      if (rechecked.status === "FAILED") {
+        const reclaimed = await prisma.lessonCreationRequest.updateMany({
+          where: { id: rechecked.id, status: "FAILED" },
+          data: { status: "PENDING", leaseExpiresAt, errorCode: null },
+        });
+        if (reclaimed.count === 1) return { kind: "reserved", requestId: rechecked.id };
       }
     }
     throw error;
@@ -368,14 +422,15 @@ export async function commitLessonGraph(input: {
       }
     });
   } catch (error) {
-    // If atomic commit fails, mark ledger UNKNOWN for AI mode or FAILED for manual
-    await prisma.lessonCreationRequest.update({
-      where: { id: input.requestId },
-      data: {
-        status: input.source === "ai" ? "UNKNOWN" : "FAILED",
-        errorCode: "BATCH_COMMIT_FAILED",
-      },
-    }).catch(() => {});
+    // If the atomic commit fails, mark the ledger UNKNOWN for AI mode or
+    // FAILED for manual. Guarded on PENDING (D5): a transaction that did
+    // commit but lost its response has already moved the row to COMMITTED,
+    // and that row must keep its lessonId.
+    await markPendingRequest(
+      input.requestId,
+      input.source === "ai" ? "UNKNOWN" : "FAILED",
+      "BATCH_COMMIT_FAILED",
+    );
     throw error;
   }
 
@@ -488,102 +543,115 @@ export async function generateLessonFromRequest(input: {
     throw new OutcomePendingError(reservation.retryAfterSeconds);
   }
 
-  const aiProvider = createAIProviderFromEnv();
-  const aiBudgetReservation = await reserveUserAICall({
-    userId: input.userId,
-    purpose: "lesson_generation",
-    provider: aiProvider.providerName,
-    model: aiProvider.modelName,
-  });
-
-  let rawDraft;
+  // AI3: from here on the ledger row is PENDING. Every step that can fail
+  // (provider configuration, the per-user AI budget, the call itself,
+  // validation, the graph commit) must move it to FAILED/UNKNOWN, or the
+  // teacher's clientRequestId stays "pending" for the whole lease.
+  let aiProvider: ReturnType<typeof createAIProviderFromEnv>;
+  let aiBudgetReservation: AICallReservation;
   try {
-    rawDraft = await aiProvider.generateLesson({
-      ...input.request,
-      safetyIdentifier: input.userId,
-    });
-  } catch (error) {
-    await settleUserAICall(aiBudgetReservation, {
-      success: false,
+    aiProvider = createAIProviderFromEnv();
+    aiBudgetReservation = await reserveUserAICall({
+      userId: input.userId,
+      purpose: "lesson_generation",
       provider: aiProvider.providerName,
       model: aiProvider.modelName,
-      failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
     });
-
-    await prisma.lessonCreationRequest.update({
-      where: { id: reservation.requestId },
-      data: {
-        status: "FAILED",
-        errorCode: isAIProviderError(error) ? error.code : "PROVIDER_ERROR",
-      },
-    }).catch(() => {});
-
+  } catch (error) {
+    await markPendingRequest(
+      reservation.requestId,
+      "FAILED",
+      isAIProviderError(error) ? error.code : "PROVIDER_ERROR",
+    );
     throw error;
   }
 
-  const validated = AILessonDraftSchema.safeParse(rawDraft);
-  if (!validated.success) {
-    await settleUserAICall(aiBudgetReservation, {
-      success: false,
-      provider: aiProvider.providerName,
-      model: aiProvider.modelName,
-      failureReason: "schema_validation_failed",
-    });
-
-    await prisma.lessonCreationRequest.update({
-      where: { id: reservation.requestId },
-      data: {
-        status: "FAILED",
-        errorCode: "VALIDATION_FAILED",
-      },
-    }).catch(() => {});
-
-    throw new Error("AI tạo nội dung không hợp lệ, vui lòng thử lại");
-  }
-
-  const aiTrace = {
-    provider: aiProvider.providerName,
-    model: aiProvider.modelName,
-    inputHash: requestHash,
-    validatedOutput: JSON.stringify({
-      title: validated.data.title,
-      cefrLevel: input.request.cefrLevel,
-      segmentCount: validated.data.segments.length,
-      exerciseCount: validated.data.exercises.length,
-    }),
-    latencyMs: Date.now() - startTime,
+  // Once reserved, the AI budget lease is settled exactly once on every path
+  // (success, provider failure, validation failure, commit failure).
+  let settled = false;
+  const settleBudget = async (outcome: Parameters<typeof settleUserAICall>[1]) => {
+    if (settled) return;
+    settled = true;
+    try {
+      await settleUserAICall(aiBudgetReservation, {
+        provider: aiProvider.providerName,
+        model: aiProvider.modelName,
+        ...outcome,
+      });
+    } catch (settleError) {
+      logger.warn({ err: settleError, requestId: reservation.requestId }, "Failed to settle AI budget for lesson generation");
+    }
   };
 
-  const { lessonId } = await commitLessonGraph({
-    requestId: reservation.requestId,
-    userId: input.userId,
-    role: input.role,
-    draft: {
-      title: validated.data.title,
-      topic: input.request.topic,
-      cefrLevel: input.request.cefrLevel,
-      learningObjectives: input.request.learningObjectives,
-      transcript: validated.data.transcript,
-      estimatedMinutes: input.request.audioDuration ?? 10,
-      segments: validated.data.segments,
-      exercises: validated.data.exercises,
-      vocabulary: validated.data.vocabulary,
-    },
-    source: "ai",
-    aiTrace,
-  });
-
   try {
-    await settleUserAICall(aiBudgetReservation, {
-      success: true,
+    let rawDraft;
+    try {
+      rawDraft = await aiProvider.generateLesson({
+        ...input.request,
+        safetyIdentifier: input.userId,
+      });
+    } catch (error) {
+      await settleBudget({
+        success: false,
+        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+      });
+      await markPendingRequest(
+        reservation.requestId,
+        "FAILED",
+        isAIProviderError(error) ? error.code : "PROVIDER_ERROR",
+      );
+      throw error;
+    }
+
+    const validated = AILessonDraftSchema.safeParse(rawDraft);
+    if (!validated.success) {
+      await settleBudget({ success: false, failureReason: "schema_validation_failed" });
+      await markPendingRequest(reservation.requestId, "FAILED", "VALIDATION_FAILED");
+      throw new Error("AI tạo nội dung không hợp lệ, vui lòng thử lại");
+    }
+
+    const aiTrace = {
       provider: aiProvider.providerName,
       model: aiProvider.modelName,
-    });
-  } catch (settleError) {
-    logger.warn({ err: settleError, lessonId }, "Failed to settle AI budget after successful lesson commit");
-  }
+      inputHash: requestHash,
+      validatedOutput: JSON.stringify({
+        title: validated.data.title,
+        cefrLevel: input.request.cefrLevel,
+        segmentCount: validated.data.segments.length,
+        exerciseCount: validated.data.exercises.length,
+      }),
+      latencyMs: Date.now() - startTime,
+    };
 
-  return { replayed: false, value: { lessonId } };
+    // The upstream call succeeded and is billed whether or not the commit
+    // below succeeds, so the reservation settles as a success here.
+    await settleBudget({ success: true });
+
+    const { lessonId } = await commitLessonGraph({
+      requestId: reservation.requestId,
+      userId: input.userId,
+      role: input.role,
+      draft: {
+        title: validated.data.title,
+        topic: input.request.topic,
+        cefrLevel: input.request.cefrLevel,
+        learningObjectives: input.request.learningObjectives,
+        transcript: validated.data.transcript,
+        estimatedMinutes: input.request.audioDuration ?? 10,
+        segments: validated.data.segments,
+        exercises: validated.data.exercises,
+        vocabulary: validated.data.vocabulary,
+      },
+      source: "ai",
+      aiTrace,
+    });
+
+    return { replayed: false, value: { lessonId } };
+  } finally {
+    // Any path that escaped without settling (an unexpected throw between
+    // the provider call and settle) must not leave a 210s PENDING lease.
+    await settleBudget({ success: false, failureReason: "unknown" });
+  }
 }
 
 export async function publishLesson(input: {

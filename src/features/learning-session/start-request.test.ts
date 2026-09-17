@@ -47,3 +47,31 @@ describe("requestSessionStart", () => {
     expect(wait).toHaveBeenCalledTimes(5);
   });
 });
+
+
+// Plan13 SPEC-P131 §3: the 409 carries the open session id and replaceActive is forwarded.
+describe("requestSessionStart and ACTIVE_SESSION_EXISTS", () => {
+  it("exposes activeSessionId and the retry window on a terminal failure", async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(409, {
+      error: "open", code: "ACTIVE_SESSION_EXISTS", activeSessionId: "00000000-0000-4000-8000-000000000777",
+    }));
+    await expect(requestSessionStart(input, { fetcher, wait: vi.fn() })).rejects.toMatchObject({
+      code: "ACTIVE_SESSION_EXISTS",
+      activeSessionId: "00000000-0000-4000-8000-000000000777",
+    });
+
+    // A typed provider failure is terminal for this key: no automatic retry.
+    const limited = vi.fn(async () => response(503, { error: "busy", code: "AI_RATE_LIMITED", retryAfterSeconds: 20 }, "20"));
+    await expect(requestSessionStart(input, { fetcher: limited, wait: vi.fn() })).rejects.toMatchObject({
+      code: "AI_RATE_LIMITED",
+      retryAfterSeconds: 20,
+    });
+    expect(limited).toHaveBeenCalledTimes(1);
+  });
+
+  it("sends replaceActive: true when the learner chooses a new session", async () => {
+    const fetcher = vi.fn().mockResolvedValue(response(201, { session: { id: "session-2" } }));
+    await requestSessionStart({ ...input, replaceActive: true }, { fetcher, wait: vi.fn() });
+    expect(JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string)).toMatchObject({ replaceActive: true });
+  });
+});

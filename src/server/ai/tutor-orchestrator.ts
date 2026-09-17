@@ -235,10 +235,16 @@ function enforceNoAnswerLeak(output: TutorTurnOutput): TutorTurnOutput {
       : output.intervention.type === "REORDER"
         ? [output.intervention.validator.correctAnswer]
         : output.intervention.validator.acceptedAnswers;
+  // Every string the learner can see belongs here, including the text
+  // intervention spec fields the client renders as a placeholder or as
+  // read-aloud audio (Plan13 SPEC-P132 §9).
+  const spec = output.intervention.spec as { placeholder?: string; audioText?: string };
   const visibleText = [
     output.npcReply,
     output.coachMessage,
     output.intervention.prompt,
+    typeof spec.placeholder === "string" ? spec.placeholder : "",
+    typeof spec.audioText === "string" ? spec.audioText : "",
   ]
     .join(" ")
     .toLowerCase();
@@ -259,7 +265,7 @@ async function createDefaultTutorProvider(): Promise<
   const providerName = process.env.AI_PROVIDER?.trim().toLowerCase();
   const hasConfiguredKey =
     (providerName === "openai" && Boolean(process.env.OPENAI_API_KEY)) ||
-    (providerName === "kira" && Boolean(process.env.KIRAAI_API_KEY));
+    (providerName === "vyce" && Boolean(process.env.VYCE_API_KEY));
   if (!hasConfiguredKey) return undefined;
   const { createConfiguredTutorProvider } =
     await import("@/server/ai/openai-tutor-provider");

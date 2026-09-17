@@ -26,8 +26,8 @@ describe("createAIProviderFromEnv", () => {
     const provider = createAIProviderFromEnv({
       AI_PROVIDER: "openai",
       OPENAI_API_KEY: "test-key",
-      OPENAI_MODEL: "kira-3.5-flash",
-      OPENAI_BASE_URL: "https://kira.example/api/v1",
+      OPENAI_MODEL: "compatible-test-model",
+      OPENAI_BASE_URL: "https://compatible.example/api/v1",
     });
 
     await provider.analyzeErrors({
@@ -41,10 +41,10 @@ describe("createAIProviderFromEnv", () => {
 
     expect(fetchMock).toHaveBeenCalledOnce();
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://kira.example/api/v1/responses");
+    expect(url).toBe("https://compatible.example/api/v1/responses");
     expect(init.headers).toMatchObject({ Authorization: "Bearer test-key" });
     expect(JSON.parse(String(init.body))).toMatchObject({
-      model: "kira-3.5-flash",
+      model: "compatible-test-model",
       store: false,
       max_output_tokens: 1200,
       safety_identifier: createHash("sha256").update("learner-1").digest("hex"),
@@ -62,11 +62,30 @@ describe("createAIProviderFromEnv", () => {
     expect(() => createAIProviderFromEnv({})).toThrow(AIUnavailableError);
   });
 
-  it("selects Kira Chat Completions for every structured caller through the compatibility factory", async () => {
+  // The kira provider was removed on 2026-09-17. A deployment that still
+  // carries its variables must fail closed, never silently pick another
+  // provider or send the old credential anywhere.
+  it("treats the removed kira configuration as not configured", () => {
+    expect(
+      createConfiguredOpenAIResponsesProvider({
+        AI_PROVIDER: "kira",
+        KIRAAI_API_KEY: "stale-key",
+      }),
+    ).toBeUndefined();
+    expect(
+      createConfiguredOpenAIResponsesProvider({
+        AI_PROVIDER: "vyce",
+        VYCE_API_KEY: "test-vyce-key",
+        KIRAAI_API_KEY: "stale-key",
+      }),
+    ).toBeUndefined();
+  });
+
+  it("selects Vyce Chat Completions for every structured caller through the compatibility factory", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          id: "chatcmpl_kira_123",
+          id: "chatcmpl_vyce_123",
           choices: [
             {
               message: {
@@ -85,14 +104,14 @@ describe("createAIProviderFromEnv", () => {
     vi.stubGlobal("fetch", fetchMock);
 
     const provider = createConfiguredOpenAIResponsesProvider({
-      AI_PROVIDER: "kira",
-      KIRAAI_API_KEY: "test-kira-key",
-      KIRAAI_MODEL: "glm-5.3-flash-free",
-      KIRAAI_BASE_URL: "https://kiraai.vn/api/v1",
+      AI_PROVIDER: "vyce",
+      VYCE_API_KEY: "test-vyce-key",
+      VYCE_MODEL: "claude-sonnet-4-6",
+      VYCE_BASE_URL: "https://vyceai.com/v1",
     });
     expect(provider).toMatchObject({
-      providerName: "kira",
-      modelName: "glm-5.3-flash-free",
+      providerName: "vyce",
+      modelName: "claude-sonnet-4-6",
     });
 
     await provider?.generateJson({
@@ -105,6 +124,6 @@ describe("createAIProviderFromEnv", () => {
     });
 
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://kiraai.vn/api/v1/chat/completions");
+    expect(url).toBe("https://vyceai.com/v1/chat/completions");
   });
 });

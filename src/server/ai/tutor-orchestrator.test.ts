@@ -233,6 +233,42 @@ describe("tutor orchestrator", () => {
     expect(result.output.pedagogicalAct).toBe("ASK_GUIDING");
   });
 
+  // Plan13 SPEC-P132 §9: spec.audioText / spec.placeholder are learner-visible.
+  it("removes an intervention whose audioText or placeholder leaks the accepted answer", async () => {
+    const mission = await startMission(
+      { scenarioKey: "lost-luggage" },
+      { provider: new DeterministicMockTutorProvider() },
+    );
+    for (const spec of [
+      { audioText: "My suitcase is black and heavy." },
+      { placeholder: "my suitcase is black" },
+    ]) {
+      const leakingProvider = new DeterministicMockTutorProvider(() => ({
+        npcReply: "Please describe your bag.",
+        coachMessage: "",
+        pedagogicalAct: "INTERVENTION",
+        targetSkill: "listening",
+        score: 0.4,
+        confidence: 0.9,
+        detectedError: null,
+        statePatch: { trustDelta: 0, evidenceDelta: 1, successfulTurn: false, recovered: false },
+        intervention: {
+          type: "FILL_BLANK",
+          prompt: "Type what you hear.",
+          spec,
+          validator: { acceptedAnswers: ["my suitcase is black"] },
+        },
+        shouldComplete: false,
+      }));
+      const result = await evaluateTutorTurn(
+        { state: mission.state, learnerMessage: "bag" },
+        { provider: leakingProvider },
+      );
+      expect(result.output.intervention).toBeNull();
+      expect(result.output.pedagogicalAct).toBe("ASK_GUIDING");
+    }
+  });
+
   it("codifies the A2 Socratic correction policy in the prompt", () => {
     expect(TUTOR_SYSTEM_PROMPT).toContain("A2 English");
     expect(TUTOR_SYSTEM_PROMPT).toContain("at most ONE learner error per turn");

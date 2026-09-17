@@ -112,7 +112,9 @@ test("AI comeback resets, persists server grading, and completion is counted onc
     startedAt: new Date(Date.now() - 10 * 60_000),
   } });
   const before = await db.learnerProfile.findUniqueOrThrow({ where: { userId: user.id } });
-  const data = { clientTurnId: randomUUID(), content: "I lost my black suitcase" };
+  // Plan13 (SPEC-P132 §9): study minutes come from learner responseTimeMs plus 30s per AI turn,
+  // capped at 120, no longer from wall-clock since startedAt.
+  const data = { clientTurnId: randomUUID(), content: "I lost my black suitcase", responseTimeMs: 8 * 60_000 };
   const finish = await page.request.post(`/api/learning-sessions/${session.id}/turns`, { data });
   expect(finish.ok()).toBe(true);
   expect((await finish.json()).session.status).toBe("COMPLETED");
@@ -120,7 +122,10 @@ test("AI comeback resets, persists server grading, and completion is counted onc
   expect((await retry.json()).idempotent).toBe(true);
   expect((await page.request.post(`/api/learning-sessions/${session.id}/complete`)).ok()).toBe(true);
   const after = await db.learnerProfile.findUniqueOrThrow({ where: { userId: user.id } });
-  expect(after.totalStudyMinutes - before.totalStudyMinutes).toBe(10);
+  const credited = after.totalStudyMinutes - before.totalStudyMinutes;
+  // 8 minutes of learner response time plus a few 30s AI turns, counted exactly once (a double count would be >= 16).
+  expect(credited).toBeGreaterThanOrEqual(8);
+  expect(credited).toBeLessThanOrEqual(12);
 });
 
 test("flashcards exclude future reviews, retain failed submissions and finish the due queue", async ({ page }) => {

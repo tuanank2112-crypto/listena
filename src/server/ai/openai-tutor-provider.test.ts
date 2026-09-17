@@ -99,11 +99,11 @@ describe("OpenAICompatibleTutorProvider", () => {
     expect(JSON.stringify(body)).not.toContain("learner-42");
   });
 
-  it("selects Kira Chat Completions for mission and session tutor flows", async () => {
+  it("selects Vyce Chat Completions for mission and session tutor flows", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
-          id: "chatcmpl_kira_123",
+          id: "chatcmpl_vyce_123",
           choices: [
             {
               message: { content: JSON.stringify(validTutorOutput) },
@@ -115,15 +115,15 @@ describe("OpenAICompatibleTutorProvider", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     const provider = createConfiguredTutorProvider({
-      AI_PROVIDER: "kira",
-      KIRAAI_API_KEY: "test-kira-key",
-      KIRAAI_MODEL: "glm-5.3-flash-free",
-      KIRAAI_BASE_URL: "https://kiraai.vn/api/v1",
+      AI_PROVIDER: "vyce",
+      VYCE_API_KEY: "test-vyce-key",
+      VYCE_MODEL: "claude-sonnet-4-6",
+      VYCE_BASE_URL: "https://vyceai.com/v1",
     });
 
     expect(provider).toMatchObject({
-      providerName: "kira",
-      modelName: "glm-5.3-flash-free",
+      providerName: "vyce",
+      modelName: "claude-sonnet-4-6",
     });
     const result = await provider?.generate({
       purpose: "start_mission",
@@ -133,12 +133,12 @@ describe("OpenAICompatibleTutorProvider", () => {
     });
 
     expect(result).toMatchObject({
-      provider: "kira",
-      model: "glm-5.3-flash-free",
+      provider: "vyce",
+      model: "claude-sonnet-4-6",
       output: validTutorOutput,
     });
     const [url] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://kiraai.vn/api/v1/chat/completions");
+    expect(url).toBe("https://vyceai.com/v1/chat/completions");
   });
 
   it("maps an upstream 429 to a bounded typed retry response", async () => {
@@ -290,5 +290,16 @@ describe("OpenAICompatibleTutorProvider", () => {
       details: { reason: "invalid_input" },
     });
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+// Plan13 SPEC-P131 §2: both providers fall back to 15s when Retry-After is absent.
+describe("OpenAI Responses provider Plan13 retry classification", () => {
+  it("falls back to 15 seconds for a missing Retry-After header", async () => {
+    const { parseRetryAfter } = await import("./openai-responses-provider");
+    expect(parseRetryAfter(null)).toBe(15);
+    expect(parseRetryAfter("")).toBe(15);
+    expect(parseRetryAfter("-3")).toBe(15);
+    expect(parseRetryAfter("42")).toBe(42);
   });
 });

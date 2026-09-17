@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   evaluatePersonalizationBudget,
+  PERSONALIZED_LESSON_ACTIVE_WINDOW_MS,
   PERSONALIZED_LESSON_DAILY_LIMIT,
 } from "./generation-budget";
 
@@ -19,6 +20,20 @@ describe("evaluatePersonalizationBudget", () => {
     });
     expect(result).toMatchObject({ allowed: false, reason: "ACTIVE" });
     expect(result.allowed ? 0 : result.retryAfterSeconds).toBeGreaterThan(0);
+  });
+
+  it("keeps the active window equal to the 210s generation lease (Plan13 PL1)", () => {
+    expect(PERSONALIZED_LESSON_ACTIVE_WINDOW_MS).toBe(210_000);
+    expect(evaluatePersonalizationBudget({
+      now,
+      activeGenerationCreatedAt: new Date(now.getTime() - 200_000),
+      successfulGenerationTimes: [],
+    })).toMatchObject({ allowed: false, reason: "ACTIVE", retryAfterSeconds: 10 });
+    expect(evaluatePersonalizationBudget({
+      now,
+      activeGenerationCreatedAt: new Date(now.getTime() - 211_000),
+      successfulGenerationTimes: [],
+    })).toEqual({ allowed: true });
   });
 
   it("reuses no provider budget for a caller after the cooldown", () => {

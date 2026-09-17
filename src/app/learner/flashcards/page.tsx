@@ -2,6 +2,10 @@ import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import { FlashcardsClient } from "./flashcards-client";
 import type { Prisma } from "@prisma/client";
+import { groupDueFlashcardsByVocabulary } from "./group-due-flashcards";
+
+/** Upper bound on due cards read per page load; the page shows one per word. */
+const DUE_FLASHCARD_QUERY_LIMIT = 500;
 
 export default async function FlashcardsPage() {
   const session = await auth();
@@ -31,7 +35,7 @@ export default async function FlashcardsPage() {
     ],
   } satisfies Prisma.FlashcardWhereInput;
 
-  const [flashcards, totalCount] = await Promise.all([
+  const [dueFlashcards, totalCount] = await Promise.all([
     prisma.flashcard.findMany({
       where: dueWhere,
       select: {
@@ -47,9 +51,13 @@ export default async function FlashcardsPage() {
         },
       },
       orderBy: { createdAt: "asc" },
+      take: DUE_FLASHCARD_QUERY_LIMIT,
     }),
     prisma.flashcard.count({ where: { userId, active: true } }),
   ]);
+
+  // Plan13 L5: one card per vocabularyItemId; nothing is deleted.
+  const flashcards = groupDueFlashcardsByVocabulary(dueFlashcards);
 
   return (
     <FlashcardsClient

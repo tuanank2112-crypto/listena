@@ -4,6 +4,8 @@ export class LearningSessionError extends Error {
     readonly code: string,
     readonly status: number,
     readonly retryAfterSeconds?: number,
+    /** Extra, navigation-safe fields merged into the JSON error body. */
+    readonly body?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "LearningSessionError";
@@ -26,13 +28,31 @@ export class LearningSessionTargetUnavailableError extends LearningSessionError 
   }
 }
 
-/** A learner must finish or explicitly abandon the current primary session first. */
+/**
+ * A learner must finish or explicitly abandon the current primary session first.
+ * `activeSessionId` lets the client offer "resume" and "start a new session"
+ * (Plan13 SPEC-P131 §3) instead of a dead end.
+ */
 export class LearningSessionActiveConflictError extends LearningSessionError {
-  constructor() {
+  constructor(readonly activeSessionId?: string) {
     super(
       "Finish or resume the current learning session before starting another one",
       "ACTIVE_SESSION_EXISTS",
       409,
+      undefined,
+      activeSessionId ? { activeSessionId } : undefined,
+    );
+  }
+}
+
+/** Plan13 SPEC-P132 §9: at most 200 PAUSE/RESUME/HINT/REPLAY rows per session. */
+export class LearningSessionEventLimitError extends LearningSessionError {
+  constructor() {
+    super(
+      "This session has recorded its maximum number of events",
+      "EVENT_LIMIT",
+      429,
+      60,
     );
   }
 }
@@ -75,11 +95,12 @@ export class LearningSessionStartOutcomeUnknownError extends LearningSessionErro
 }
 
 export class LearningSessionStartFailedError extends LearningSessionError {
-  constructor() {
+  constructor(retryAfterSeconds?: number) {
     super(
       "This start request already failed before a session was created. Start a new session to continue.",
       "START_FAILED",
       409,
+      retryAfterSeconds,
     );
   }
 }

@@ -38,6 +38,7 @@ export function learningSessionErrorResponse(error: unknown) {
         error: error.message,
         code: error.code,
         ...(error.retryAfterSeconds ? { retryAfterSeconds: error.retryAfterSeconds } : {}),
+        ...(error.body ?? {}),
       },
       {
         status: error.status,

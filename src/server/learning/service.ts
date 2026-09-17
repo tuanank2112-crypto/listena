@@ -9,8 +9,11 @@ import {
   type LibSqlBatchStatement,
 } from "@/lib/libsql-batch";
 import { prisma } from "@/lib/prisma";
+import { isDatabaseUnavailableError } from "@/lib/database-errors";
+import logger from "@/lib/logger";
 import {
   AIMisconfiguredError,
+  AIRateLimitedError,
   AIRequestBudgetError,
   AIUnavailableError,
   isAIProviderError,
@@ -32,6 +35,7 @@ import { toLearningSessionDto } from "@/server/learning/dto";
 import {
   LearningSessionConflictError,
   LearningSessionActiveConflictError,
+  LearningSessionEventLimitError,
   LearningSessionIdempotencyConflictError,
   LearningSessionNotFoundError,
   LearningSessionStartFailedError,
@@ -101,8 +105,33 @@ type StartPersistenceResult =
 
 const repository = new LearningSessionRepository();
 const MAX_LEARNER_MEMORY_WRITE_ATTEMPTS = 3;
-const START_REQUEST_PENDING_LEASE_MS = 120_000;
+/**
+ * Plan13 SPEC-P131 §1: the start lease must outlive the 180s provider call
+ * (plus route headroom), otherwise a second start is claimed while the first
+ * is still being billed and the winner is discarded as UNKNOWN.
+ */
+export const START_REQUEST_PENDING_LEASE_MS = 210_000;
 const START_REQUEST_RETRY_AFTER_SECONDS = 2;
+/** An ACTIVE session with no evidence older than this is closed automatically on a new start. */
+const EMPTY_ACTIVE_SESSION_AUTO_ABANDON_MS = 2 * 60_000;
+/** Plan13 SPEC-P132 §9: PAUSE/RESUME/HINT/REPLAY rows per session. */
+export const MAX_SESSION_EVENTS = 200;
+/** Study-time accounting (SPEC-P132 §9): each AI turn counts as 30s of reading. */
+const AI_TURN_STUDY_MS = 30_000;
+const MAX_STUDY_MINUTES = 120;
+/** Provider failures that invite a retry; everything else is a configuration defect. */
+const TRANSIENT_UNAVAILABLE_REASONS = new Set([
+  "timeout",
+  "network_failure",
+  "upstream_failure",
+  "upstream_invalid_request",
+  "invalid_response",
+  "invalid_json",
+  "schema_validation_failed",
+  "rate_limited",
+]);
+const DEFAULT_TRANSIENT_RETRY_SECONDS = 15;
+const DATABASE_RETRY_SECONDS = 5;
 
 export async function createLearningSession(
   userId: string,
@@ -167,7 +196,8 @@ export async function createLearningSession(
     throw new LearningSessionNotFoundError();
   }
   if (activeSession) {
-    throw new LearningSessionActiveConflictError();
+    const released = await releaseActiveSessionForNewStart(userId, activeSession, input);
+    if (!released) throw new LearningSessionActiveConflictError(activeSession.id);
   }
 
   const startClaim = await claimLearningSessionStart(userId, input);
@@ -207,27 +237,15 @@ export async function createLearningSession(
       ...(input.mode === "DAILY_QUEST" ? { recentScenarioKeys } : {}),
     });
   } catch (error) {
-    try {
-      await settleUserAICall(reservation, {
-        success: false,
-        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
-      });
-    } catch {
-      const recovered = await recoverCommittedStart(startClaim);
-      if (recovered) return recovered;
-      await safelyMarkStartRequestUnknown(startClaim);
-      throw new LearningSessionStartOutcomeUnknownError();
-    }
-    if (isKnownNoCallStartFailure(error)) {
-      await safelyMarkStartRequestFailed(startClaim, error);
-      throw error;
-    } else {
-      // A timeout or opaque upstream failure can have been billed even though
-      // no session graph was committed. Preserve the key and force explicit
-      // reconciliation rather than triggering another provider call.
-      await safelyMarkStartRequestUnknown(startClaim);
-      throw new LearningSessionStartOutcomeUnknownError();
-    }
+    // The provider threw, so no session graph exists and nothing learner-
+    // visible was committed. Whether the upstream billed the attempt does not
+    // change the learning state, so this is a FAILED outcome with a typed
+    // code (and Retry-After where the provider gave one), never UNKNOWN.
+    // UNKNOWN is reserved for failures *after* the provider returned
+    // (Plan13 SPEC-P131 §2, findings AI2/S2).
+    await safelySettleFailedReservation(reservation, error);
+    await safelyMarkStartRequestFailed(startClaim, error);
+    throw error;
   }
 
   try {
@@ -266,7 +284,7 @@ export async function createLearningSession(
     throw new LearningSessionStartOutcomeUnknownError();
   }
   if (persistence === "active-session") {
-    throw new LearningSessionActiveConflictError();
+    throw new LearningSessionActiveConflictError(await findActiveSessionId(userId));
   }
   if (persistence === "target-unavailable") {
     throw new LearningSessionTargetUnavailableError();
@@ -281,6 +299,51 @@ export async function createLearningSession(
   // A response can still be lost after this point. The COMMITTED record is
   // retained so the same clientStartId returns this exact owned session.
   return { session: await getOwnedSessionDto(userId, sessionId), idempotent: false };
+}
+
+/**
+ * Plan13 SPEC-P131 §3 (finding S1): an open session must never trap the
+ * learner. A session with no evidence is closed automatically once it is
+ * older than two minutes, or immediately when the learner explicitly chose
+ * "start a new session" (`replaceActive`). An explicit replacement of a
+ * session that already holds evidence completes it as PARTIAL so the work
+ * is kept in the debrief rather than discarded. Returns false when the caller
+ * must answer ACTIVE_SESSION_EXISTS.
+ */
+async function releaseActiveSessionForNewStart(
+  userId: string,
+  activeSession: { id: string; startedAt?: Date | null },
+  input: CreateLearningSessionInput,
+): Promise<boolean> {
+  const evidenceCount = await prisma.learningEvidence.count({
+    where: { sessionId: activeSession.id },
+  });
+  const startedAt = activeSession.startedAt?.getTime();
+  const staleEmpty = evidenceCount === 0
+    && Number.isFinite(startedAt)
+    && Date.now() - (startedAt as number) >= EMPTY_ACTIVE_SESSION_AUTO_ABANDON_MS;
+
+  if (input.replaceActive === true) {
+    if (evidenceCount > 0) {
+      await completeLearningSessionWithAtomicBatch(userId, activeSession.id);
+    } else {
+      await abandonLearningSessionWithAtomicBatch(userId, activeSession.id);
+    }
+    return true;
+  }
+  if (staleEmpty) {
+    await abandonLearningSessionWithAtomicBatch(userId, activeSession.id);
+    return true;
+  }
+  return false;
+}
+
+async function findActiveSessionId(userId: string) {
+  try {
+    return (await repository.findActiveSession(userId))?.id;
+  } catch {
+    return undefined;
+  }
 }
 
 function hashStartPayload(input: CreateLearningSessionInput) {
@@ -361,8 +424,9 @@ async function claimLearningSessionStart(
     throw new LearningSessionStartInProgressError(START_REQUEST_RETRY_AFTER_SECONDS);
   }
 
-  if (await repository.findActiveSession(userId)) {
-    throw new LearningSessionActiveConflictError();
+  const activeSession = await repository.findActiveSession(userId);
+  if (activeSession) {
+    throw new LearningSessionActiveConflictError(activeSession.id);
   }
   // A conflicting writer may have completed between the INSERT SELECT and
   // these reads. Retry one claim; after that, uncertainty is safer than a
@@ -392,7 +456,12 @@ async function reconcileExistingStartRequest(
     throw new LearningSessionStartOutcomeUnknownError();
   }
   if (existing.status === "FAILED") {
-    throw replayKnownStartFailure(existing);
+    throw replayKnownStartFailure(
+      existing,
+      existing.errorCode === "ACTIVE_SESSION_EXISTS"
+        ? await findActiveSessionId(userId)
+        : undefined,
+    );
   }
   if (existing.status === "UNKNOWN") {
     throw new LearningSessionStartOutcomeUnknownError();
@@ -438,12 +507,27 @@ async function safelyMarkStartRequestFailed(
   error: unknown,
 ) {
   const failure = knownStartFailure(error);
-  if (!failure) return;
   try {
     await updatePendingStartRequest(claim, "FAILED", failure.code, failure.retryAfterSeconds);
   } catch {
     // The original typed error is more useful to the caller. A subsequent
     // same-key request remains safely PENDING until its lease expires.
+  }
+}
+
+async function safelySettleFailedReservation(
+  reservation: Awaited<ReturnType<typeof reserveUserAICall>>,
+  error: unknown,
+) {
+  try {
+    await settleUserAICall(reservation, {
+      success: false,
+      failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
+    });
+  } catch (settleError) {
+    // The lease self-expires after AI_REQUEST_PENDING_LEASE_MS; the learner's
+    // outcome is still FAILED because no session was created.
+    logger.warn({ error: settleError, reservationId: reservation.id }, "AI reservation settle failed after a failed start");
   }
 }
 
@@ -483,55 +567,83 @@ async function updatePendingStartRequest(
   ]);
 }
 
-function knownStartFailure(error: unknown) {
-  if (!isAIProviderError(error)) return null;
-  if (error.code === "AI_REQUEST_LIMIT") {
-    return {
-      code: error.code,
-      retryAfterSeconds: Math.max(1, Math.ceil(error.details.retryAfterSeconds ?? 1)),
-    };
+/**
+ * Classifies a failure that happened before any session graph was committed
+ * (Plan13 SPEC-P131 §2). Every branch is FAILED: the ledger stores the typed
+ * code plus a Retry-After hint so a same-key replay reproduces the same
+ * answer without another provider call.
+ */
+export function knownStartFailure(error: unknown): {
+  code: string;
+  retryAfterSeconds: number | null;
+} {
+  if (isDatabaseUnavailableError(error)) {
+    return { code: "DATABASE_UNAVAILABLE", retryAfterSeconds: DATABASE_RETRY_SECONDS };
   }
-  if (error.code === "AI_UNAVAILABLE" && isKnownNoCallStartFailure(error)) {
-    return { code: error.code, retryAfterSeconds: null };
+  if (!isAIProviderError(error)) {
+    return { code: "START_FAILED", retryAfterSeconds: null };
   }
-  // The provider rejected the request itself, so no session can exist. Settling
-  // this as FAILED keeps the learner recoverable; leaving it UNKNOWN would
-  // strand every future start behind a misconfiguration they cannot clear.
-  if (error.code === "AI_MISCONFIGURED") {
-    return { code: error.code, retryAfterSeconds: null };
+  const hinted = error.details.retryAfterSeconds;
+  const hintedSeconds = typeof hinted === "number" && Number.isFinite(hinted) && hinted > 0
+    ? Math.ceil(hinted)
+    : null;
+  switch (error.code) {
+    case "AI_REQUEST_LIMIT":
+      return { code: error.code, retryAfterSeconds: Math.max(1, hintedSeconds ?? 1) };
+    case "AI_RATE_LIMITED":
+      return {
+        code: error.code,
+        retryAfterSeconds: Math.max(1, hintedSeconds ?? DEFAULT_TRANSIENT_RETRY_SECONDS),
+      };
+    case "AI_MISCONFIGURED":
+      // The provider rejected the request itself; retrying cannot help and an
+      // operator must act. No Retry-After on purpose.
+      return { code: error.code, retryAfterSeconds: null };
+    case "AI_UNAVAILABLE":
+      return {
+        code: error.code,
+        retryAfterSeconds: TRANSIENT_UNAVAILABLE_REASONS.has(error.details.reason)
+          ? (hintedSeconds ?? DEFAULT_TRANSIENT_RETRY_SECONDS)
+          : null,
+      };
+    default:
+      return { code: "START_FAILED", retryAfterSeconds: null };
   }
-  return null;
 }
 
 /** Only stored, safe failure codes are recreated; unknown history stays generic. */
-function replayKnownStartFailure(record: StartRequestRecord) {
+function replayKnownStartFailure(
+  record: StartRequestRecord,
+  activeSessionId?: string,
+) {
+  const retryAfterSeconds = record.errorRetryAfterSeconds ?? undefined;
   if (record.errorCode === "AI_REQUEST_LIMIT") {
     return new AIRequestBudgetError({
       reason: "ACTIVE",
-      retryAfterSeconds: Math.max(1, record.errorRetryAfterSeconds ?? 1),
+      retryAfterSeconds: Math.max(1, retryAfterSeconds ?? 1),
+    });
+  }
+  if (record.errorCode === "AI_RATE_LIMITED") {
+    return new AIRateLimitedError({
+      reason: "rate_limited",
+      retryAfterSeconds: Math.max(1, retryAfterSeconds ?? DEFAULT_TRANSIENT_RETRY_SECONDS),
     });
   }
   if (record.errorCode === "AI_UNAVAILABLE") {
-    return new AIUnavailableError({ reason: "provider_not_configured" });
+    return retryAfterSeconds
+      ? new AIUnavailableError({ reason: "upstream_failure", retryAfterSeconds })
+      : new AIUnavailableError({ reason: "provider_not_configured" });
   }
   if (record.errorCode === "AI_MISCONFIGURED") {
     return new AIMisconfiguredError({ reason: "invalid_provider_configuration" });
   }
   if (record.errorCode === "ACTIVE_SESSION_EXISTS") {
-    return new LearningSessionActiveConflictError();
+    return new LearningSessionActiveConflictError(activeSessionId);
   }
   if (record.errorCode === "TARGET_UNAVAILABLE") {
     return new LearningSessionTargetUnavailableError();
   }
-  return new LearningSessionStartFailedError();
-}
-
-function isKnownNoCallStartFailure(error: unknown) {
-  return isAIProviderError(error) && [
-    "provider_not_configured",
-    "invalid_provider_configuration",
-    "invalid_input",
-  ].includes(error.details.reason);
+  return new LearningSessionStartFailedError(retryAfterSeconds);
 }
 
 async function getCommittedStartSession(userId: string, sessionId: string) {
@@ -1012,10 +1124,10 @@ async function persistLearningTurnWithAtomicBatch(input: {
   const completionOutcome = input.nextState.completionOutcome;
   if (completionOutcome) {
     const completedState = input.nextState;
-    const studyMinutes = Math.max(
-      1,
-      Math.min(120, Math.round((now.getTime() - input.snapshot.startedAt.getTime()) / 60_000)),
-    );
+    const studyMinutes = computeStudyMinutes(input.snapshot.turns, {
+      responseTimeMs: input.input.responseTimeMs ?? null,
+      aiTurns: 1,
+    });
     statements.push(
       {
         sql: `UPDATE "LearningSession"
@@ -1252,13 +1364,18 @@ async function persistLearningEventWithAtomicBatch(input: {
   const snapshot = await repository.findOwnedSnapshot(input.userId, input.sessionId);
   if (!snapshot) throw new LearningSessionNotFoundError();
   if (snapshot.turns.some((turn) => turn.clientTurnId === input.eventTurnId)) return;
-  if (snapshot.status !== "ACTIVE" && input.input.type !== "ABANDON") {
+  // ABANDON on a COMPLETED/ABANDONED session is an idempotent no-op: nothing
+  // is inserted (Plan13 SPEC-P132 §9). Other events need an ACTIVE session.
+  if (snapshot.status !== "ACTIVE") {
+    if (input.input.type === "ABANDON") return;
     throw new LearningSessionConflictError("Only active sessions accept events");
+  }
+  if (countSessionEvents(snapshot.turns) >= MAX_SESSION_EVENTS) {
+    throw new LearningSessionEventLimitError();
   }
   const now = new Date();
   const timestamp = libSqlTimestamp(now);
   const eventId = randomUUID();
-  const requiredStatus = input.input.type === "ABANDON" ? snapshot.status : "ACTIVE";
   const statements: LibSqlBatchStatement[] = [
     {
      sql: `INSERT INTO "LearningTurn"
@@ -1268,8 +1385,12 @@ async function persistLearningEventWithAtomicBatch(input: {
             ), 1), ?, 'SYSTEM', 'RESULT', ?, '', ?
             WHERE EXISTS (
               SELECT 1 FROM "LearningSession"
-              WHERE "id" = ? AND "userId" = ? AND "status" = ?
-            )`,
+              WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
+            )
+              AND (
+                SELECT COUNT(*) FROM "LearningTurn"
+                WHERE "sessionId" = ? AND "actor" = 'SYSTEM'
+              ) < ?`,
       values: [
         eventId,
         input.sessionId,
@@ -1279,17 +1400,18 @@ async function persistLearningEventWithAtomicBatch(input: {
         timestamp,
         input.sessionId,
         input.userId,
-        requiredStatus,
+        input.sessionId,
+        MAX_SESSION_EVENTS,
       ],
     },
   ];
-  if (input.input.type === "ABANDON" && snapshot.status === "ACTIVE") {
+  if (input.input.type === "ABANDON") {
     statements.push({
       sql: `UPDATE "LearningSession"
-              SET "status" = 'ABANDONED', "updatedAt" = ?
+              SET "status" = 'ABANDONED', "completedAt" = ?, "updatedAt" = ?
             WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
               AND EXISTS (SELECT 1 FROM "LearningTurn" WHERE "id" = ?)`,
-      values: [timestamp, input.sessionId, input.userId, eventId],
+      values: [timestamp, timestamp, input.sessionId, input.userId, eventId],
     });
   }
   try {
@@ -1300,12 +1422,120 @@ async function persistLearningEventWithAtomicBatch(input: {
   }
   const current = await repository.findOwnedSnapshot(input.userId, input.sessionId);
   if (current?.turns.some((turn) => turn.clientTurnId === input.eventTurnId)) return;
+  if (current && current.status !== "ACTIVE" && input.input.type === "ABANDON") return;
+  if (current && countSessionEvents(current.turns) >= MAX_SESSION_EVENTS) {
+    throw new LearningSessionEventLimitError();
+  }
   throw new LearningSessionConflictError();
+}
+
+function countSessionEvents(turns: Array<{ actor: string }>) {
+  return turns.filter((turn) => turn.actor === "SYSTEM").length;
 }
 
 export async function completeLearningSession(userId: string, sessionId: string) {
   await completeLearningSessionWithAtomicBatch(userId, sessionId);
   return { session: await getOwnedSessionDto(userId, sessionId) };
+}
+
+/**
+ * Plan13 SPEC-P131 §3 (finding S1): the learner's guaranteed exit from an
+ * ACTIVE session that has no evidence or whose AI is unavailable. Idempotent
+ * and owner-scoped: a COMPLETED or ABANDONED session is returned unchanged.
+ */
+export async function abandonLearningSession(userId: string, sessionId: string) {
+  await abandonLearningSessionWithAtomicBatch(userId, sessionId);
+  return { session: await getOwnedSessionDto(userId, sessionId) };
+}
+
+export function getAbandonClientTurnId(sessionId: string) {
+  return `system:abandon:${sessionId}`;
+}
+
+async function abandonLearningSessionWithAtomicBatch(userId: string, sessionId: string) {
+  const snapshot = await repository.findOwnedSnapshot(userId, sessionId);
+  if (!snapshot) throw new LearningSessionNotFoundError();
+  if (snapshot.status !== "ACTIVE") return;
+  const now = new Date();
+  const timestamp = libSqlTimestamp(now);
+  const turnId = randomUUID();
+  const clientTurnId = getAbandonClientTurnId(sessionId);
+  const results = await executeAtomicLibSqlBatch([
+    {
+      sql: `INSERT INTO "LearningTurn"
+              ("id", "sessionId", "sequence", "clientTurnId", "actor", "turnType", "contentJson", "skillTags", "createdAt")
+            SELECT ?, ?, COALESCE((
+              SELECT MAX("sequence") + 1 FROM "LearningTurn" WHERE "sessionId" = ?
+            ), 1), ?, 'SYSTEM', 'RESULT', ?, '', ?
+            WHERE EXISTS (
+              SELECT 1 FROM "LearningSession"
+              WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
+            )
+              AND NOT EXISTS (
+                SELECT 1 FROM "LearningTurn" WHERE "sessionId" = ? AND "clientTurnId" = ?
+              )`,
+      values: [
+        turnId,
+        sessionId,
+        sessionId,
+        clientTurnId,
+        JSON.stringify({ event: "ABANDON", value: 1 }),
+        timestamp,
+        sessionId,
+        userId,
+        sessionId,
+        clientTurnId,
+      ],
+    },
+    {
+      sql: `UPDATE "LearningSession"
+              SET "status" = 'ABANDONED', "completedAt" = ?, "summary" = ?, "updatedAt" = ?
+            WHERE "id" = ? AND "userId" = ? AND "status" = 'ACTIVE'
+              AND EXISTS (SELECT 1 FROM "LearningTurn" WHERE "id" = ?)`,
+      values: [
+        timestamp,
+        "Phiên đã huỷ theo yêu cầu của bạn; không có kết quả nào bị mất.",
+        timestamp,
+        sessionId,
+        userId,
+        turnId,
+      ],
+    },
+  ]);
+  if (results[1]?.changes === 1) return;
+  // A concurrent abandon/complete may have won; only a still-ACTIVE session is
+  // a real conflict.
+  const current = await repository.findOwnedSnapshot(userId, sessionId);
+  if (current && current.status !== "ACTIVE") return;
+  throw new LearningSessionConflictError();
+}
+
+/**
+ * Study minutes come from what the learner actually did: the sum of learner
+ * turn response times plus 30s of reading per AI turn, capped at 120 minutes
+ * (Plan13 SPEC-P132 §9). Wall-clock since startedAt rewarded leaving a tab open.
+ */
+export function computeStudyMinutes(
+  turns: Array<{ actor: string; contentJson: string }>,
+  pending?: { responseTimeMs: number | null; aiTurns: number },
+) {
+  let totalMs = 0;
+  for (const turn of turns) {
+    if (turn.actor === "LEARNER") {
+      const responseTimeMs = parseJsonObject(turn.contentJson).responseTimeMs;
+      if (typeof responseTimeMs === "number" && Number.isFinite(responseTimeMs) && responseTimeMs > 0) {
+        totalMs += responseTimeMs;
+      }
+    } else if (turn.actor === "AI") {
+      totalMs += AI_TURN_STUDY_MS;
+    }
+  }
+  if (pending) {
+    const responseTimeMs = pending.responseTimeMs ?? 0;
+    if (Number.isFinite(responseTimeMs) && responseTimeMs > 0) totalMs += responseTimeMs;
+    totalMs += Math.max(0, pending.aiTurns) * AI_TURN_STUDY_MS;
+  }
+  return Math.max(1, Math.min(MAX_STUDY_MINUTES, Math.round(totalMs / 60_000)));
 }
 
 async function completeLearningSessionWithAtomicBatch(userId: string, sessionId: string) {
@@ -1329,10 +1559,7 @@ async function completeLearningSessionWithAtomicBatch(userId: string, sessionId:
   };
   const now = new Date();
   const timestamp = libSqlTimestamp(now);
-  const studyMinutes = Math.max(
-    1,
-    Math.min(120, Math.round((now.getTime() - snapshot.startedAt.getTime()) / 60_000)),
-  );
+  const studyMinutes = computeStudyMinutes(snapshot.turns);
   const results = await executeAtomicLibSqlBatch([
     {
       sql: `UPDATE "LearnerProfile"

@@ -29,7 +29,7 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
-import { planNextLearningAction } from "./planner";
+import { PLANNER_TIME_ZONE, dateKey, planNextLearningAction } from "./planner";
 
 const userId = "learner-1";
 const now = new Date("2026-09-13T07:00:00.000Z");
@@ -121,7 +121,7 @@ describe("planNextLearningAction", () => {
     expect(decision.kind).toBe("QUEST");
     expect(decision.reasonCode).toBe("GOAL_PRACTICE");
     expect(decision.evidenceRefs).toEqual([]);
-    expect(decision.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: 1 });
+    expect(decision.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: "r1" });
     expect(decision.reasonVi).not.toContain("nghe");
   });
 
@@ -188,6 +188,59 @@ describe("planNextLearningAction", () => {
         { lastUpdatedAt: "asc" },
         { skillKey: "asc" },
       ],
+    }));
+  });
+});
+
+describe("planner day key and intent revision (Plan13 P132 \u00a77)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.memory.mockResolvedValue(null);
+    mocks.active.mockResolvedValue(null);
+    mocks.sessions.mockResolvedValue([]);
+    mocks.learningEvidence.mockResolvedValue(evidence);
+    mocks.adaptiveEvidence.mockResolvedValue([]);
+    mocks.referencedEvidence.mockResolvedValue(null);
+    mocks.dueVocabulary.mockResolvedValue(null);
+    mocks.weakSkill.mockResolvedValue(null);
+    mocks.profile.mockResolvedValue({ estimatedCefrLevel: "A2" });
+    mocks.lesson.mockResolvedValue(null);
+  });
+
+  it("records the intent revision hash verbatim and null when the learner has no saved intent", async () => {
+    mocks.intent.mockResolvedValue({ goal: "Order food", dailyMinutes: 10, preferredTopics: [], revision: "sha-abc" });
+    await expect(planNextLearningAction(userId, now)).resolves.toMatchObject({
+      kind: "QUEST",
+      basis: { kind: "DECLARED_GOAL", intentRevision: "sha-abc" },
+    });
+
+    mocks.intent.mockResolvedValue({ goal: null, dailyMinutes: 10, preferredTopics: [], revision: null });
+    await expect(planNextLearningAction(userId, now)).resolves.toMatchObject({
+      kind: "QUEST",
+      basis: { kind: "DECLARED_GOAL", intentRevision: null },
+    });
+  });
+
+  it("rolls the Daily Quest day over at midnight Asia/Ho_Chi_Minh, not at UTC midnight (07:00 local)", () => {
+    expect(PLANNER_TIME_ZONE).toBe("Asia/Ho_Chi_Minh");
+    // 16:59Z = 23:59 in Viet Nam -> still the 13th
+    expect(dateKey(new Date("2026-09-13T16:59:00.000Z"))).toBe("2026-09-13");
+    // 17:00Z = 00:00 in Viet Nam -> already the 14th (UTC would still say 13)
+    expect(dateKey(new Date("2026-09-13T17:00:00.000Z"))).toBe("2026-09-14");
+    // 23:30Z on the 13th is 06:30 on the 14th in Viet Nam
+    expect(dateKey(new Date("2026-09-13T23:30:00.000Z"))).toBe("2026-09-14");
+  });
+});
+
+
+// Plan13 SPEC-P131 §3: the planner only ever resumes an ACTIVE session.
+describe("planner and abandoned sessions", () => {
+  it("queries only ACTIVE sessions for RESUME so an ABANDONED session is never resumed", async () => {
+    mocks.active.mockResolvedValue(null);
+    const decision = await planNextLearningAction(userId, now);
+    expect(decision.kind).not.toBe("RESUME");
+    expect(mocks.active).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId, status: "ACTIVE" },
     }));
   });
 });

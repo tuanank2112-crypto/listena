@@ -8,7 +8,7 @@ import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency
 import logger from "@/lib/logger";
 
 export const runtime = "nodejs";
-// Must exceed the 180s provider timeout in kira-chat-completions-provider.ts.
+// Must exceed the 180s provider timeout in vyce-chat-completions-provider.ts.
 export const maxDuration = 200;
 
 export async function POST(req: Request) {
@@ -72,12 +72,32 @@ export async function POST(req: Request) {
 
     if (isAIProviderError(error)) {
       logger.warn(
-        { code: error.code, provider: error.details.provider },
+        { code: error.code, reason: error.details.reason, provider: error.details.provider },
         "AI lesson generation unavailable"
       );
+      // Plan13 SPEC-P131 §2: typed codes keep their meaning.
+      //  - AI_REQUEST_LIMIT (local budget): 429 + Retry-After.
+      //  - AI_MISCONFIGURED: 503, no Retry-After, the error's own message
+      //    ("báo quản trị") so the teacher stops retrying.
+      //  - AI_RATE_LIMITED / AI_UNAVAILABLE: 503 + Retry-After when known.
+      const retryAfterSeconds = error.code === "AI_MISCONFIGURED"
+        ? undefined
+        : error.details.retryAfterSeconds;
       return NextResponse.json(
-        { code: error.code, error: "Dịch vụ AI hiện không khả dụng, vui lòng thử lại sau" },
-        { status: 503, headers: { "Cache-Control": "private, no-store" } }
+        {
+          code: error.code,
+          error: error.code === "AI_MISCONFIGURED"
+            ? error.message
+            : "Dịch vụ AI hiện không khả dụng, vui lòng thử lại sau",
+          ...(retryAfterSeconds ? { retryAfterSeconds } : {}),
+        },
+        {
+          status: error.code === "AI_REQUEST_LIMIT" ? 429 : 503,
+          headers: {
+            "Cache-Control": "private, no-store",
+            ...(retryAfterSeconds ? { "Retry-After": String(retryAfterSeconds) } : {}),
+          },
+        }
       );
     }
 

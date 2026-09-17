@@ -1,7 +1,7 @@
 /**
  * Checks the configured AI provider against the live catalogue.
  *
- * Exists because a `KIRAAI_MODEL` naming a model the provider does not have
+ * Exists because a `VYCE_MODEL` naming a model the provider does not have
  * silently disabled every tutor feature for a long time: the request failed
  * with 404 `model_not_found`, the app reported its generic "try again later"
  * state, and no test caught it because every test uses a deterministic
@@ -37,21 +37,26 @@ async function main() {
   const provider = readEnv("AI_PROVIDER") ?? "(unset)";
   console.log(`AI_PROVIDER      ${provider}`);
 
-  if (provider !== "kira") {
-    console.log("Only the kira provider is checked by this script; nothing to do.");
+  if (provider === "kira" || readEnv("KIRAAI_API_KEY")) {
+    fail(
+      "stale configuration: the kira provider was removed. Set AI_PROVIDER=vyce and VYCE_API_KEY / VYCE_MODEL / VYCE_BASE_URL.",
+    );
+  }
+  if (provider !== "vyce") {
+    console.log("Only the vyce provider is checked by this script; nothing to do.");
     return;
   }
 
-  const apiKey = readEnv("KIRAAI_API_KEY");
-  const baseUrl = readEnv("KIRAAI_BASE_URL") ?? "https://kiraai.vn/api/v1";
-  const model = readEnv("KIRAAI_MODEL");
+  const apiKey = readEnv("VYCE_API_KEY");
+  const baseUrl = readEnv("VYCE_BASE_URL") ?? "https://vyceai.com/v1";
+  const model = readEnv("VYCE_MODEL");
 
-  console.log(`KIRAAI_BASE_URL  ${baseUrl}`);
-  console.log(`KIRAAI_MODEL     ${model ?? "(unset -> provider default)"}`);
-  console.log(`KIRAAI_API_KEY   ${apiKey ? `present (${apiKey.length} chars)` : "MISSING"}`);
+  console.log(`VYCE_BASE_URL    ${baseUrl}`);
+  console.log(`VYCE_MODEL       ${model ?? "(unset -> provider default)"}`);
+  console.log(`VYCE_API_KEY     ${apiKey ? `present (${apiKey.length} chars)` : "MISSING"}`);
   console.log();
 
-  if (!apiKey) fail("KIRAAI_API_KEY is not set, so no tutor call can succeed.");
+  if (!apiKey) fail("VYCE_API_KEY is not set, so no tutor call can succeed.");
 
   const response = await fetch(`${baseUrl}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
@@ -82,7 +87,7 @@ async function main() {
   console.log();
 
   if (!model) {
-    console.log("WARN  KIRAAI_MODEL is unset; the in-code default is used.");
+    console.log("WARN  VYCE_MODEL is unset; the in-code default is used.");
     console.log("      Set it explicitly so the deployment does not drift.");
     return;
   }
@@ -91,7 +96,7 @@ async function main() {
     const chat = catalogue
       .filter((m) => m.type === "chat" && m.status === "active")
       .map((m) => String(m.id));
-    console.error(`FAIL  KIRAAI_MODEL "${model}" is NOT in the catalogue.`);
+    console.error(`FAIL  VYCE_MODEL "${model}" is NOT in the catalogue.`);
     console.error("      Every tutor call will fail with 404 model_not_found.");
     console.error(`      Active chat models: ${chat.join(", ")}`);
     process.exit(1);

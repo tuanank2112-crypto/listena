@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/server/auth/config";
 import { databaseErrorResponse } from "@/lib/database-error-response";
 import { prisma } from "@/lib/prisma";
@@ -10,6 +11,12 @@ import {
 } from "@/server/services/lesson-authoring";
 import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency";
 import logger from "@/lib/logger";
+
+/** PUT body contract (Plan13 P130 §6). Anything else is a 400, never a guess. */
+const LessonActionSchema = z.object({
+  id: z.string().uuid(),
+  action: z.enum(["review", "publish"]),
+});
 
 export async function POST(req: Request) {
   try {
@@ -108,15 +115,20 @@ export async function PUT(req: Request) {
       );
     }
 
-    const body = await req.json();
-    const { id, action } = body;
-
-    if (!id) {
+    let body: unknown;
+    try {
+      body = await req.json();
+    } catch {
+      body = undefined;
+    }
+    const parsed = LessonActionSchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json(
-        { code: "VALIDATION_ERROR", error: "Missing lesson ID" },
+        { code: "VALIDATION_ERROR", error: "Dữ liệu không hợp lệ", details: parsed.error.flatten() },
         { status: 400, headers: { "Cache-Control": "private, no-store" } }
       );
     }
+    const { id, action } = parsed.data;
 
     if (action === "publish") {
       const result = await publishLesson({
@@ -154,8 +166,9 @@ export async function PUT(req: Request) {
       );
     }
 
+    // `action` is an exhaustive enum; the schema already rejected anything else.
     return NextResponse.json(
-      { code: "VALIDATION_ERROR", error: "Invalid action" },
+      { code: "VALIDATION_ERROR", error: "Dữ liệu không hợp lệ" },
       { status: 400, headers: { "Cache-Control": "private, no-store" } }
     );
   } catch (error) {

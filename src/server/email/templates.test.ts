@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  renderAccountExistsEmail,
   renderFeedbackNotificationEmail,
   renderFeedbackReceiptEmail,
   renderPasswordResetEmail,
@@ -38,6 +39,28 @@ describe("transactional email templates", () => {
     expect(() => renderPasswordResetEmail({
       to: "lan@example.com",
       resetUrl: "javascript:alert('token-must-not-leak')",
+    })).toThrow("Email action URL must be an absolute HTTP(S) URL.");
+  });
+
+  it("renders the account-exists email with a reset link and a benign ignore notice", () => {
+    const email = renderAccountExistsEmail({
+      to: "lan@example.com",
+      recipientName: "Lan",
+      resetUrl: "https://listenai.example/reset-password?token=existing-account-token",
+      idempotencyKey: "account-exists-1",
+    });
+
+    expect(email).toMatchObject({
+      to: "lan@example.com",
+      subject: "Tài khoản ListenAI của bạn đã tồn tại",
+      idempotencyKey: "account-exists-1",
+    });
+    expect(email.text).toContain("Đặt lại mật khẩu: https://listenai.example/reset-password?token=existing-account-token");
+    expect(email.text).toContain("tài khoản đã tồn tại");
+    expect(email.html).toContain("Bạn đã có tài khoản ListenAI");
+    expect(() => renderAccountExistsEmail({
+      to: "lan@example.com",
+      resetUrl: "javascript:alert(1)",
     })).toThrow("Email action URL must be an absolute HTTP(S) URL.");
   });
 

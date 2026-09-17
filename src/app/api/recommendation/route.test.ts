@@ -67,3 +67,31 @@ describe("GET /api/recommendation", () => {
     expect(mocks.recommendation).not.toHaveBeenCalled();
   });
 });
+
+describe("GET /api/recommendation history bounds (Plan13)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.auth.mockResolvedValue({ user: { id: "learner-1" } });
+    mocks.profile.mockResolvedValue(null);
+    mocks.skills.mockResolvedValue([]);
+    mocks.lessons.mockResolvedValue([]);
+    mocks.vocabDue.mockResolvedValue(0);
+    mocks.attempts.mockResolvedValue([]);
+    mocks.learningSessions.mockResolvedValue([]);
+  });
+
+  it("reads at most 200 newest attempts and 50 newest lesson sessions", async () => {
+    const response = await GET();
+    expect(response.status).toBe(200);
+    expect(mocks.attempts).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "learner-1" },
+      orderBy: { createdAt: "desc" },
+      take: 200,
+    }));
+    expect(mocks.learningSessions).toHaveBeenCalledWith(expect.objectContaining({
+      where: { userId: "learner-1", lessonId: { not: null } },
+      orderBy: { updatedAt: "desc" },
+      take: 50,
+    }));
+  });
+});

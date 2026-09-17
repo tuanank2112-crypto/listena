@@ -17,7 +17,12 @@ jobs:
 
     env:
       NODE_ENV: test
-      DATABASE_URL: "file:./prisma/dev.db"
+      # Path convention (Plan13 D9): a relative `file:./...` DATABASE_URL is resolved
+      # against `prisma/` by BOTH the app resolver (src/lib/database-config.ts,
+      # normalizeLocalSqliteUrl) and the Prisma CLI (schema/migrations live under
+      # prisma/). `file:./dev.db` therefore means `<repo>/prisma/dev.db`;
+      # `file:./prisma/dev.db` would create the nested `prisma/prisma/dev.db`.
+      DATABASE_URL: "file:./dev.db"
       AUTH_SECRET: "ci-auth-secret-for-testing-only-12345678901234567890"
       MIGRATION_WRITE_MODE: "disabled"
       TTS_API_KEY: "test-sidecar-api-key"

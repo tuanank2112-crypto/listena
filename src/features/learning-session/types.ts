@@ -10,6 +10,8 @@ export type InterventionType = "CHOICE" | "REORDER" | "RETRY" | "USE_IN_SENTENCE
 
 export type NextActionKind = "COACH" | "MISSION" | "QUEST" | "PRACTICE";
 export type CompletionOutcome = "COMPLETED" | "PARTIAL";
+/** Terminal outcome shown by the player; ABANDONED is the learner's explicit exit (Plan13). */
+export type SessionOutcome = CompletionOutcome | "ABANDONED";
 
 /**
  * An additive, public recommendation contract shared by API consumers and
@@ -104,7 +106,7 @@ export interface PublicLearningSession {
   startedAt: string;
   updatedAt: string;
   completedAt: string | null;
-  completionOutcome?: CompletionOutcome;
+  completionOutcome?: SessionOutcome;
 }
 
 export interface LearningSessionEnvelope {

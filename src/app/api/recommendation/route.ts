@@ -7,6 +7,9 @@ import type { CefrLevel } from "@/core/recommendation/engine";
 import { getLessonProgress } from "./history";
 import logger from "@/lib/logger";
 
+export const RECOMMENDATION_ATTEMPT_HISTORY_LIMIT = 200;
+export const RECOMMENDATION_SESSION_HISTORY_LIMIT = 50;
+
 export async function GET() {
   try {
     const session = await auth();
@@ -26,9 +29,13 @@ export async function GET() {
       prisma.vocabularyMastery.count({
         where: { userId, nextReviewAt: { lte: new Date() } },
       }),
+      // Plan13: bounded history. Progress only needs the most recent attempts
+      // and sessions per lesson, never the learner's full log.
       prisma.attempt.findMany({
         where: { userId },
         select: { lessonId: true, score: true, createdAt: true },
+        orderBy: { createdAt: "desc" },
+        take: RECOMMENDATION_ATTEMPT_HISTORY_LIMIT,
       }),
       prisma.learningSession.findMany({
         where: { userId, lessonId: { not: null } },
@@ -39,6 +46,8 @@ export async function GET() {
           completedAt: true,
           evidence: { select: { score: true } },
         },
+        orderBy: { updatedAt: "desc" },
+        take: RECOMMENDATION_SESSION_HISTORY_LIMIT,
       }),
     ]);
 

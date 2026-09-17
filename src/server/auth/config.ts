@@ -3,9 +3,17 @@ import { CredentialsSignin } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { requireAuthSecret } from "@/lib/auth-secret";
+import logger from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 import { LoginSchema } from "@/server/validation/schemas";
+import { equalizePasswordWork } from "@/server/auth/opaque-response";
+import {
+  clearLoginFailures,
+  isLoginLocked,
+  loginSubjects,
+  recordLoginFailure,
+} from "@/server/auth/login-throttle";
 
 /**
  * Resolved per read, not at module load.
@@ -29,6 +37,24 @@ export class EmailNotVerifiedError extends CredentialsSignin {
   code = "email_not_verified";
 }
 
+/**
+ * Thrown before any account lookup when the email or client IP is locked
+ * (Plan13 A2). The same code is used whether or not the account exists.
+ */
+export class AuthLockedError extends CredentialsSignin {
+  code = "auth_locked";
+}
+
+/** How long a JWT may keep its role/verification claims before re-reading them. */
+export const ROLE_REFRESH_INTERVAL_MS = 5 * 60_000;
+
+type RefreshableToken = {
+  id?: unknown;
+  role?: unknown;
+  isEmailVerified?: unknown;
+  roleCheckedAt?: unknown;
+};
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
@@ -37,7 +63,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = LoginSchema.safeParse({
           email: credentials?.email,
           password: credentials?.password,
@@ -45,6 +71,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (!parsed.success) return null;
 
         const { email, password } = parsed.data;
+        const subjects = loginSubjects(email, request);
+
+        // The lock check precedes the account read so a locked address costs
+        // the same whether or not it belongs to a real account.
+        if (await isLoginLocked(subjects)) {
+          throw new AuthLockedError();
+        }
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -59,13 +92,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         });
 
         if (!user) {
+          // An unknown address pays the same bcrypt cost as a wrong password,
+          // so login latency does not reveal whether the account exists.
+          await equalizePasswordWork();
+          await recordLoginFailure(subjects);
           return null;
         }
 
         const isValid = await compare(password, user.password);
         if (!isValid) {
+          await recordLoginFailure(subjects);
           return null;
         }
+
+        // A correct password is not a brute-force signal, verified or not.
+        await clearLoginFailures(subjects);
 
         if (!user.emailVerifiedAt) {
           throw new EmailNotVerifiedError();
@@ -83,10 +124,40 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user }) {
+      const claims = token as RefreshableToken;
       if (user) {
         token.id = user.id ?? "";
         token.role = (user.role as Role) ?? "LEARNER";
         token.isEmailVerified = user.isEmailVerified === true;
+        claims.roleCheckedAt = Date.now();
+        return token;
+      }
+
+      // Role refresh (Plan13 P130 §5): a 30-day JWT must not freeze a role
+      // change or outlive a deleted account. Re-read at most every 5 minutes;
+      // a flapping database keeps the existing claims rather than logging
+      // the person out.
+      const checkedAt = typeof claims.roleCheckedAt === "number" ? claims.roleCheckedAt : 0;
+      if (Date.now() - checkedAt <= ROLE_REFRESH_INTERVAL_MS) return token;
+
+      const userId = typeof claims.id === "string" ? claims.id : "";
+      if (!userId) return token;
+
+      try {
+        const current = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { role: true, emailVerifiedAt: true },
+        });
+        if (!current) return null;
+
+        token.role = current.role;
+        token.isEmailVerified = current.emailVerifiedAt !== null;
+        claims.roleCheckedAt = Date.now();
+      } catch (error) {
+        logger.warn(
+          { userId, errorName: error instanceof Error ? error.name : "unknown" },
+          "Role refresh failed; keeping the existing session claims",
+        );
       }
       return token;
     },

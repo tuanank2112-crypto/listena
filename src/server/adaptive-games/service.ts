@@ -27,6 +27,8 @@ import {
   nextVocabularyMastery,
   processReview,
 } from "./mastery";
+import { skillMasteryPerformance } from "@/core/learner-model/skill-mastery";
+import { createSeededRandom, seededShuffle } from "./seeded-random";
 import {
   ADAPTIVE_GAME_MAX_ROUNDS,
   ADAPTIVE_GAME_MIN_ROUNDS,
@@ -42,8 +44,16 @@ import {
   GAME_RUN_ROLLING_WINDOW_MS,
 } from "./run-budget";
 
-const CANDIDATE_QUERY_LIMIT = 80;
+/**
+ * Plan13 G1 pool: read up to 300 curriculum words (ordered by lemma only so the
+ * DB read is stable), reserve a slot for private vocabulary, then shuffle in
+ * Node with the run-seeded PRNG and keep ADAPTIVE_POOL_SIZE. The old
+ * alphabetical `take` made every run and every distractor set the same first
+ * letters of the dictionary.
+ */
+const CANDIDATE_QUERY_LIMIT = 300;
 const PRIVATE_CANDIDATE_QUERY_LIMIT = 24;
+export const ADAPTIVE_POOL_SIZE = 56;
 const RECENT_EVIDENCE_QUERY_LIMIT = 80;
 const GAME_RUN_TTL_MS = 20 * 60 * 1000;
 
@@ -85,7 +95,10 @@ export async function createAdaptiveGameRun(
     now,
   );
 
-  const snapshot = await loadAdaptiveCandidateSnapshot(userId, targetSkill);
+  // The run id is minted before selection so the pool shuffle and every
+  // round's distractors are reproducible from the persisted run (Plan13 G1).
+  const runId = crypto.randomUUID();
+  const snapshot = await loadAdaptiveCandidateSnapshot(userId, targetSkill, runId);
   const selected = selectAdaptiveGameCandidates(snapshot.candidates, now, ADAPTIVE_GAME_MAX_ROUNDS);
 
   if (selected.length < ADAPTIVE_GAME_MIN_ROUNDS) {
@@ -101,6 +114,7 @@ export async function createAdaptiveGameRun(
       selected,
       candidatePool: snapshot.candidates,
       difficulty: snapshot.difficulty,
+      seed: runId,
     });
   } catch {
     // Duplicate/malformed dataset meanings cannot be patched with a made-up
@@ -129,6 +143,7 @@ export async function createAdaptiveGameRun(
   });
 
   return createAdaptiveGameRunWithAtomicBatch({
+    runId,
     userId,
     mode: input.mode,
     targetSkill,
@@ -162,6 +177,7 @@ export async function submitAdaptiveGameAnswer(
  * orphaned-round side effect.
  */
 async function createAdaptiveGameRunWithAtomicBatch(input: {
+  runId: string;
   userId: string;
   mode: CreateAdaptiveGameRunInput["mode"];
   targetSkill: string;
@@ -170,7 +186,7 @@ async function createAdaptiveGameRunWithAtomicBatch(input: {
   generatedRounds: SerializedAdaptiveGameRound[];
 }): Promise<PublicAdaptiveGameRun> {
   const committedAt = new Date();
-  const runId = crypto.randomUUID();
+  const runId = input.runId;
   const expiresAt = new Date(committedAt.getTime() + GAME_RUN_TTL_MS);
   const rounds = input.generatedRounds.map((round) => ({
     id: crypto.randomUUID(),
@@ -351,6 +367,7 @@ async function submitAdaptiveGameAnswerWithAtomicBatch(
       userId,
       skillKey: round.run.targetSkill,
       score,
+      difficulty: round.run.difficulty,
       now,
       fence,
     }),
@@ -645,14 +662,21 @@ function atomicVocabularyMasteryUpsert(input: {
   };
 }
 
+/**
+ * SQL mirror of `applySkillMasteryUpdate` (Plan13 §8, source "game"):
+ * new = clamp(old + 0.18 * (performance - old)). `performance` is computed in
+ * Node from (score, run difficulty) so SQL and the TS formula cannot drift.
+ */
 function atomicSkillMasteryUpsert(input: {
   userId: string;
   skillKey: string;
   score: number;
+  difficulty: number;
   now: Date;
   fence: AtomicRoundCommitFence;
 }): LibSqlBatchStatement {
   const now = libSqlTimestamp(input.now);
+  const performance = skillMasteryPerformance(input.score, input.difficulty);
   return {
     sql: `INSERT INTO "SkillMastery"
             ("id", "userId", "skillKey", "masteryScore", "evidenceCount", "lastUpdatedAt")
@@ -666,10 +690,10 @@ function atomicSkillMasteryUpsert(input: {
       crypto.randomUUID(),
       input.userId,
       input.skillKey,
-      nextSkillMastery({ score: input.score }),
+      nextSkillMastery({ score: input.score, difficulty: input.difficulty }),
       now,
       ...input.fence.values,
-      input.score,
+      performance,
       now,
     ],
   };
@@ -871,6 +895,7 @@ function toPublicRound(round: PublicRoundRow): PublicAdaptiveGameRound {
 async function loadAdaptiveCandidateSnapshot(
   userId: string,
   targetSkill: "vocabulary" | "spelling",
+  poolSeed: string,
 ) {
   const [profile, skillMasteries, curriculumVocabulary, privateVocabulary] = await Promise.all([
     prisma.learnerProfile.findUnique({
@@ -886,7 +911,7 @@ async function loadAdaptiveCandidateSnapshot(
         lessons: { some: { lesson: { status: "PUBLISHED" } } },
       },
       orderBy: { lemma: "asc" },
-      take: CANDIDATE_QUERY_LIMIT - PRIVATE_CANDIDATE_QUERY_LIMIT,
+      take: CANDIDATE_QUERY_LIMIT,
       select: {
         id: true,
         displayText: true,
@@ -922,12 +947,22 @@ async function loadAdaptiveCandidateSnapshot(
     }),
   ]);
 
-  const vocabulary = [...new Map(
-    [...privateVocabulary, ...curriculumVocabulary]
-      .map((item) => [item.id, item] as const),
-  ).values()]
-    .sort((left, right) => left.lemma.localeCompare(right.lemma))
-    .slice(0, CANDIDATE_QUERY_LIMIT);
+  // Private (READY personalized) words keep their reserved slot; the rest of
+  // the pool is a run-seeded random sample of the curriculum instead of the
+  // alphabetically-first words (Plan13 G1). The final pool is shuffled too so
+  // the selector's tie-breaks do not favour private words by position.
+  const poolRandom = createSeededRandom(`${poolSeed}:pool`);
+  const privateIds = new Set(privateVocabulary.map((item) => item.id));
+  const curriculumSample = seededShuffle(
+    curriculumVocabulary.filter((item) => !privateIds.has(item.id)),
+    poolRandom,
+  );
+  const vocabulary = seededShuffle(
+    [...new Map(
+      [...privateVocabulary, ...curriculumSample].map((item) => [item.id, item] as const),
+    ).values()].slice(0, ADAPTIVE_POOL_SIZE),
+    poolRandom,
+  );
 
   if (vocabulary.length < ADAPTIVE_GAME_MIN_ROUNDS) {
     return { candidates: [] as AdaptiveGameCandidate[], difficulty: 0.2 };

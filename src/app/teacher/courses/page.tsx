@@ -4,7 +4,13 @@ import Link from "next/link";
 import { ChevronRight, PlusCircle, FileText, Users } from "lucide-react";
 
 export default async function TeacherCoursesPage() {
+  // Owner-scoped like the API (Plan13 P130 §6); ADMIN sees every course.
+  const session = await auth();
+  const viewerId = session?.user?.id ?? "";
+  const isAdmin = session?.user?.role === "ADMIN";
+
   const courses = await prisma.course.findMany({
+    where: isAdmin ? undefined : { createdById: viewerId },
     include: {
       _count: { select: { lessons: true } },
       createdBy: { select: { name: true } },

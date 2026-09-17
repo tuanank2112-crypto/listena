@@ -267,7 +267,7 @@ export class LearningSessionRepository {
     return this.db.learningSession.findFirst({
       where: { userId, status: "ACTIVE" },
       orderBy: [{ updatedAt: "desc" }, { id: "desc" }],
-      select: { id: true },
+      select: { id: true, startedAt: true },
     });
   }
 

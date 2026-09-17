@@ -12,6 +12,7 @@ import type {
   InterventionType,
   PublicIntervention,
   PublicLearningSession,
+  SessionOutcome,
 } from "@/features/learning-session/types";
 import { parseMissionState } from "@/server/learning/state";
 
@@ -73,6 +74,11 @@ export type LearningSessionDto = ReturnType<typeof toLearningSessionDto>;
 
 export function toLearningSessionDto(record: SessionRecord) {
   const state = parseMissionState(record.stateJson);
+  const completionOutcome: SessionOutcome | undefined = record.status === "COMPLETED"
+    ? (state.completionOutcome === "COMPLETED" ? "COMPLETED" : "PARTIAL")
+    : record.status === "ABANDONED"
+      ? "ABANDONED"
+      : undefined;
   return {
     id: record.id,
     lessonId: record.lessonId,
@@ -81,9 +87,7 @@ export function toLearningSessionDto(record: SessionRecord) {
     goal: record.goal,
     levelSnapshot: record.levelSnapshot,
     state,
-    ...(record.status === "COMPLETED" ? {
-      completionOutcome: state.completionOutcome === "COMPLETED" ? "COMPLETED" : "PARTIAL",
-    } : {}),
+    ...(completionOutcome ? { completionOutcome } : {}),
     summary: record.summary,
     lesson: record.lesson,
     turns: record.turns

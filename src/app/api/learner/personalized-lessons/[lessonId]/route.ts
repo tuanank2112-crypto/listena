@@ -1,11 +1,18 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/server/auth/config";
-import { getOwnedPersonalizedLesson } from "@/server/personalized-learning/service";
+import { getOwnedPersonalizedLessonStatus } from "@/server/personalized-learning/service";
 import { personalizedLearningErrorResponse } from "../http";
 
 const LessonIdSchema = z.string().uuid();
 
+/**
+ * Plan13 SPEC-P131 §4: the poll target of the async generation flow.
+ * READY -> `{ lesson: <public lesson with status "READY"> }` (content, no answers).
+ * GENERATING/FAILED -> `{ lesson: { id, status, failureCode?, targetSkill,
+ * generationAttempt, generationStartedAt, retryAfterSeconds } }` with 200, never 404.
+ * Unknown/foreign/archived id -> 404 PRIVATE_NOT_FOUND.
+ */
 export async function GET(
   _request: Request,
   context: { params: Promise<{ lessonId: string }> },
@@ -19,7 +26,16 @@ export async function GET(
     return NextResponse.json({ error: "Không tìm thấy bài học", code: "PRIVATE_NOT_FOUND" }, { status: 404 });
   }
   try {
-    return NextResponse.json({ lesson: await getOwnedPersonalizedLesson(session.user.id, lessonId) });
+    const lesson = await getOwnedPersonalizedLessonStatus(session.user.id, lessonId);
+    return NextResponse.json(
+      { lesson },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+          ...(lesson.status === "GENERATING" ? { "Retry-After": String(lesson.retryAfterSeconds) } : {}),
+        },
+      },
+    );
   } catch (error) {
     return personalizedLearningErrorResponse(error);
   }

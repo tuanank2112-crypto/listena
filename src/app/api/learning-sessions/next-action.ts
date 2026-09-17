@@ -6,12 +6,16 @@ import type { PublicLearningSession } from "@/features/learning-session/types";
 
 type SessionResult = { session: PublicLearningSession };
 
-/** Adds a best-effort recommendation without making an already completed turn fail. */
+/**
+ * Adds a best-effort recommendation without making an already completed turn
+ * fail. An ABANDONED session is terminal as well (Plan13 SPEC-P131 §3): the
+ * learner who just left a stuck session needs a next step, not a dead end.
+ */
 export async function withCompletedNextAction<T extends SessionResult>(
   userId: string,
   result: T,
 ) {
-  if (result.session.status !== "COMPLETED") {
+  if (result.session.status === "ACTIVE") {
     return { ...result, nextAction: null };
   }
 

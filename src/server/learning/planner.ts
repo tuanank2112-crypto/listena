@@ -10,6 +10,17 @@ import type { EvidenceRef, LearningDecision } from "./decision";
 
 const MAX_PLANNING_EVIDENCE = 50;
 const MAX_EVIDENCE_REFS = 12;
+/**
+ * Daily Quest day boundary. Learners are in Vietnam; a UTC key would roll the
+ * quest over at 07:00 local time (Plan13 P132 §7).
+ */
+export const PLANNER_TIME_ZONE = "Asia/Ho_Chi_Minh";
+const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: PLANNER_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
 
 type Observation = EvidenceRef & {
   skillKey: string;
@@ -170,7 +181,9 @@ export async function planNextLearningAction(
     const topicReason = scenarioSelection.preferenceInfluenced
       ? "Tình huống hôm nay ưu tiên một chủ đề bạn đã chọn."
       : "Tình huống hôm nay được chọn để bạn tiếp tục dùng tiếng Anh chủ động.";
-    const intentRevision = Number(intent.revision) || 1;
+    // The intent revision is an opaque hash (string) or null; it is recorded
+    // verbatim so the basis can be matched against the learner's saved intent.
+    const intentRevision = intent.revision ?? null;
     return {
       ...base,
       kind: "QUEST",
@@ -291,8 +304,9 @@ function isFiniteScore(value: number) {
   return Number.isFinite(value) && value >= 0 && value <= 1;
 }
 
-function dateKey(value: Date) {
-  return value.toISOString().slice(0, 10);
+/** YYYY-MM-DD in `PLANNER_TIME_ZONE`. */
+export function dateKey(value: Date) {
+  return dayKeyFormatter.format(value);
 }
 
 function formatSkill(skillKey: string) {

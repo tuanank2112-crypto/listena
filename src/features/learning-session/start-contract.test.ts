@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_AUTOMATIC_START_RETRIES,
+  offersActiveSessionChoice,
   shouldDiscardSessionStartId,
   shouldRetrySessionStart,
   startRetryDelayMs,
@@ -22,6 +23,14 @@ describe("session start browser contract", () => {
     expect(shouldDiscardSessionStartId("ACTIVE_SESSION_EXISTS")).toBe(true);
     expect(shouldDiscardSessionStartId("START_OUTCOME_UNKNOWN")).toBe(false);
     expect(shouldDiscardSessionStartId("START_IN_PROGRESS")).toBe(false);
+  });
+
+  it("offers resume/replace only when the 409 names the open session (Plan13)", () => {
+    expect(offersActiveSessionChoice({ code: "ACTIVE_SESSION_EXISTS", activeSessionId: "s-1" })).toBe(true);
+    expect(offersActiveSessionChoice({ code: "ACTIVE_SESSION_EXISTS" })).toBe(false);
+    expect(offersActiveSessionChoice({ code: "START_FAILED", activeSessionId: "s-1" })).toBe(false);
+    expect(shouldDiscardSessionStartId("AI_RATE_LIMITED")).toBe(true);
+    expect(shouldDiscardSessionStartId("DATABASE_UNAVAILABLE")).toBe(true);
   });
 
   it("uses a bounded retry delay", () => {

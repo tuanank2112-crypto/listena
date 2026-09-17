@@ -125,3 +125,24 @@ describe("learningSessionPlayerReducer", () => {
     expect(afterReload.nextAction).toEqual(nextAction);
   });
 });
+
+
+// Plan13 SPEC-P132 §9: an ABANDONED session is terminal, not an active conversation.
+describe("abandoned sessions in the player reducer", () => {
+  it("renders an ABANDONED session as the completed view with an ABANDONED outcome", () => {
+    const abandoned = { ...session("ABANDONED"), completionOutcome: "ABANDONED" as const };
+    const loaded = learningSessionPlayerReducer(createInitialPlayerState(), { type: "LOAD_SUCCESS", session: abandoned, nextAction: null, now: 1 });
+    expect(loaded.phase).toBe("completed");
+    expect(loaded.outcome).toBe("ABANDONED");
+
+    const ended = learningSessionPlayerReducer(createInitialPlayerState(), { type: "COMPLETE_SUCCESS", session: abandoned, nextAction: null });
+    expect(ended.phase).toBe("completed");
+    expect(ended.outcome).toBe("ABANDONED");
+  });
+
+  it("keeps COMPLETED/PARTIAL outcomes and leaves ACTIVE sessions without an outcome", () => {
+    const partial = { ...session("COMPLETED"), completionOutcome: "PARTIAL" as const };
+    expect(learningSessionPlayerReducer(createInitialPlayerState(), { type: "LOAD_SUCCESS", session: partial, nextAction: null, now: 1 }).outcome).toBe("PARTIAL");
+    expect(learningSessionPlayerReducer(createInitialPlayerState(), { type: "LOAD_SUCCESS", session: session(), nextAction: null, now: 1 }).outcome).toBeNull();
+  });
+});

@@ -24,6 +24,14 @@ function isEmailNotVerified(result: CredentialResult | undefined) {
   return code === "email_not_verified" || code === "EMAIL_NOT_VERIFIED";
 }
 
+/** Login throttle (P130 §3). The message never says whether the account exists. */
+function isAuthLocked(result: CredentialResult | undefined) {
+  const code = result?.code ?? result?.error;
+  return code === "auth_locked" || code === "AUTH_LOCKED";
+}
+
+const LOCKED_MESSAGE = "Đăng nhập tạm thời bị khoá do có quá nhiều lần thử. Hãy thử lại sau vài phút.";
+
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -54,7 +62,9 @@ function LoginContent() {
       })) as CredentialResult | undefined;
 
       if (result?.error || !result?.ok) {
-        if (isEmailNotVerified(result)) {
+        if (isAuthLocked(result)) {
+          setError(LOCKED_MESSAGE);
+        } else if (isEmailNotVerified(result)) {
           setVerificationRequired(true);
           setError("Bạn cần xác thực email trước khi đăng nhập.");
         } else {

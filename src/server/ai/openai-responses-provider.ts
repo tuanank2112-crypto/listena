@@ -1,10 +1,10 @@
 import { createHash } from "node:crypto";
 import logger from "@/lib/logger";
 import { AIRateLimitedError, AIUnavailableError } from "@/server/ai/errors";
-import { KiraChatCompletionsProvider } from "@/server/ai/kira-chat-completions-provider";
+import { VyceChatCompletionsProvider } from "@/server/ai/vyce-chat-completions-provider";
 
 export type JsonSchema = Record<string, unknown>;
-export type AIProviderName = "openai" | "kira";
+export type AIProviderName = "openai" | "vyce";
 
 export interface StructuredAIRequest {
   purpose: string;
@@ -52,9 +52,15 @@ export type StructuredAIProviderEnvironment = {
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   OPENAI_BASE_URL?: string;
+  VYCE_API_KEY?: string;
+  VYCE_MODEL?: string;
+  VYCE_BASE_URL?: string;
+  /**
+   * Removed provider names/variables. They are read only so that a stale
+   * deployment fails loudly (see `createConfiguredStructuredAIProvider`)
+   * instead of silently reporting "provider not configured".
+   */
   KIRAAI_API_KEY?: string;
-  KIRAAI_MODEL?: string;
-  KIRAAI_BASE_URL?: string;
 };
 
 type ResponsesPayload = {
@@ -199,10 +205,15 @@ export class OpenAIResponsesProvider implements StructuredAIProvider {
           reason:
             response.status === 401 || response.status === 403
               ? "upstream_unauthorized"
-              : "upstream_failure",
+              : response.status === 400
+                ? "upstream_invalid_request"
+                : "upstream_failure",
           provider: this.providerName,
           model: this.modelName,
           requestId,
+          ...(response.status === 401 || response.status === 403
+            ? {}
+            : { retryAfterSeconds: DEFAULT_RETRY_AFTER_SECONDS }),
         });
       }
 
@@ -315,12 +326,23 @@ export function createConfiguredStructuredAIProvider(
     OPENAI_API_KEY: process.env.OPENAI_API_KEY,
     OPENAI_MODEL: process.env.OPENAI_MODEL,
     OPENAI_BASE_URL: process.env.OPENAI_BASE_URL,
+    VYCE_API_KEY: process.env.VYCE_API_KEY,
+    VYCE_MODEL: process.env.VYCE_MODEL,
+    VYCE_BASE_URL: process.env.VYCE_BASE_URL,
     KIRAAI_API_KEY: process.env.KIRAAI_API_KEY,
-    KIRAAI_MODEL: process.env.KIRAAI_MODEL,
-    KIRAAI_BASE_URL: process.env.KIRAAI_BASE_URL,
   },
 ): StructuredAIProvider | undefined {
   const provider = env.AI_PROVIDER?.trim().toLowerCase();
+  if (provider === "kira" || env.KIRAAI_API_KEY?.trim()) {
+    // The Kira provider was removed on 2026-09-17 (user decision: Vyce only).
+    // A deployment still carrying the old variables gets an unmistakable log
+    // line rather than a generic "not configured" state.
+    logger.error(
+      { provider },
+      "AI provider configuration is stale: set AI_PROVIDER=vyce and VYCE_API_KEY/VYCE_MODEL/VYCE_BASE_URL; the kira provider and KIRAAI_* variables were removed",
+    );
+    return undefined;
+  }
   if (provider === "openai" && env.OPENAI_API_KEY?.trim()) {
     return new OpenAIResponsesProvider({
       apiKey: env.OPENAI_API_KEY,
@@ -328,11 +350,11 @@ export function createConfiguredStructuredAIProvider(
       baseUrl: env.OPENAI_BASE_URL,
     });
   }
-  if (provider === "kira" && env.KIRAAI_API_KEY?.trim()) {
-    return new KiraChatCompletionsProvider({
-      apiKey: env.KIRAAI_API_KEY,
-      model: env.KIRAAI_MODEL,
-      baseUrl: env.KIRAAI_BASE_URL,
+  if (provider === "vyce" && env.VYCE_API_KEY?.trim()) {
+    return new VyceChatCompletionsProvider({
+      apiKey: env.VYCE_API_KEY,
+      model: env.VYCE_MODEL,
+      baseUrl: env.VYCE_BASE_URL,
     });
   }
   return undefined;
@@ -347,8 +369,8 @@ export function createStructuredAIProvider(
   if (config.provider === "openai") {
     return new OpenAIResponsesProvider(config);
   }
-  if (config.provider === "kira") {
-    return new KiraChatCompletionsProvider(config);
+  if (config.provider === "vyce") {
+    return new VyceChatCompletionsProvider(config);
   }
   throw new AIUnavailableError({ reason: "provider_not_configured" });
 }
@@ -415,11 +437,15 @@ function getRequestId(response: Response) {
   );
 }
 
-function parseRetryAfter(value: string | null) {
+/** Fallback when the upstream omits or mangles `Retry-After` (Plan13: 15s). */
+const DEFAULT_RETRY_AFTER_SECONDS = 15;
+
+export function parseRetryAfter(value: string | null) {
+  // `Number(null)` is 0: finite, so the old fallback never fired.
+  if (value === null || !value.trim()) return DEFAULT_RETRY_AFTER_SECONDS;
   const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? Math.min(Math.max(Math.ceil(parsed), 1), 60)
-    : 15;
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_RETRY_AFTER_SECONDS;
+  return Math.min(Math.max(Math.ceil(parsed), 1), 60);
 }
 
 function boundMaxOutputTokens(value: number) {

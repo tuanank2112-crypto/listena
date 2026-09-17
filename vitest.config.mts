@@ -10,6 +10,10 @@ export default defineConfig({
     environment: "node",
     include: ["src/**/*.test.ts", "src/**/*.test.tsx", "eval/**/*.test.ts"],
     exclude: ["node_modules", "e2e"],
+    // Plan13 SPEC-P134 §6: integration suites deploy real migrations into a
+    // temporary SQLite file inside beforeAll; the default 10s hook budget flakes
+    // on cold Windows/CI runners.
+    hookTimeout: 60_000,
     coverage: {
       provider: "v8",
       reporter: ["text", "json", "html"],

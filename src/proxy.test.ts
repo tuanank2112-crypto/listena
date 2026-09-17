@@ -208,3 +208,33 @@ describe("authenticated page proxy", () => {
     expect(new URL(response.headers.get("location")!).pathname).toBe(target);
   });
 });
+
+describe("learner API role gate (P130 §6)", () => {
+  it.each([
+    "/api/attempt",
+    "/api/flashcard",
+    "/api/learning-sessions",
+    "/api/learning-sessions/00000000-0000-4000-8000-000000000000/turns",
+    "/api/game-runs",
+    "/api/tutor",
+    "/api/learner/personalized-lessons",
+  ])("rejects a TEACHER session on %s with 403 ROLE_FORBIDDEN", async (pathname) => {
+    const response = await proxy(await request(`https://school.example${pathname}`, true, "TEACHER"));
+
+    expect(response.status).toBe(403);
+    await expect(response.json()).resolves.toMatchObject({ code: "ROLE_FORBIDDEN" });
+  });
+
+  it.each(["LEARNER", "ADMIN"])("passes a %s session through to learner APIs", async (role) => {
+    const response = await proxy(await request("https://school.example/api/attempt", true, role));
+    expect(response.headers.get("x-middleware-next")).toBe("1");
+  });
+
+  it("leaves teacher APIs and anonymous learner-API calls to the route handlers", async () => {
+    const teacherApi = await proxy(await request("https://school.example/api/teacher/lesson", true, "TEACHER"));
+    expect(teacherApi.headers.get("x-middleware-next")).toBe("1");
+
+    const anonymous = await proxy(new NextRequest("https://school.example/api/attempt", { method: "POST" }));
+    expect(anonymous.headers.get("x-middleware-next")).toBe("1");
+  });
+});

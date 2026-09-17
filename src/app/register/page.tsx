@@ -56,7 +56,6 @@ export default function RegisterPage() {
       });
       const payload = (await response.json().catch(() => ({}))) as {
         error?: string;
-        verificationEmailSent?: boolean;
       };
 
       if (!response.ok) {
@@ -64,13 +63,11 @@ export default function RegisterPage() {
         return;
       }
 
+      // The server answers the same way whether this address is new or
+      // already registered; the mailbox owner learns which from the email.
       setPassword("");
       setRegisteredEmail(normalizedEmail);
       setResendIn(RESEND_COOLDOWN_SECONDS);
-
-      if (!payload.verificationEmailSent) {
-        setDeliveryMessage("Tài khoản đã được tạo, nhưng email xác thực đang tạm thời chưa gửi được. Hãy thử gửi lại sau ít phút.");
-      }
     } catch {
       setError("Không thể tạo tài khoản lúc này. Vui lòng thử lại sau.");
     } finally {
@@ -102,13 +99,14 @@ export default function RegisterPage() {
       <AccountPageShell
         description="Bạn cần xác thực quyền sở hữu hộp thư trước khi có thể đăng nhập và bắt đầu học."
         eyebrow="Kiểm tra hộp thư"
-        title="Xác thực email của bạn."
+        title="Kiểm tra hộp thư của bạn."
       >
         <div className="mt-7 rounded-2xl bg-[#dff2e8] p-4 text-[#245340]">
           <CheckCircle2 className="h-6 w-6" />
-          <p className="mt-3 text-sm font-black">Tài khoản đã được tạo.</p>
+          <p className="mt-3 text-sm font-black">Yêu cầu đã được ghi nhận.</p>
           <p className="mt-1 text-sm font-bold leading-6">
-            Hãy mở email gửi tới <span className="font-black">{maskEmail(registeredEmail)}</span> và làm theo liên kết xác thực.
+            Hãy mở email gửi tới <span className="font-black">{maskEmail(registeredEmail)}</span> và làm theo hướng dẫn trong đó.
+            Nếu địa chỉ này đã có tài khoản, email sẽ hướng dẫn bạn đăng nhập hoặc đặt lại mật khẩu.
           </p>
         </div>
 

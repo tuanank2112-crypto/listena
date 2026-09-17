@@ -1,14 +1,27 @@
 /**
- * Read-only verifier for the Plan 07 D1-to-Turso migration rehearsal.
+ * Read-only verifier for a ListenAI database against the Prisma migration
+ * contract (Plan13 SPEC-P134 §1, finding D3).
  *
- * This tool deliberately does not export, import, seed, migrate, reset, or
- * mutate either database. Reports contain schema metadata, counts, and
- * cryptographic fingerprints only; they never print URLs, tokens, keys, or
- * application-row values. A staging-only write/read/delete probe belongs to
- * a separately approved operator procedure because a generic URL cannot
- * safely prove that a remote target is not production.
+ * The expected contract is not hard-coded any more. It is derived at run time
+ * by applying every `prisma/migrations/<dir>/migration.sql` (in directory
+ * name order) to a throw-away SQLite file in the OS temp directory and
+ * fingerprinting the result with exactly the same algorithm that is used for
+ * the target database. Tables, columns, defaults, foreign keys, named indexes
+ * (including partial/expression indexes, compared through normalized SQL
+ * signatures) therefore always follow the checked-in migrations.
+ *
+ * Optionally a source database can be supplied; then row counts, redacted
+ * primary-key fingerprints, timestamp summaries and the curriculum summary of
+ * source and target are compared as migration-copy evidence.
+ *
+ * This tool never exports, imports, seeds, migrates, resets, or mutates the
+ * source or target database. Reports contain schema metadata, counts, and
+ * cryptographic fingerprints only; they never print URLs, tokens, keys, file
+ * paths of the databases, or application-row values.
  */
 import { createHash } from "node:crypto";
+import { mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -18,95 +31,20 @@ import {
   type Value,
 } from "@libsql/client";
 
-const APPLICATION_TABLES = [
-  "User",
-  "LearnerMemory",
-  "LearnerProfile",
-  "Course",
-  "Lesson",
-  "LessonSegment",
-  "VocabularyItem",
-  "LessonVocabulary",
-  "Exercise",
-  "Attempt",
-  "AttemptError",
-  "VocabularyMastery",
-  "SkillMastery",
-  "Flashcard",
-  "ReviewLog",
-  "Recommendation",
-  "AIInteraction",
-  "LearningSession",
-  "LearningTurn",
-  "LearningEvidence",
-  "Intervention",
-  "PersonalizedLesson",
-  "PersonalizedLessonVocabulary",
-  "PersonalizedLessonAttempt",
-  "AdaptiveGameRun",
-  "AdaptiveGameRound",
-  "AdaptiveEvidence",
-] as const;
+/**
+ * Engine-owned bookkeeping tables. `d1_migrations` is written by Cloudflare
+ * D1 and `_prisma_migrations` by `prisma migrate`; a database created through
+ * `turso db shell < migration.sql` has neither. They are not application data
+ * and never take part in the contract. Every other non-`sqlite_%` table is
+ * compared against the migration contract.
+ */
+const IGNORED_INFRASTRUCTURE_TABLES = new Set([
+  "d1_migrations",
+  "_prisma_migrations",
+]);
 
-// Cloudflare D1 records applied migrations in this engine-owned table. It is
-// not application data and it may not exist in a database created directly by
-// Prisma/libSQL, so it cannot be part of the exact 27-table product contract.
-// Keep this allow-list deliberately narrow: every other non-SQLite table is a
-// blocking surprise and remains visible to the verifier.
-const IGNORED_INFRASTRUCTURE_TABLES = new Set(["d1_migrations"]);
-
-const EXPECTED_NAMED_INDEXES = [
-  "User_email_key",
-  "LearnerMemory_userId_key",
-  "LearnerProfile_userId_key",
-  "Lesson_courseId_idx",
-  "Lesson_status_idx",
-  "LessonSegment_lessonId_idx",
-  "VocabularyItem_lemma_key",
-  "Exercise_lessonId_idx",
-  "Attempt_userId_lessonId_idx",
-  "Attempt_userId_createdAt_idx",
-  "AttemptError_attemptId_idx",
-  "VocabularyMastery_userId_nextReviewAt_idx",
-  "VocabularyMastery_userId_vocabularyItemId_key",
-  "SkillMastery_userId_skillKey_idx",
-  "SkillMastery_userId_skillKey_key",
-  "Flashcard_userId_active_idx",
-  "Flashcard_userId_vocabularyItemId_idx",
-  "ReviewLog_flashcardId_idx",
-  "ReviewLog_userId_reviewedAt_idx",
-  "Recommendation_userId_status_idx",
-  "Recommendation_userId_generatedAt_idx",
-  "Recommendation_userId_lessonId_key",
-  "AIInteraction_createdAt_idx",
-  "AIInteraction_purpose_success_idx",
-  "AIInteraction_sessionId_createdAt_idx",
-  "AIInteraction_traceId_idx",
-  "LearningSession_userId_status_updatedAt_idx",
-  "LearningSession_lessonId_status_idx",
-  "LearningTurn_sessionId_createdAt_idx",
-  "LearningTurn_sessionId_sequence_key",
-  "LearningTurn_sessionId_clientTurnId_key",
-  "LearningEvidence_sessionId_createdAt_idx",
-  "LearningEvidence_skillKey_createdAt_idx",
-  "Intervention_sessionId_status_idx",
-  "PersonalizedLesson_userId_status_createdAt_idx",
-  "PersonalizedLesson_userId_targetSkill_sourceSnapshotHash_key",
-  "PersonalizedLesson_userId_generationKey_key",
-  "PersonalizedLessonVocabulary_vocabularyItemId_idx",
-  "PersonalizedLessonAttempt_lessonId_clientAttemptId_key",
-  "PersonalizedLessonAttempt_userId_lessonId_createdAt_idx",
-  "AdaptiveGameRun_userId_status_startedAt_idx",
-  "AdaptiveGameRound_runId_position_key",
-  "AdaptiveGameRound_runId_clientAnswerId_key",
-  "AdaptiveGameRound_vocabularyItemId_idx",
-  "AdaptiveEvidence_sourceKind_sourceId_skillKey_key",
-  "AdaptiveEvidence_userId_skillKey_createdAt_idx",
-  "AdaptiveEvidence_userId_vocabularyItemId_createdAt_idx",
-  "AIInteraction_userId_purpose_createdAt_idx",
-] as const;
-
-const EXPECTED_FOREIGN_KEY_COUNT = 45;
+const DEFAULT_MIGRATIONS_DIRECTORY = path.join("prisma", "migrations");
+const MIGRATION_FILE_NAME = "migration.sql";
 const CORE_COURSE_ID = "464c2a28-e631-4c2e-80b4-a6e5f5cefcbf";
 const SYSTEM_CURRICULUM_USER_ID = "aed67c1c-b8e4-4ffc-806e-25c65d860c09";
 const SYSTEM_CURRICULUM_EMAIL = "system-curriculum@listena.invalid";
@@ -118,8 +56,14 @@ export type MigrationDatabaseConnection = {
 };
 
 export type MigrationVerifierOptions = {
-  source: MigrationDatabaseConnection;
+  /** Database whose schema must match the migration contract. */
   target: MigrationDatabaseConnection;
+  /** Optional pre-migration database for row-level copy evidence. */
+  source?: MigrationDatabaseConnection;
+  /** Defaults to `<cwd>/prisma/migrations`. */
+  migrationsDirectory?: string;
+  /** A contract already derived with `deriveSchemaContract()`; skips re-deriving it. */
+  contract?: SchemaContract;
 };
 
 export type ColumnDescriptor = {
@@ -161,6 +105,34 @@ export type IndexDescriptor = {
   predicateSignature: string | null;
 };
 
+export type SchemaDescriptor = {
+  tables: TableDescriptor[];
+  foreignKeys: ForeignKeyDescriptor[];
+  /** One hash per table over its columns and outgoing foreign keys. */
+  tableSignatures: Record<string, string>;
+  semanticSignature: string;
+};
+
+export type IndexInventory = {
+  indexes: IndexDescriptor[];
+  /** One hash per named index over its keys, uniqueness, and SQL signatures. */
+  indexSignatures: Record<string, string>;
+  semanticSignature: string;
+};
+
+/**
+ * The expected shape of a migrated database, derived from the migration
+ * files. It is schema-only: the contract has no opinion about row content.
+ */
+export type SchemaContract = {
+  migrations: string[];
+  tables: string[];
+  namedIndexes: string[];
+  foreignKeyCount: number;
+  schema: SchemaDescriptor;
+  indexes: IndexInventory;
+};
+
 export type PrimaryKeyFingerprint =
   | {
       supported: true;
@@ -185,7 +157,6 @@ export type TimestampSummary = {
 
 export type CurriculumSummary = {
   available: boolean;
-  valid: boolean;
   systemOwnerCount: string | null;
   courseOwnedBySystemCount: string | null;
   lessonsInCoreCourse: string | null;
@@ -205,11 +176,7 @@ export type DatabaseFingerprint = {
     unexpected: string[];
     matchesExpected: boolean;
   };
-  schema: {
-    tables: TableDescriptor[];
-    foreignKeys: ForeignKeyDescriptor[];
-    semanticSignature: string;
-  };
+  schema: SchemaDescriptor;
   namedIndexes: {
     expectedCount: number;
     actual: IndexDescriptor[];
@@ -255,8 +222,16 @@ export type StagingProbeResult = {
 
 export type MigrationVerificationReport = {
   status: "passed" | "failed";
-  source: DatabaseFingerprint;
+  contract: {
+    migrations: string[];
+    tableCount: number;
+    namedIndexCount: number;
+    foreignKeyCount: number;
+    schemaSignature: string;
+    indexSignature: string;
+  };
   target: DatabaseFingerprint;
+  source: DatabaseFingerprint | null;
   comparison: {
     passed: boolean;
     mismatches: VerificationMismatch[];
@@ -268,16 +243,17 @@ export type MigrationVerificationReport = {
   };
 };
 
-class MigrationVerifierError extends Error {
+export class MigrationVerifierError extends Error {
   constructor(
-    readonly code: "INVALID_INPUT" | "DATABASE_READ_FAILED",
+    readonly code: "INVALID_INPUT" | "DATABASE_READ_FAILED" | "MIGRATION_APPLY_FAILED",
     message: string,
   ) {
     super(message);
+    this.name = "MigrationVerifierError";
   }
 }
 
-function quoteIdentifier(identifier: string) {
+export function quoteIdentifier(identifier: string) {
   return `"${identifier.replaceAll('"', '""')}"`;
 }
 
@@ -359,14 +335,6 @@ function equalCount(left: string | null, right: string | null) {
   return left !== null && right !== null && left === right;
 }
 
-function expectedTableSet() {
-  return new Set<string>(APPLICATION_TABLES);
-}
-
-function expectedIndexSet() {
-  return new Set<string>(EXPECTED_NAMED_INDEXES);
-}
-
 function hashDescriptor(value: unknown) {
   return sha256(JSON.stringify(value));
 }
@@ -444,6 +412,84 @@ function createReadClient(connection: MigrationDatabaseConnection): Client {
   }
 }
 
+/** libSQL wants forward slashes in `file:` URLs even on Windows. */
+export function sqliteFileUrl(filePath: string) {
+  return `file:${path.resolve(filePath).replaceAll("\\", "/")}`;
+}
+
+/**
+ * Lists the Prisma migration directories in the order Prisma applies them
+ * (lexical directory-name order, timestamps first).
+ */
+export async function listPrismaMigrations(
+  migrationsDirectory: string = path.resolve(
+    process.cwd(),
+    DEFAULT_MIGRATIONS_DIRECTORY,
+  ),
+) {
+  let entries: Array<{ name: string; isDirectory(): boolean }>;
+  try {
+    entries = await readdir(migrationsDirectory, { withFileTypes: true });
+  } catch {
+    throw new MigrationVerifierError(
+      "INVALID_INPUT",
+      "The Prisma migrations directory could not be read.",
+    );
+  }
+  const migrations = entries
+    .filter((entry) => entry.isDirectory())
+    .map((entry) => entry.name)
+    .sort();
+  if (migrations.length === 0) {
+    throw new MigrationVerifierError(
+      "INVALID_INPUT",
+      "The Prisma migrations directory contains no migration.",
+    );
+  }
+  return migrations;
+}
+
+/**
+ * Applies every checked-in migration to `client` through plain libSQL, the
+ * same way the production runbook applies them with `turso db shell`. No
+ * `_prisma_migrations` bookkeeping table is created. Only ever call this on a
+ * throw-away database.
+ */
+export async function applyPrismaMigrations(
+  client: Client,
+  migrationsDirectory: string = path.resolve(
+    process.cwd(),
+    DEFAULT_MIGRATIONS_DIRECTORY,
+  ),
+) {
+  const migrations = await listPrismaMigrations(migrationsDirectory);
+  for (const migration of migrations) {
+    let sql: string;
+    try {
+      sql = await readFile(
+        path.join(migrationsDirectory, migration, MIGRATION_FILE_NAME),
+        "utf8",
+      );
+    } catch {
+      throw new MigrationVerifierError(
+        "INVALID_INPUT",
+        `Migration ${migration} has no ${MIGRATION_FILE_NAME}.`,
+      );
+    }
+    try {
+      await client.executeMultiple(sql);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : "unknown error";
+      throw new MigrationVerifierError(
+        "MIGRATION_APPLY_FAILED",
+        `Migration ${migration} failed to apply to the temporary database: ${detail}`,
+      );
+    }
+  }
+  await client.execute("PRAGMA foreign_keys = ON");
+  return migrations;
+}
+
 async function readApplicationTableNames(client: Client) {
   const result = await client.execute(`
     SELECT name
@@ -459,7 +505,10 @@ async function readApplicationTableNames(client: Client) {
     );
 }
 
-async function readSchema(client: Client, tables: string[]) {
+async function readSchema(
+  client: Client,
+  tables: string[],
+): Promise<SchemaDescriptor> {
   const tableDescriptors: TableDescriptor[] = [];
   const foreignKeys: ForeignKeyDescriptor[] = [];
 
@@ -508,9 +557,19 @@ async function readSchema(client: Client, tables: string[]) {
     left.name.localeCompare(right.name),
   );
   const normalizedForeignKeys = sortByJson(foreignKeys);
+  const tableSignatures: Record<string, string> = {};
+  for (const table of normalizedTables) {
+    tableSignatures[table.name] = hashDescriptor({
+      columns: table.columns,
+      foreignKeys: normalizedForeignKeys.filter(
+        (foreignKey) => foreignKey.childTable === table.name,
+      ),
+    });
+  }
   return {
     tables: normalizedTables,
     foreignKeys: normalizedForeignKeys,
+    tableSignatures,
     semanticSignature: hashDescriptor({
       tables: normalizedTables,
       foreignKeys: normalizedForeignKeys,
@@ -518,7 +577,10 @@ async function readSchema(client: Client, tables: string[]) {
   };
 }
 
-async function readNamedIndexes(client: Client, tables: string[]) {
+async function readIndexInventory(
+  client: Client,
+  tables: string[],
+): Promise<IndexInventory> {
   const indexRows = await client.execute(`
     SELECT name, tbl_name, sql
     FROM sqlite_master
@@ -572,23 +634,13 @@ async function readNamedIndexes(client: Client, tables: string[]) {
     const tableOrder = left.table.localeCompare(right.table);
     return tableOrder || left.name.localeCompare(right.name);
   });
-  const actualNames = normalizedIndexes.map((index) => index.name).sort();
-  const expected = expectedIndexSet();
-  const actual = new Set(actualNames);
-  const missingExpected = EXPECTED_NAMED_INDEXES.filter(
-    (name) => !actual.has(name),
-  );
-  const unexpected = actualNames.filter((name) => !expected.has(name));
-
+  const indexSignatures: Record<string, string> = {};
+  for (const index of normalizedIndexes) {
+    indexSignatures[index.name] = hashDescriptor(index);
+  }
   return {
-    expectedCount: EXPECTED_NAMED_INDEXES.length,
-    actual: normalizedIndexes,
-    missingExpected,
-    unexpected,
-    matchesExpected:
-      missingExpected.length === 0 &&
-      unexpected.length === 0 &&
-      actualNames.length === EXPECTED_NAMED_INDEXES.length,
+    indexes: normalizedIndexes,
+    indexSignatures,
     semanticSignature: hashDescriptor(normalizedIndexes),
   };
 }
@@ -762,6 +814,12 @@ async function scalarCount(
   return countValue(result.rows[0], "count");
 }
 
+/**
+ * Curriculum evidence around the historical Plan05/Plan07 core course. It is
+ * reported for both databases and compared source-vs-target; it is no longer
+ * a fixed pass/fail target because a production database created by
+ * `scripts/import-dataset.ts` receives fresh identifiers.
+ */
 async function readCurriculum(
   client: Client,
   actualTables: string[],
@@ -778,7 +836,6 @@ async function readCurriculum(
   if (required.some((table) => !actualTables.includes(table))) {
     return {
       available: false,
-      valid: false,
       systemOwnerCount: null,
       courseOwnedBySystemCount: null,
       lessonsInCoreCourse: null,
@@ -838,19 +895,8 @@ async function readCurriculum(
     ),
   ]);
 
-  const valid = [
-    [systemOwnerCount, "1"],
-    [courseOwnedBySystemCount, "1"],
-    [lessonsInCoreCourse, "5"],
-    [segmentsInCoreCourse, "20"],
-    [exercisesInCoreCourse, "54"],
-    [lessonVocabularyJoinsInCoreCourse, "116"],
-    [distinctVocabularyInCoreCourse, "116"],
-  ].every(([actual, expected]) => actual === expected);
-
   return {
     available: true,
-    valid,
     systemOwnerCount,
     courseOwnedBySystemCount,
     lessonsInCoreCourse,
@@ -862,28 +908,95 @@ async function readCurriculum(
   };
 }
 
+async function removeTemporaryDirectory(directory: string) {
+  try {
+    await rm(directory, {
+      recursive: true,
+      force: true,
+      maxRetries: 8,
+      retryDelay: 100,
+    });
+  } catch {
+    // A leftover empty temp directory is harmless; never fail a report on it.
+  }
+}
+
+/**
+ * Builds the expected contract by migrating a throw-away SQLite database in
+ * the OS temp directory and fingerprinting it with the verifier's own
+ * schema reader.
+ */
+export async function deriveSchemaContract(
+  migrationsDirectory: string = path.resolve(
+    process.cwd(),
+    DEFAULT_MIGRATIONS_DIRECTORY,
+  ),
+): Promise<SchemaContract> {
+  const directory = await mkdtemp(
+    path.join(os.tmpdir(), "listenai-migration-contract-"),
+  );
+  const client = createClient({
+    url: sqliteFileUrl(path.join(directory, "contract.db")),
+    intMode: "string",
+  });
+  try {
+    const migrations = await applyPrismaMigrations(client, migrationsDirectory);
+    const tables = await readApplicationTableNames(client);
+    const schema = await readSchema(client, tables);
+    const indexes = await readIndexInventory(client, tables);
+    return {
+      migrations,
+      tables,
+      namedIndexes: indexes.indexes.map((index) => index.name).sort(),
+      foreignKeyCount: schema.foreignKeys.length,
+      schema,
+      indexes,
+    };
+  } catch (error) {
+    if (error instanceof MigrationVerifierError) throw error;
+    throw new MigrationVerifierError(
+      "MIGRATION_APPLY_FAILED",
+      "Unable to derive the migration contract from the temporary database.",
+    );
+  } finally {
+    client.close();
+    await removeTemporaryDirectory(directory);
+  }
+}
+
 export async function fingerprintMigrationDatabase(
   connection: MigrationDatabaseConnection,
+  contract: SchemaContract,
 ): Promise<DatabaseFingerprint> {
   const client = createReadClient(connection);
   try {
     const actualTableNames = await readApplicationTableNames(client);
-    const expectedTables = expectedTableSet();
+    const expectedTables = new Set(contract.tables);
     const actualTableSet = new Set(actualTableNames);
-    const missingExpected = APPLICATION_TABLES.filter(
+    const missingExpected = contract.tables.filter(
       (table) => !actualTableSet.has(table),
     );
     const unexpected = actualTableNames.filter(
       (table) => !expectedTables.has(table),
     );
     // A surprise table is itself a blocking mismatch. Do not recursively scan
-    // unknown application data: the verifier's bounded evidence surface is the
-    // 27-table Plan 07 contract only.
-    const verifiedTables = APPLICATION_TABLES.filter((table) =>
+    // unknown application data: the evidence surface is the migration contract.
+    const verifiedTables = contract.tables.filter((table) =>
       actualTableSet.has(table),
     );
     const schema = await readSchema(client, verifiedTables);
-    const namedIndexes = await readNamedIndexes(client, verifiedTables);
+    const indexInventory = await readIndexInventory(client, verifiedTables);
+    const actualIndexNames = indexInventory.indexes
+      .map((index) => index.name)
+      .sort();
+    const expectedIndexes = new Set(contract.namedIndexes);
+    const actualIndexSet = new Set(actualIndexNames);
+    const missingIndexes = contract.namedIndexes.filter(
+      (name) => !actualIndexSet.has(name),
+    );
+    const unexpectedIndexes = actualIndexNames.filter(
+      (name) => !expectedIndexes.has(name),
+    );
     const [integrity, timestamps, curriculum] = await Promise.all([
       readIntegrity(client),
       readTimestamps(client, schema),
@@ -909,17 +1022,27 @@ export async function fingerprintMigrationDatabase(
 
     return {
       applicationTables: {
-        expectedCount: APPLICATION_TABLES.length,
+        expectedCount: contract.tables.length,
         actual: actualTableNames,
         missingExpected,
         unexpected,
         matchesExpected:
           missingExpected.length === 0 &&
           unexpected.length === 0 &&
-          actualTableNames.length === APPLICATION_TABLES.length,
+          actualTableNames.length === contract.tables.length,
       },
       schema,
-      namedIndexes,
+      namedIndexes: {
+        expectedCount: contract.namedIndexes.length,
+        actual: indexInventory.indexes,
+        missingExpected: missingIndexes,
+        unexpected: unexpectedIndexes,
+        matchesExpected:
+          missingIndexes.length === 0 &&
+          unexpectedIndexes.length === 0 &&
+          actualIndexNames.length === contract.namedIndexes.length,
+        semanticSignature: indexInventory.semanticSignature,
+      },
       integrity,
       tableCounts,
       primaryKeys,
@@ -937,56 +1060,90 @@ export async function fingerprintMigrationDatabase(
   }
 }
 
-function compareFingerprints(
-  source: DatabaseFingerprint,
-  target: DatabaseFingerprint,
+function compareWithContract(
+  label: "source" | "target",
+  fingerprint: DatabaseFingerprint,
+  contract: SchemaContract,
+  add: (mismatch: VerificationMismatch) => void,
 ) {
-  const mismatches: VerificationMismatch[] = [];
-  const add = (mismatch: VerificationMismatch) => mismatches.push(mismatch);
-
-  for (const [label, fingerprint] of [
-    ["source", source],
-    ["target", target],
-  ] as const) {
-    if (!fingerprint.applicationTables.matchesExpected) {
-      add({ code: "APPLICATION_TABLE_SET", subject: label });
-    }
-    if (!fingerprint.namedIndexes.matchesExpected) {
-      add({ code: "NAMED_INDEX_SET", subject: label });
-    }
-    if (fingerprint.schema.foreignKeys.length !== EXPECTED_FOREIGN_KEY_COUNT) {
-      add({
-        code: "FOREIGN_KEY_COUNT",
-        subject: label,
-        source: String(fingerprint.schema.foreignKeys.length),
-        target: String(EXPECTED_FOREIGN_KEY_COUNT),
-      });
-    }
-    if (fingerprint.integrity.foreignKeyViolationCount !== "0") {
-      add({
-        code: "FOREIGN_KEY_CHECK",
-        subject: label,
-        source: fingerprint.integrity.foreignKeyViolationCount,
-      });
-    }
-    if (!fingerprint.integrity.integrityCheckOk)
-      add({ code: "INTEGRITY_CHECK", subject: label });
-    if (!fingerprint.integrity.quickCheckOk)
-      add({ code: "QUICK_CHECK", subject: label });
-    if (!fingerprint.curriculum.valid)
-      add({ code: "CORE_CURRICULUM", subject: label });
+  if (!fingerprint.applicationTables.matchesExpected) {
+    add({
+      code: "APPLICATION_TABLE_SET",
+      subject: label,
+      source: `missing:${fingerprint.applicationTables.missingExpected.join(",") || "-"}`,
+      target: `unexpected:${fingerprint.applicationTables.unexpected.join(",") || "-"}`,
+    });
   }
-
-  if (source.schema.semanticSignature !== target.schema.semanticSignature) {
-    add({ code: "SEMANTIC_SCHEMA", subject: "source-target" });
+  if (!fingerprint.namedIndexes.matchesExpected) {
+    add({
+      code: "NAMED_INDEX_SET",
+      subject: label,
+      source: `missing:${fingerprint.namedIndexes.missingExpected.join(",") || "-"}`,
+      target: `unexpected:${fingerprint.namedIndexes.unexpected.join(",") || "-"}`,
+    });
+  }
+  if (fingerprint.schema.foreignKeys.length !== contract.foreignKeyCount) {
+    add({
+      code: "FOREIGN_KEY_COUNT",
+      subject: label,
+      source: String(contract.foreignKeyCount),
+      target: String(fingerprint.schema.foreignKeys.length),
+    });
   }
   if (
-    source.namedIndexes.semanticSignature !==
-    target.namedIndexes.semanticSignature
+    fingerprint.schema.semanticSignature !== contract.schema.semanticSignature
   ) {
-    add({ code: "SEMANTIC_INDEX", subject: "source-target" });
+    // Name every table whose columns/foreign keys differ so an operator can
+    // act on the mismatch without the raw DDL.
+    const differing = contract.tables.filter(
+      (table) =>
+        fingerprint.schema.tableSignatures[table] !== undefined &&
+        fingerprint.schema.tableSignatures[table] !==
+          contract.schema.tableSignatures[table],
+    );
+    add({
+      code: "SEMANTIC_SCHEMA",
+      subject: label,
+      target: differing.length > 0 ? differing.join(",") : "table-set",
+    });
   }
+  if (
+    fingerprint.namedIndexes.semanticSignature !==
+    contract.indexes.semanticSignature
+  ) {
+    const differing = contract.namedIndexes.filter((name) => {
+      const actual = fingerprint.namedIndexes.actual.find(
+        (index) => index.name === name,
+      );
+      return (
+        actual !== undefined &&
+        hashDescriptor(actual) !== contract.indexes.indexSignatures[name]
+      );
+    });
+    add({
+      code: "SEMANTIC_INDEX",
+      subject: label,
+      target: differing.length > 0 ? differing.join(",") : "index-set",
+    });
+  }
+  if (fingerprint.integrity.foreignKeyViolationCount !== "0") {
+    add({
+      code: "FOREIGN_KEY_CHECK",
+      subject: label,
+      source: fingerprint.integrity.foreignKeyViolationCount,
+    });
+  }
+  if (!fingerprint.integrity.integrityCheckOk)
+    add({ code: "INTEGRITY_CHECK", subject: label });
+  if (!fingerprint.integrity.quickCheckOk)
+    add({ code: "QUICK_CHECK", subject: label });
+}
 
+function compareSourceAndTarget(
+  source: DatabaseFingerprint,
+  target: DatabaseFingerprint,
+  add: (mismatch: VerificationMismatch) => void,
+) {
   const allTables = [
     ...new Set([
       ...Object.keys(source.tableCounts),
@@ -1030,7 +1187,9 @@ function compareFingerprints(
     }
   }
 
-  return { passed: mismatches.length === 0, mismatches };
+  if (JSON.stringify(source.curriculum) !== JSON.stringify(target.curriculum)) {
+    add({ code: "CORE_CURRICULUM", subject: "source-target" });
+  }
 }
 
 function validateConnection(
@@ -1103,8 +1262,9 @@ function endpointIdentity(url: string) {
 }
 
 function validateOptions(options: MigrationVerifierOptions) {
-  validateConnection(options.source, "source");
   validateConnection(options.target, "target");
+  if (!options.source) return;
+  validateConnection(options.source, "source");
   if (
     endpointIdentity(options.source.url) ===
     endpointIdentity(options.target.url)
@@ -1120,46 +1280,136 @@ export async function verifyMigration(
   options: MigrationVerifierOptions,
 ): Promise<MigrationVerificationReport> {
   validateOptions(options);
-  const [source, target] = await Promise.all([
-    fingerprintMigrationDatabase(options.source),
-    fingerprintMigrationDatabase(options.target),
+  const contract =
+    options.contract ??
+    (await deriveSchemaContract(
+      options.migrationsDirectory
+        ? path.resolve(options.migrationsDirectory)
+        : undefined,
+    ));
+  const [target, source] = await Promise.all([
+    fingerprintMigrationDatabase(options.target, contract),
+    options.source
+      ? fingerprintMigrationDatabase(options.source, contract)
+      : Promise.resolve(null),
   ]);
-  const comparison = compareFingerprints(source, target);
-  const stagingTimestampProbe: StagingProbeResult = {
-    status: "not-run",
-    reason:
-      "This verifier is intentionally read-only. Perform any staging-only Prisma/raw-libSQL write-read-delete proof through a separately approved operator procedure after the target identity is verified.",
-  };
 
-  const passed = comparison.passed;
+  const mismatches: VerificationMismatch[] = [];
+  const add = (mismatch: VerificationMismatch) => mismatches.push(mismatch);
+  compareWithContract("target", target, contract, add);
+  if (source) {
+    compareWithContract("source", source, contract, add);
+    compareSourceAndTarget(source, target, add);
+  }
+  const passed = mismatches.length === 0;
+
   return {
     status: passed ? "passed" : "failed",
-    source,
+    contract: {
+      migrations: contract.migrations,
+      tableCount: contract.tables.length,
+      namedIndexCount: contract.namedIndexes.length,
+      foreignKeyCount: contract.foreignKeyCount,
+      schemaSignature: contract.schema.semanticSignature,
+      indexSignature: contract.indexes.semanticSignature,
+    },
     target,
-    comparison,
-    stagingTimestampProbe,
+    source,
+    comparison: { passed, mismatches },
+    stagingTimestampProbe: {
+      status: "not-run",
+      reason:
+        "This verifier is intentionally read-only. Perform any staging-only Prisma/raw-libSQL write-read-delete proof through a separately approved operator procedure after the target identity is verified.",
+    },
     coverage: {
       performed: [
-        "exact 27-table application inventory",
-        "semantic columns, foreign keys, and 48 named indexes excluding sqlite_autoindex",
+        `migration contract derived from ${contract.migrations.length} checked-in Prisma migrations applied to a temporary SQLite file (${contract.tables.length} tables, ${contract.namedIndexes.length} named indexes, ${contract.foreignKeyCount} foreign keys)`,
+        "exact application-table inventory against the contract (d1_migrations and _prisma_migrations ignored)",
+        "semantic columns, defaults, foreign keys, and named indexes including partial/expression indexes through normalized SQL signatures",
         "PRAGMA foreign_key_check, integrity_check, and quick_check",
-        "per-table row counts and deterministic redacted primary-key SHA-256 fingerprints",
-        "per-timestamp storage-class, UTC-day bucket, null, min/max, and parseability summaries",
-        "system curriculum owner/course and 5 lessons / 116 core joins + distinct vocabulary / 20 segments / 54 exercises checks",
-        "read-only per-timestamp storage-class and canonical UTC evidence",
+        ...(source
+          ? [
+              "source-vs-target per-table row counts and deterministic redacted primary-key SHA-256 fingerprints",
+              "source-vs-target per-timestamp storage-class, UTC-day bucket, null, min/max, and parseability summaries",
+              "source-vs-target curriculum summary (system owner, core course, lessons, segments, exercises, vocabulary joins)",
+            ]
+          : [
+              "no source database supplied: row counts, primary-key fingerprints, timestamps, and curriculum are reported for the target only",
+            ]),
       ],
       gaps: [
-        "This verifier does not export or import D1 data, create Turso databases, deploy Vercel, change DNS, or establish the Cloudflare maintenance/export fence.",
+        "This verifier does not export or import data, create Turso databases, deploy Vercel, change DNS, or establish a maintenance/export fence.",
         "This verifier never writes a timestamp probe. A staging-only Prisma/raw-libSQL write-read-delete proof requires separate, recorded operator approval after independently verifying the target database identity.",
         "It cannot prove a remote source remained immutable between independent read queries; run it inside the approved export fence and compare pre/post source reports.",
-        "It fingerprints primary keys and reports counts, not non-key learner content or row-by-row non-key values. A reviewed conversion needs additional purpose-built aggregate checks.",
-        "Expression-index and partial-index SQL are compared through normalized SHA-256 signatures; the current 48-index contract has no expression or partial index.",
+        "It fingerprints primary keys and reports counts, not non-key learner content or row-by-row non-key values. scripts/verify-backup-restore.ts hashes full rows for the backup drill.",
+        "CHECK constraints are part of the table DDL but are not surfaced by PRAGMA table_info; they are not compared.",
       ],
     },
   };
 }
 
-type ParsedCli = MigrationVerifierOptions | { help: true };
+/**
+ * Migrates a throw-away database and verifies it against the contract. A
+ * second, negative pass drops one named index and must fail, so a green
+ * self-test proves the verifier can still detect drift.
+ */
+export async function runSelfTest(migrationsDirectory?: string) {
+  const directory = await mkdtemp(
+    path.join(os.tmpdir(), "listenai-migration-selftest-"),
+  );
+  const databasePath = path.join(directory, "self-test.db");
+  const client = createClient({ url: sqliteFileUrl(databasePath) });
+  try {
+    await applyPrismaMigrations(
+      client,
+      migrationsDirectory ? path.resolve(migrationsDirectory) : undefined,
+    );
+    const positive = await verifyMigration({
+      target: { url: sqliteFileUrl(databasePath) },
+      migrationsDirectory,
+    });
+
+    const droppedIndex = positive.target.namedIndexes.actual[0]?.name ?? null;
+    if (droppedIndex) {
+      await client.execute(`DROP INDEX ${quoteIdentifier(droppedIndex)}`);
+    }
+    const negative = await verifyMigration({
+      target: { url: sqliteFileUrl(databasePath) },
+      migrationsDirectory,
+    });
+
+    const negativeDetected =
+      droppedIndex !== null &&
+      negative.status === "failed" &&
+      negative.comparison.mismatches.some(
+        (mismatch) => mismatch.code === "NAMED_INDEX_SET",
+      );
+    return {
+      status:
+        positive.status === "passed" && negativeDetected
+          ? ("passed" as const)
+          : ("failed" as const),
+      contract: positive.contract,
+      positive: {
+        status: positive.status,
+        mismatches: positive.comparison.mismatches,
+      },
+      negative: {
+        droppedIndex,
+        status: negative.status,
+        detected: negativeDetected,
+      },
+    };
+  } finally {
+    client.close();
+    await removeTemporaryDirectory(directory);
+  }
+}
+
+type ParsedCli =
+  | MigrationVerifierOptions
+  | { help: true }
+  | { selfTest: true; migrationsDirectory?: string };
 
 function cleanEnv(value: string | undefined) {
   const trimmed = value?.trim();
@@ -1168,14 +1418,19 @@ function cleanEnv(value: string | undefined) {
 
 function parseFlagValues(args: string[]) {
   const values = new Map<string, string>();
+  let selfTest = false;
 
   for (let index = 0; index < args.length; index += 1) {
     const argument = args[index];
     if (argument === "--help" || argument === "-h")
-      return { values, help: true };
+      return { values, help: true, selfTest };
+    if (argument === "--self-test") {
+      selfTest = true;
+      continue;
+    }
 
     const matched =
-      /^(--(?:source-url|target-url|source-token|target-token))(?:=(.*))?$/.exec(
+      /^(--(?:source-url|target-url|source-token|target-token|migrations-dir))(?:=(.*))?$/.exec(
         argument,
       );
     if (!matched) {
@@ -1196,7 +1451,7 @@ function parseFlagValues(args: string[]) {
     values.set(flag, value);
   }
 
-  return { values, help: false };
+  return { values, help: false, selfTest };
 }
 
 export function parseMigrationVerifierCli(
@@ -1205,6 +1460,13 @@ export function parseMigrationVerifierCli(
 ): ParsedCli {
   const parsed = parseFlagValues(args);
   if (parsed.help) return { help: true };
+  const migrationsDirectory = parsed.values.get("--migrations-dir");
+  if (parsed.selfTest) {
+    return {
+      selfTest: true,
+      ...(migrationsDirectory ? { migrationsDirectory } : {}),
+    };
+  }
 
   const sourceUrl =
     parsed.values.get("--source-url") ??
@@ -1218,28 +1480,35 @@ export function parseMigrationVerifierCli(
   const targetToken =
     parsed.values.get("--target-token") ??
     cleanEnv(env.MIGRATION_TARGET_AUTH_TOKEN);
-  if (!sourceUrl || !targetUrl) {
+  if (!targetUrl) {
     throw new MigrationVerifierError(
       "INVALID_INPUT",
-      "Explicit source and target URLs are required through arguments or MIGRATION_SOURCE_DATABASE_URL / MIGRATION_TARGET_DATABASE_URL.",
+      "An explicit target URL is required through --target-url or MIGRATION_TARGET_DATABASE_URL (add --source-url / MIGRATION_SOURCE_DATABASE_URL for copy evidence).",
     );
   }
   return {
-    source: {
-      url: sourceUrl,
-      ...(sourceToken ? { authToken: sourceToken } : {}),
-    },
     target: {
       url: targetUrl,
       ...(targetToken ? { authToken: targetToken } : {}),
     },
+    ...(sourceUrl
+      ? {
+          source: {
+            url: sourceUrl,
+            ...(sourceToken ? { authToken: sourceToken } : {}),
+          },
+        }
+      : {}),
+    ...(migrationsDirectory ? { migrationsDirectory } : {}),
   };
 }
 
 function usage() {
   return [
-    "Usage: npm run migration:verify -- --source-url <file:|libsql:|https:> --target-url <file:|libsql:|https:>",
-    "Prefer MIGRATION_SOURCE_DATABASE_URL, MIGRATION_TARGET_DATABASE_URL, and the matching *_AUTH_TOKEN environment variables so credentials do not enter shell history.",
+    "Usage: npm run migration:verify -- --target-url <file:|libsql:|https:> [--source-url <...>] [--migrations-dir prisma/migrations]",
+    "       npm run migration:verify -- --self-test",
+    "The expected schema is derived by applying prisma/migrations/** to a temporary SQLite file; the target must match it exactly.",
+    "Prefer MIGRATION_TARGET_DATABASE_URL, MIGRATION_SOURCE_DATABASE_URL, and the matching *_AUTH_TOKEN environment variables so credentials do not enter shell history.",
     "The tool is intentionally read-only. A staging write/read/delete proof is a separate approved operator procedure after target identity verification.",
   ].join("\n");
 }
@@ -1249,6 +1518,12 @@ async function main() {
     const options = parseMigrationVerifierCli();
     if ("help" in options) {
       process.stdout.write(`${usage()}\n`);
+      return;
+    }
+    if ("selfTest" in options) {
+      const result = await runSelfTest(options.migrationsDirectory);
+      process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
+      if (result.status !== "passed") process.exitCode = 1;
       return;
     }
     const report = await verifyMigration(options);

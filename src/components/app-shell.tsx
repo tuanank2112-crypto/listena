@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { clearOwnerIntents } from "@/lib/client-intent";
 import {
@@ -37,11 +37,26 @@ const teacherNav = [
   { href: "/teacher/courses", label: "Khóa học", icon: GraduationCap },
 ];
 
-export async function handleAppSignOut(ownerId?: string | null): Promise<void> {
+export type SignOutRouter = {
+  replace: (href: string) => void;
+  refresh: () => void;
+};
+
+/**
+ * Sign-out sequence (Plan13 P130 §4): drop this owner's queued intents, end
+ * the Auth.js session in place, then navigate with the router rather than a
+ * `callbackUrl` so no redirect target is ever taken from the request.
+ */
+export async function handleAppSignOut(
+  ownerId: string | null | undefined,
+  router: SignOutRouter,
+): Promise<void> {
   if (ownerId) {
     clearOwnerIntents(ownerId);
   }
-  await signOut({ callbackUrl: "/" });
+  await signOut({ redirect: false });
+  router.replace("/");
+  router.refresh();
 }
 
 export function syncOwnerIntentLifecycle(
@@ -55,6 +70,7 @@ export function syncOwnerIntentLifecycle(
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { data: session } = useSession();
   const isTeacher = session?.user?.role === "TEACHER" || session?.user?.role === "ADMIN";
   const navItems = isTeacher ? teacherNav : learnerNav;
@@ -116,27 +132,47 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <MessageSquareText className="h-4 w-4" /> Phản hồi
           </Link>
-          <button onClick={() => handleAppSignOut(session?.user?.id)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]">
+          <button
+            className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]"
+            data-testid="sign-out-desktop"
+            onClick={() => void handleAppSignOut(session?.user?.id, router)}
+            type="button"
+          >
             <LogOut className="h-4 w-4" /> Đăng xuất
           </button>
         </div>
       </aside>
 
-      <main className={cn("min-h-screen pb-24 lg:ml-[232px] lg:pb-0", isTeacher && "bg-[#030014] text-white")}>{children}</main>
+      <main className={cn("min-h-screen pb-32 lg:ml-[232px] lg:pb-0", isTeacher && "bg-[#030014] text-white")}>{children}</main>
 
-      {!isTeacher && (
-        <nav className="fixed inset-x-3 bottom-3 z-50 grid grid-cols-4 rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden">
-          {learnerNav.map((item) => {
-            const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link key={item.href} href={item.href} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] text-[10px] font-bold", active ? "bg-[#176b55] text-white" : "text-[#758078]")}>
-                <item.icon className="h-[18px] w-[18px]" />
-                <span className="max-w-full truncate">{item.label}</span>
-              </Link>
-            );
-          })}
-        </nav>
-      )}
+      {/* Mobile navigation for both roles, with a sign-out control so a
+          phone user is never stuck in a session (P130 §4). */}
+      <nav
+        aria-label="Điều hướng di động"
+        className={cn(
+          "fixed inset-x-3 bottom-3 z-50 grid rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden",
+          isTeacher ? "grid-cols-5" : "grid-cols-4",
+        )}
+      >
+        {navItems.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+          return (
+            <Link key={item.href} href={item.href} className={cn("flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] text-[10px] font-bold", active ? "bg-[#176b55] text-white" : "text-[#758078]")}>
+              <item.icon className="h-[18px] w-[18px]" />
+              <span className="max-w-full truncate">{item.label}</span>
+            </Link>
+          );
+        })}
+        <button
+          className="flex min-h-12 flex-col items-center justify-center gap-1 rounded-[16px] text-[10px] font-bold text-[#758078]"
+          data-testid="sign-out-mobile"
+          onClick={() => void handleAppSignOut(session?.user?.id, router)}
+          type="button"
+        >
+          <LogOut className="h-[18px] w-[18px]" />
+          <span className="max-w-full truncate">Đăng xuất</span>
+        </button>
+      </nav>
     </div>
   );
 }

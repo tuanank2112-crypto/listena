@@ -441,3 +441,43 @@ describe("adaptive game service", () => {
     }));
   });
 });
+
+describe("adaptive game candidate pool (Plan13 G1: seeded sample, not alphabetical head)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.timestamp.mockImplementation((value: Date) => value.toISOString().replace("Z", "+00:00"));
+  });
+
+  it("reads up to 300 curriculum words, keeps private words, and does not play only the first 56 by lemma", async () => {
+    const curriculum = Array.from({ length: 120 }, (_, index) => vocabulary(`c${String(index + 1).padStart(3, "0")}`));
+    const privateWords = [vocabulary("p001"), vocabulary("p002")];
+    mocks.profile.mockResolvedValue({ vocabularyMastery: 0.25, spellingMastery: 0.25 });
+    mocks.skillMastery.mockResolvedValue([]);
+    mocks.vocabulary.mockImplementation(async (query: { where: Record<string, unknown> }) =>
+      "personalizedLessons" in query.where ? privateWords : curriculum,
+    );
+    mocks.vocabularyMastery.mockResolvedValue([]);
+    mocks.evidence.mockResolvedValue([]);
+    mocks.gameRuns.mockResolvedValue([]);
+    mocks.atomicBatch.mockResolvedValue(Array.from({ length: 10 }, () => ({ changes: 1 })));
+
+    const run = await createAdaptiveGameRun("learner-1", { mode: "QUIZ" });
+
+    expect(mocks.vocabulary).toHaveBeenCalledWith(expect.objectContaining({
+      where: { lessons: { some: { lesson: { status: "PUBLISHED" } } } },
+      take: 300,
+    }));
+    // Mastery/evidence lookups are bounded to the 56-word pool that was drawn.
+    const masteryQuery = mocks.vocabularyMastery.mock.calls[0]?.[0] as {
+      where: { vocabularyItemId: { in: string[] } };
+    };
+    expect(masteryQuery.where.vocabularyItemId.in).toHaveLength(56);
+    expect(masteryQuery.where.vocabularyItemId.in).toEqual(expect.arrayContaining(["p001", "p002"]));
+    const alphabeticalHead = new Set(curriculum.slice(0, 54).map((item) => item.id));
+    const drewOnlyAlphabeticalHead = masteryQuery.where.vocabularyItemId.in
+      .filter((id) => !id.startsWith("p"))
+      .every((id) => alphabeticalHead.has(id));
+    expect(drewOnlyAlphabeticalHead).toBe(false);
+    expect(run.rounds).toHaveLength(8);
+  });
+});

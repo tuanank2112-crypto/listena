@@ -49,7 +49,7 @@ export type EvidenceRef = {
 export type CausalBasis =
   | { kind: "EVIDENCE"; skillKey: string; refs: EvidenceRef[] }
   | { kind: "DUE_REVIEW"; vocabularyItemId: string; dueAt: string }
-  | { kind: "DECLARED_GOAL"; intentRevision: number }
+  | { kind: "DECLARED_GOAL"; intentRevision: string | null }
   | { kind: "ACTIVE_SESSION"; sessionId: string }
   | { kind: "INSUFFICIENT_EVIDENCE" };
 

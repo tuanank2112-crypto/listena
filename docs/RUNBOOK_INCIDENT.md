@@ -1,6 +1,6 @@
 # ListenAI — Production Incident Response Runbook
 
-This runbook defines the emergency response procedures for the 4 critical incident scenarios in ListenAI production environments (Vercel, Turso libSQL, AI providers, Email).
+This runbook defines the emergency response procedures for the 5 critical incident scenarios in ListenAI production environments (Vercel, Turso libSQL, AI providers, Email).
 
 ---
 
@@ -38,7 +38,7 @@ This runbook defines the emergency response procedures for the 4 critical incide
 ### Symptoms
 - Tutor turn generation returns 503 or `AIUnavailableError`.
 - Lesson generation on teacher portal hangs or fails.
-- Logs show HTTP 429 (`rate_limited`) or 502/503 from OpenAI/Kira provider.
+- Logs show HTTP 429 (`rate_limited`) or 502/503 from the Vyce (or OpenAI) provider.
 
 ### Immediate Remediation
 1. **Verify Circuit Breakers & Cooldowns:**
@@ -47,7 +47,7 @@ This runbook defines the emergency response procedures for the 4 critical incide
 2. **Failover to Alternate Provider:**
    - Switch active provider via environment configuration without code change:
      ```env
-     AI_PROVIDER_DEFAULT=kira  # or openai
+     AI_PROVIDER=vyce  # or openai (requires OPENAI_* variables)
      ```
 3. **Graceful Fallback Mode:**
    - The UI automatically falls back to typed contextual support:
@@ -96,7 +96,31 @@ This runbook defines the emergency response procedures for the 4 critical incide
      ```
    - Update `TURSO_AUTH_TOKEN` in Vercel.
 3. **AI Provider Key Revocation:**
-   - Immediately delete the compromised key in OpenAI / Kira developer console.
-   - Issue a replacement key with hard spending caps and update `OPENAI_API_KEY`.
+   - Immediately delete the compromised key in the Vyce / OpenAI developer console.
+   - Issue a replacement key with hard spending caps and update `VYCE_API_KEY` (or `OPENAI_API_KEY`).
 4. **Audit Trail Inspection:**
    - Inspect query and login logs over the last 48 hours for unauthorized IP addresses or abnormal mutation bursts.
+
+---
+
+## 5. Incident Scenario E: AI Gateway 524 (upstream timeout on long generations) — Plan13
+
+### Symptoms
+- The AI gateway (Vyce, fronted by Cloudflare) answers **HTTP 524** after roughly 100–125 s. Measured 2026-09-17: a personalized-lesson output of ~2,200 tokens hit 524 at ~125 s, while ~1,200-token outputs returned in 7–10 s (n=7).
+- `AIInteraction` rows with `success = 0` and an `upstream_failure` / `timeout` reason; routes return typed `AI_UNAVAILABLE` with `Retry-After`.
+- Personalized lessons stay `GENERATING` until the 210 s lease expires and then flip to `FAILED`; learners see "Thử lại".
+- Not a symptom: `ACTIVE_SESSION_EXISTS` (that is the empty-session case handled by abandon / `replaceActive`).
+
+### Immediate Remediation
+1. **Diagnose from the ledger, never from guesswork:**
+   ```sql
+   SELECT purpose, success, errorCode, durationMs, createdAt
+   FROM "AIInteraction" ORDER BY createdAt DESC LIMIT 50;
+   ```
+   Long `durationMs` (> 100 s) with failures on `personalized_lesson` / `teacher_generate_lesson` confirms the gateway ceiling rather than a provider outage.
+2. **Do NOT raise the provider timeout (180 s) or the route `maxDuration` (200 s).** Both are fixed decisions (Plan13, 18:50). The ceiling is the gateway's, not ours; longer waits only tie up leases.
+3. **Confirm the compact generation profile is in effect** (SPEC-P131 §4): `maxOutputTokens` 1,400, exactly 4 exercises, 4–5 vocabulary items, transcript ≤ 700 characters. A deploy that regressed these limits reproduces the 524.
+4. **Confirm the async flow is live:** `POST /api/learner/personalized-lessons` must answer **202** with `{ lesson: { status: "GENERATING" }, retryAfterSeconds: 3 }` and the client polls `GET /{id}` for up to 210 s. A synchronous 5xx after ~125 s means the deploy predates Plan13.
+5. **Unstick learners:** a learner is never blocked by a stuck AI session — `POST /api/learning-sessions/{id}/abandon` or "Bắt đầu phiên mới" (`replaceActive: true`) always works; `FAILED` personalized lessons expose "Thử lại". Reservations self-expire after the 210 s lease (`leaseExpiresAt`).
+6. **Provider-wide degradation:** fall back to Scenario B (switch `AI_PROVIDER` / keys). Pre-authored lessons, dictation and SM-2 flashcards keep working without AI.
+7. **After recovery:** spot-check with the live smoke (202 → poll → READY in < 60 s, n ≥ 2) before closing the incident.

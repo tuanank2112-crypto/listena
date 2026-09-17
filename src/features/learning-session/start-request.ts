@@ -7,6 +7,8 @@ export type StartSessionRequest = {
   mode: LearningSessionMode;
   goal?: string;
   scenarioKey?: string;
+  /** Plan13 SPEC-P131 §3: the learner chose "start a new session" over resuming. */
+  replaceActive?: boolean;
 };
 
 type StartPayload = {
@@ -14,10 +16,17 @@ type StartPayload = {
   error?: string;
   code?: string;
   retryAfterSeconds?: number;
+  /** Present on ACTIVE_SESSION_EXISTS so the client can offer resume or replace. */
+  activeSessionId?: string;
 };
 
 export class SessionStartRequestError extends Error {
-  constructor(message: string, readonly code?: string) {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly activeSessionId?: string,
+    readonly retryAfterSeconds?: number,
+  ) {
     super(message);
     this.name = "SessionStartRequestError";
   }
@@ -66,7 +75,12 @@ export async function requestSessionStart(
     await wait(startRetryDelayMs(retryAfterSeconds), options.signal);
     return requestSessionStart(input, { ...options, attempt: attempt + 1, fetcher, wait });
   }
-  throw new SessionStartRequestError(payload.error || "Chưa thể mở phiên AI.", payload.code);
+  throw new SessionStartRequestError(
+    payload.error || "Chưa thể mở phiên AI.",
+    payload.code,
+    typeof payload.activeSessionId === "string" ? payload.activeSessionId : undefined,
+    Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0 ? retryAfterSeconds : undefined,
+  );
 }
 
 function waitForStartRetry(delayMs: number, signal?: AbortSignal) {

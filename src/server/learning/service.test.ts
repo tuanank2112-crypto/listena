@@ -4,7 +4,8 @@ import type { LearningSessionRecord, LearningSessionSnapshot } from "./repositor
 import { createMissionState, getMissionTemplate } from "@/server/ai/mission-templates";
 import { planDailyQuest } from "@/server/ai/daily-quest";
 import { createHash } from "node:crypto";
-import { AIUnavailableError } from "@/server/ai/errors";
+import { AIMisconfiguredError, AIRateLimitedError, AIUnavailableError } from "@/server/ai/errors";
+import { DatabaseUnavailableError } from "@/lib/database-errors";
 import { createEvaluateTurnFallback, createStartMissionFallback } from "@/server/ai/tutor-fallback";
 
 const mocks = vi.hoisted(() => ({
@@ -60,7 +61,16 @@ vi.mock("@/lib/libsql-batch", () => ({
   executeAtomicLibSqlBatch: mocks.atomicBatch,
 }));
 
-import { completeLearningSession, createLearningSession, submitLearningTurn } from "./service";
+import {
+  abandonLearningSession,
+  completeLearningSession,
+  computeStudyMinutes,
+  createLearningSession,
+  MAX_SESSION_EVENTS,
+  recordLearningEvent,
+  START_REQUEST_PENDING_LEASE_MS,
+  submitLearningTurn,
+} from "./service";
 
 const template = getMissionTemplate("lost-luggage");
 const initialState = createMissionState(template);
@@ -478,7 +488,7 @@ describe("session start idempotency ledger", () => {
       mode: "MISSION",
       scenarioKey: "lost-luggage",
     }, {
-      updatedAt: new Date(now.getTime() - 120_001),
+      updatedAt: new Date(now.getTime() - START_REQUEST_PENDING_LEASE_MS - 1),
     }));
 
     await expect(createLearningSession(userId, input)).rejects.toMatchObject({
@@ -838,7 +848,9 @@ describe("session completion accounting", () => {
 
   it("counts natural completion once even when the final turn and complete endpoint are retried", async () => {
     record.stateJson = JSON.stringify({ ...initialState, phase: "BOSS", turnCount: 7 });
-    const input = { ...turnInput, content: "I lost my black suitcase" };
+    // Plan13 SPEC-P132 §9: minutes come from response time (4 min) + 30s for
+    // the AI reply, not from wall-clock since startedAt (which would be 10).
+    const input = { ...turnInput, content: "I lost my black suitcase", responseTimeMs: 240_000 };
 
     const result = await submitLearningTurn(userId, sessionId, input);
     await submitLearningTurn(userId, sessionId, input);
@@ -846,7 +858,7 @@ describe("session completion accounting", () => {
 
     expect(result.session).toMatchObject({ status: "COMPLETED", completionOutcome: "COMPLETED", state: { phase: "DEBRIEF", successfulTurns: 1 } });
     expect(tx.learnerProfile.updateMany).toHaveBeenCalledExactlyOnceWith({
-      where: { userId }, data: { totalStudyMinutes: { increment: 10 }, lastActivityAt: now },
+      where: { userId }, data: { totalStudyMinutes: { increment: 5 }, lastActivityAt: now },
     });
     expect(tx.learningSession.updateMany).toHaveBeenCalledOnce();
   });
@@ -860,8 +872,13 @@ describe("session completion accounting", () => {
     expect(tx.learnerProfile.updateMany).toHaveBeenCalledOnce();
   });
 
-  it.each([[0, 1], [10, 10], [300, 120]])("counts manual completion with %i elapsed minutes as %i, only once", async (elapsed, expected) => {
-    record.startedAt = new Date(now.getTime() - elapsed * 60_000);
+  it.each([[0, 1], [10, 10], [300, 120]])("counts manual completion with %i minutes of learner response time as %i, only once", async (elapsed, expected) => {
+    // Wall-clock is irrelevant now: a tab left open for a day earns nothing.
+    record.startedAt = new Date(now.getTime() - 24 * 60 * 60_000);
+    record.turns.push({
+      id: "learner-turn-minutes", sequence: 1, clientTurnId: "learner-minutes", actor: "LEARNER", turnType: "RESPONSE",
+      contentJson: JSON.stringify({ message: "hello", responseTimeMs: elapsed * 60_000 }), skillTags: "", createdAt: now,
+    } as never);
     addEvidence();
     const first = await completeLearningSession(userId, sessionId);
     const second = await completeLearningSession(userId, sessionId);
@@ -894,5 +911,194 @@ describe("session completion accounting", () => {
     tx.learningSession.updateMany.mockResolvedValueOnce({ count: 0 });
     await expect(completeLearningSession(userId, sessionId)).rejects.toMatchObject({ status: 409 });
     expect(tx.learnerProfile.updateMany).not.toHaveBeenCalled();
+  });
+});
+
+
+// Plan13 SPEC-P131 §2 (AI2/S2): every failure before a session graph exists is
+// a FAILED ledger row with a typed code; UNKNOWN is reserved for failures after
+// the provider returned.
+describe("Plan13 start failure classification", () => {
+  const input = { clientStartId: "00000000-0000-4000-8000-000000000501", mode: "MISSION" as const, scenarioKey: "cafe-order" };
+
+  function ledgerWrites() {
+    return mocks.atomicBatch.mock.calls
+      .map(([statements]) => (statements as AtomicStatement[])[0])
+      .filter((statement) => statement?.sql.includes('UPDATE "LearningSessionStartRequest"') && statement.sql.includes('SET "status" = ?'))
+      .map((statement) => statement!.values ?? []);
+  }
+
+  it("records a misconfigured provider as FAILED with no Retry-After, never UNKNOWN", async () => {
+    mocks.start.mockRejectedValue(new AIMisconfiguredError({ reason: "upstream_model_not_found" }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({ code: "AI_MISCONFIGURED", status: 503 });
+
+    expect(ledgerWrites()).toEqual([["FAILED", "AI_MISCONFIGURED", null, expect.any(String), expect.any(String), userId, expect.any(String)]]);
+    expect(mocks.settleAICall).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ success: false, failureReason: "upstream_model_not_found" }));
+  });
+
+  it("stores the upstream Retry-After for a rate limit and throws the typed 503", async () => {
+    mocks.start.mockRejectedValue(new AIRateLimitedError({ reason: "rate_limited", retryAfterSeconds: 42 }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({ code: "AI_RATE_LIMITED", details: { retryAfterSeconds: 42 } });
+
+    expect(ledgerWrites()).toEqual([["FAILED", "AI_RATE_LIMITED", 42, expect.any(String), expect.any(String), userId, expect.any(String)]]);
+  });
+
+  it("turns a provider timeout into FAILED with a retry hint instead of START_OUTCOME_UNKNOWN", async () => {
+    // Red on the pre-Plan13 code: a timeout was marked UNKNOWN and the learner
+    // saw "kết quả không rõ" with every click burning another reservation.
+    mocks.start.mockRejectedValue(new AIUnavailableError({ reason: "timeout" }));
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({ code: "AI_UNAVAILABLE", details: { reason: "timeout" } });
+
+    expect(ledgerWrites()).toEqual([["FAILED", "AI_UNAVAILABLE", 15, expect.any(String), expect.any(String), userId, expect.any(String)]]);
+    expect(mocks.atomicBatch.mock.calls.some(([statements]) => (statements as AtomicStatement[])[0]?.sql.includes("'UNKNOWN'"))).toBe(false);
+  });
+
+  it("marks a database outage before the provider call as FAILED with a 5 second retry", async () => {
+    mocks.reserveAICall.mockRejectedValue(new DatabaseUnavailableError());
+
+    await expect(createLearningSession(userId, input)).rejects.toBeInstanceOf(DatabaseUnavailableError);
+
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(ledgerWrites()).toEqual([["FAILED", "DATABASE_UNAVAILABLE", 5, expect.any(String), expect.any(String), userId, expect.any(String)]]);
+  });
+
+  it("replays a stored rate limit and a stored database failure with their retry windows", async () => {
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input, { status: "FAILED", errorCode: "AI_RATE_LIMITED", errorRetryAfterSeconds: 30 }));
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({ code: "AI_RATE_LIMITED", details: { retryAfterSeconds: 30 } });
+
+    mocks.startRequest.mockResolvedValue(savedStartRequest(input, { status: "FAILED", errorCode: "DATABASE_UNAVAILABLE", errorRetryAfterSeconds: 5 }));
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({ code: "START_FAILED", status: 409, retryAfterSeconds: 5 });
+    expect(mocks.start).not.toHaveBeenCalled();
+  });
+});
+
+// Plan13 SPEC-P131 §3 (finding S1): a learner is never trapped by an open session.
+describe("Plan13 session exit and replaceActive", () => {
+  const input = { clientStartId: "00000000-0000-4000-8000-000000000601", mode: "LESSON_COACH" as const, lessonId: "00000000-0000-4000-8000-000000000602" };
+
+  beforeEach(() => {
+    mocks.lessonForStart.mockResolvedValue({
+      id: input.lessonId, title: "Listen at work", topic: "listening", transcript: "A short conversation.",
+      learningObjectives: "listening", cefrLevel: "A2", vocabulary: [],
+    });
+  });
+
+  function abandonBatches() {
+    return mocks.atomicBatch.mock.calls
+      .map(([statements]) => statements as AtomicStatement[])
+      .filter((statements) => statements[1]?.sql.includes("SET \"status\" = 'ABANDONED'"));
+  }
+
+  it("answers ACTIVE_SESSION_EXISTS with the open session id when a fresh empty Mission is open", async () => {
+    // Red on the pre-Plan13 code: the 409 carried no activeSessionId.
+    mocks.activeSession.mockResolvedValue({ id: "mission-1", startedAt: new Date(now.getTime() - 30_000) });
+
+    await expect(createLearningSession(userId, input)).rejects.toMatchObject({
+      code: "ACTIVE_SESSION_EXISTS", status: 409, body: { activeSessionId: "mission-1" },
+    });
+    expect(mocks.start).not.toHaveBeenCalled();
+    expect(abandonBatches()).toHaveLength(0);
+  });
+
+  it("abandons the empty open session and starts the Coach session when the learner chooses replaceActive", async () => {
+    mocks.activeSession.mockResolvedValue({ id: "mission-1", startedAt: new Date(now.getTime() - 30_000) });
+    mocks.snapshot.mockImplementation(async (_userId: string, id: string) =>
+      id === "mission-1"
+        ? { ...structuredClone(record), id: "mission-1", status: "ACTIVE", turns: [] } as unknown as LearningSessionSnapshot
+        : structuredClone(record) as unknown as LearningSessionSnapshot);
+
+    const result = await createLearningSession(userId, { ...input, replaceActive: true });
+
+    expect(result.idempotent).toBe(false);
+    expect(abandonBatches()).toHaveLength(1);
+    const [insertTurn, update] = abandonBatches()[0]!;
+    expect(insertTurn?.values).toContain("system:abandon:mission-1");
+    expect(update?.values).toContain("mission-1");
+    expect(mocks.start).toHaveBeenCalledOnce();
+  });
+
+  it("auto-abandons an empty session older than two minutes without an explicit choice", async () => {
+    mocks.activeSession.mockResolvedValue({ id: "mission-old", startedAt: new Date(now.getTime() - 3 * 60_000) });
+    mocks.snapshot.mockImplementation(async (_userId: string, id: string) =>
+      ({ ...structuredClone(record), id, status: "ACTIVE", turns: [] }) as unknown as LearningSessionSnapshot);
+
+    await expect(createLearningSession(userId, input)).resolves.toMatchObject({ idempotent: false });
+    expect(abandonBatches()).toHaveLength(1);
+  });
+
+  it("completes (PARTIAL) instead of abandoning a replaced session that already holds evidence", async () => {
+    mocks.activeSession.mockResolvedValue({ id: sessionId, startedAt: new Date(now.getTime() - 30_000) });
+    addEvidence();
+
+    await expect(createLearningSession(userId, { ...input, replaceActive: true })).resolves.toMatchObject({ idempotent: false });
+    expect(abandonBatches()).toHaveLength(0);
+    expect(tx.learningSession.updateMany).toHaveBeenCalledWith(expect.objectContaining({ data: expect.objectContaining({ status: "COMPLETED" }) }));
+  });
+
+  it("abandons an ACTIVE session with a SYSTEM turn and completedAt, idempotently", async () => {
+    await abandonLearningSession(userId, sessionId);
+
+    expect(abandonBatches()).toHaveLength(1);
+    const [insertTurn, update] = abandonBatches()[0]!;
+    expect(insertTurn?.sql).toContain("'SYSTEM'");
+    expect(insertTurn?.sql).toContain("NOT EXISTS");
+    expect(update?.sql).toContain('"completedAt" = ?');
+    expect(update?.sql).toContain("AND \"status\" = 'ACTIVE'");
+  });
+
+  it("returns a COMPLETED or ABANDONED session unchanged without writing", async () => {
+    record.status = "COMPLETED";
+    await expect(abandonLearningSession(userId, sessionId)).resolves.toMatchObject({ session: { status: "COMPLETED" } });
+    record.status = "ABANDONED";
+    await expect(abandonLearningSession(userId, sessionId)).resolves.toMatchObject({ session: { status: "ABANDONED", completionOutcome: "ABANDONED" } });
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("rejects abandoning a session the learner does not own", async () => {
+    mocks.snapshot.mockResolvedValue(null);
+    await expect(abandonLearningSession("someone-else", sessionId)).rejects.toMatchObject({ code: "SESSION_NOT_FOUND", status: 404 });
+  });
+});
+
+// Plan13 SPEC-P132 §9: session housekeeping rules owned by this module.
+describe("Plan13 session events and study minutes", () => {
+  it("caps PAUSE/RESUME/HINT/REPLAY rows at 200 per session with a typed 429", async () => {
+    record.turns = Array.from({ length: MAX_SESSION_EVENTS }, (_, index) => ({
+      id: `event-${index}`, sequence: index + 1, clientTurnId: `event:e${index}`, actor: "SYSTEM", turnType: "RESULT",
+      contentJson: JSON.stringify({ event: "PAUSE", value: 1 }), skillTags: "", createdAt: now,
+    })) as never;
+
+    await expect(recordLearningEvent(userId, sessionId, { type: "PAUSE", clientEventId: "pause-final-1" }))
+      .rejects.toMatchObject({ code: "EVENT_LIMIT", status: 429 });
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("makes the event insert itself refuse a 201st row", async () => {
+    await recordLearningEvent(userId, sessionId, { type: "HINT", clientEventId: "hint-1234" });
+    const [insert] = mocks.atomicBatch.mock.calls[0]![0] as AtomicStatement[];
+    expect(insert?.sql).toContain('"actor" = \'SYSTEM\'');
+    expect(insert?.values).toContain(MAX_SESSION_EVENTS);
+  });
+
+  it("treats ABANDON on a COMPLETED session as a no-op without inserting a row", async () => {
+    record.status = "COMPLETED";
+    await expect(recordLearningEvent(userId, sessionId, { type: "ABANDON", clientEventId: "abandon-1234" })).resolves.toMatchObject({ session: { status: "COMPLETED" } });
+    expect(mocks.atomicBatch).not.toHaveBeenCalled();
+  });
+
+  it("derives study minutes from learner response time plus 30s per AI turn, capped at 120", () => {
+    const turns = [
+      { actor: "AI", contentJson: "{}" },
+      { actor: "LEARNER", contentJson: JSON.stringify({ responseTimeMs: 90_000 }) },
+      { actor: "AI", contentJson: "{}" },
+      { actor: "SYSTEM", contentJson: JSON.stringify({ event: "PAUSE" }) },
+    ];
+    expect(computeStudyMinutes(turns)).toBe(3);
+    expect(computeStudyMinutes(turns, { responseTimeMs: 60_000, aiTurns: 1 })).toBe(4);
+    expect(computeStudyMinutes([])).toBe(1);
+    expect(computeStudyMinutes([{ actor: "LEARNER", contentJson: JSON.stringify({ responseTimeMs: 30 * 60 * 60_000 }) }])).toBe(120);
   });
 });

@@ -12,7 +12,7 @@ import type {
   StructuredAIResponse,
 } from "@/server/ai/openai-responses-provider";
 
-export interface KiraChatCompletionsProviderConfig {
+export interface VyceChatCompletionsProviderConfig {
   apiKey: string;
   model?: string;
   baseUrl?: string;
@@ -27,39 +27,32 @@ type ChatCompletionsPayload = {
   }>;
 };
 
-const DEFAULT_BASE_URL = "https://kiraai.vn/api/v1";
-
 /**
- * The only endpoints this provider may send the API key to.
+ * The only endpoint this provider may send the API key to.
  *
- * The allowlist is in code, not configuration, on purpose: an attacker who can
- * set `KIRAAI_BASE_URL` must not be able to redirect the credential to a host
- * of their choosing. Adding an entry is a reviewable change, and anything else
- * still fails closed.
- *
- * Both endpoints speak the same OpenAI-compatible Chat Completions contract,
- * which is why one client serves them.
+ * Vyce AI (decision 2026-09-17, user) is the sole upstream: an OpenAI-compatible
+ * Chat Completions gateway in front of the model vendors. The allowlist is in
+ * code, not configuration, on purpose: an attacker who can set `VYCE_BASE_URL`
+ * must not be able to redirect the credential to a host of their choosing.
+ * Adding an entry is a reviewable change, and anything else still fails closed.
  */
-const SUPPORTED_ENDPOINTS: ReadonlyArray<{ origin: string; path: string }> = [
-  { origin: "https://kiraai.vn", path: "/api/v1" },
-  { origin: "https://vyceai.com", path: "/v1" },
-];
+const VYCE_API_ORIGIN = "https://vyceai.com";
+const VYCE_API_PATH = "/v1";
+const DEFAULT_BASE_URL = `${VYCE_API_ORIGIN}${VYCE_API_PATH}`;
 /**
- * Must name a model that exists in the provider catalogue. `glm-5.3-flash-free`
- * was the previous default and is absent from it, so any deployment that omitted
- * `KIRAAI_MODEL` fell back to a guaranteed 404. Verify a replacement against
- * `GET /models` before changing this.
+ * Must name a model that exists in the Vyce catalogue (`GET /models`). A default
+ * that is absent from the catalogue turns every tutor call into a guaranteed
+ * 404, so verify with `npm run ai:doctor -- --probe` before changing this.
  */
-const DEFAULT_MODEL = "ling-3.0-flash-free";
+const DEFAULT_MODEL = "claude-sonnet-4-6";
 /**
  * Sized against the provider, not against a round number.
  *
- * The configured upstream (vyceai.com) is an API gateway in front of the model
- * vendors. Measured on 2026-09-17 with a lesson-sized request (2,200 output
- * tokens): completions arrived after 25-28s on a good try, 74s on a slow one,
- * and the gateway itself gave up at about 125s on the worst ones. A 50s cap
- * therefore aborted a valid generation about half the time and the learner
- * only ever saw "Gia sư AI hiện chưa sẵn sàng" (reason `timeout`).
+ * Measured on 2026-09-17 with a lesson-sized request (2,200 output tokens):
+ * completions arrived after 25-28s on a good try, 74s on a slow one, and the
+ * gateway itself gave up at about 125s on the worst ones. A 50s cap therefore
+ * aborted a valid generation about half the time and the learner only ever
+ * saw "Gia sư AI hiện chưa sẵn sàng" (reason `timeout`).
  *
  * 180s (decision 2026-09-17 18:50, user) is long enough to outlast the
  * gateway's own timeout, so a stalled request ends with the upstream's typed
@@ -75,22 +68,22 @@ const MAX_SCHEMA_CHARS = 32_000;
 const MAX_OUTPUT_JSON_CHARS = 64_000;
 
 /**
- * Kira documents `model`, `messages`, and `max_tokens` for its compatible
- * Chat Completions endpoint, not the Responses API or structured-output
- * extensions. JSON is instructed in the system message, then bounded and
- * parsed locally; each caller's existing Zod validator remains authoritative.
+ * Vyce exposes the plain Chat Completions contract (`model`, `messages`,
+ * `max_tokens`), not the Responses API or structured-output extensions. JSON
+ * is instructed in the system message, then bounded and parsed locally; each
+ * caller's existing Zod validator remains authoritative.
  */
-export class KiraChatCompletionsProvider implements StructuredAIProvider {
-  readonly providerName = "kira" as const;
+export class VyceChatCompletionsProvider implements StructuredAIProvider {
+  readonly providerName = "vyce" as const;
   readonly modelName: string;
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
 
-  constructor(config: KiraChatCompletionsProviderConfig) {
+  constructor(config: VyceChatCompletionsProviderConfig) {
     this.apiKey = config.apiKey;
     this.modelName = config.model?.trim() || DEFAULT_MODEL;
-    this.baseUrl = resolveKiraBaseUrl(config.baseUrl);
+    this.baseUrl = resolveVyceBaseUrl(config.baseUrl);
     this.timeoutMs = Math.min(
       Math.max(config.timeoutMs ?? DEFAULT_TIMEOUT_MS, 1),
       MAX_TIMEOUT_MS,
@@ -236,11 +229,15 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
           });
         }
 
+        // A 400 is a rejected *request*, not a broken deployment: the same
+        // deployment serves other calls, so the learner may retry (Plan13
+        // SPEC-P131 §2). Only 401/403/404/model_not_found are permanent.
         throw new AIUnavailableError({
-          reason: "upstream_failure",
+          reason: response.status === 400 ? "upstream_invalid_request" : "upstream_failure",
           provider: this.providerName,
           model: this.modelName,
           requestId,
+          retryAfterSeconds: DEFAULT_RETRY_AFTER_SECONDS,
         });
       }
 
@@ -317,7 +314,7 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
           requestId: resolvedRequestId,
           inputHash,
         },
-        "Kira chat completions request completed",
+        "Vyce chat completions request completed",
       );
 
       return {
@@ -332,26 +329,23 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
   }
 }
 
-export function resolveKiraBaseUrl(baseUrl?: string) {
+export function resolveVyceBaseUrl(baseUrl?: string) {
   const candidate = baseUrl?.trim() || DEFAULT_BASE_URL;
   try {
     const parsed = new URL(candidate);
     const normalizedPath = parsed.pathname.replace(/\/+$/, "") || "/";
-    const match = SUPPORTED_ENDPOINTS.find(
-      (endpoint) =>
-        endpoint.origin === parsed.origin && endpoint.path === normalizedPath,
-    );
     if (
-      !match ||
       parsed.protocol !== "https:" ||
+      parsed.origin !== VYCE_API_ORIGIN ||
+      normalizedPath !== VYCE_API_PATH ||
       parsed.username ||
       parsed.password ||
       parsed.search ||
       parsed.hash
     ) {
-      throw new Error("Base URL must be one of the supported provider endpoints");
+      throw new Error("Base URL must be the documented Vyce API endpoint");
     }
-    return `${match.origin}${match.path}`;
+    return DEFAULT_BASE_URL;
   } catch {
     throw new AIUnavailableError({ reason: "invalid_provider_configuration" });
   }
@@ -373,7 +367,7 @@ function extractOutputText(payload: ChatCompletionsPayload) {
 }
 
 /**
- * Kira's Chat Completions-compatible models occasionally obey an otherwise
+ * Chat Completions models behind the gateway occasionally obey an otherwise
  * valid JSON instruction by returning a complete `json` Markdown fence. We
  * accept only a single whole-message fence, then keep JSON.parse and each
  * caller's Zod schema as the authoritative validation boundary. Prose before
@@ -418,11 +412,16 @@ function getRequestId(response: Response) {
   );
 }
 
-function parseRetryAfter(value: string | null) {
+/** Fallback when the upstream omits or mangles `Retry-After` (Plan13: 15s). */
+const DEFAULT_RETRY_AFTER_SECONDS = 15;
+
+export function parseRetryAfter(value: string | null) {
+  // `Number(null)` is 0 and `Number("")` is 0: both are finite, so the old
+  // fallback never fired and a header-less 429 reported a 1 second wait.
+  if (value === null || !value.trim()) return DEFAULT_RETRY_AFTER_SECONDS;
   const parsed = Number(value);
-  return Number.isFinite(parsed)
-    ? Math.min(Math.max(Math.ceil(parsed), 1), 60)
-    : 15;
+  if (!Number.isFinite(parsed) || parsed <= 0) return DEFAULT_RETRY_AFTER_SECONDS;
+  return Math.min(Math.max(Math.ceil(parsed), 1), 60);
 }
 
 function boundMaxOutputTokens(value: number) {
@@ -443,7 +442,7 @@ function logProviderFailure(input: {
   upstreamCode?: string;
   upstreamType?: string;
 }) {
-  logger.warn(input, "Kira chat completions request unavailable");
+  logger.warn(input, "Vyce chat completions request unavailable");
 }
 
 /**
@@ -476,7 +475,6 @@ async function readUpstreamErrorCodes(response: Response) {
  */
 function isPermanentConfigurationStatus(status: number, upstreamCode?: string) {
   if (status === 401 || status === 403 || status === 404) return true;
-  if (status === 400) return true;
   return upstreamCode === "model_not_found";
 }
 

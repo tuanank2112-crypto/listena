@@ -17,7 +17,7 @@ import {
 } from "@/server/ai/openai-responses-provider";
 
 export const runtime = "nodejs";
-// Must exceed the 180s provider timeout in kira-chat-completions-provider.ts.
+// Must exceed the 180s provider timeout in vyce-chat-completions-provider.ts.
 export const maxDuration = 200;
 
 const TutorRequestSchema = z.object({

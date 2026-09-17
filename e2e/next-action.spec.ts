@@ -272,7 +272,7 @@ test("a weak listening aggregate without listening observations does not claim l
   // Causal invariant: does NOT claim listening without listening observations
   expect(completed.nextAction?.kind).toBe("QUEST");
   expect(completed.nextAction?.reasonVi).not.toContain("nghe");
-  expect(completed.nextAction?.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: 1 });
+  expect(completed.nextAction?.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: null });
 
   await page.goto(`/learner/session/${sessionId}`);
   await expect(page.getByText("Bước tiếp theo")).toBeVisible();

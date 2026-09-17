@@ -34,12 +34,15 @@ export function PersonalizedLessonsClient({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(targetSkill === "AUTO" ? {} : { targetSkill }),
       });
+      // Plan13: 200 = an existing READY lesson; 202 = generation claimed and
+      // running after the response. Either way the lesson page owns the wait
+      // (it polls GET /{id} until READY/FAILED), so navigate immediately.
       const payload = await response.json() as {
-        lesson?: PublicPersonalizedLesson;
+        lesson?: { id: string; status?: "READY" | "GENERATING" };
         error?: string;
         retryAfterSeconds?: number;
       };
-      if (!response.ok || !payload.lesson) {
+      if (!response.ok || !payload.lesson?.id) {
         const retry = payload.retryAfterSeconds ? ` Thử lại sau ${payload.retryAfterSeconds} giây.` : "";
         throw new Error(`${payload.error || "Chưa thể tạo bài học AI."}${retry}`);
       }
@@ -69,7 +72,7 @@ export function PersonalizedLessonsClient({
             </label>
             <button onClick={() => void generate()} disabled={loading} className="flex min-h-14 items-center justify-center gap-2 rounded-2xl bg-[#f7d779] px-5 text-sm font-black text-[#18332d] disabled:opacity-55">
               {loading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <WandSparkles className="h-4 w-4" />}
-              {loading ? "AI đang tạo…" : "Tạo bài riêng"}
+              {loading ? "Đang gửi yêu cầu…" : "Tạo bài riêng"}
             </button>
           </div>
           {error && <p role="alert" className="mt-3 rounded-xl bg-[#d6534d]/25 px-3 py-2 text-sm font-bold text-white">{error}</p>}

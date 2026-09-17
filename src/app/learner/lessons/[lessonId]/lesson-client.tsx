@@ -7,6 +7,13 @@ import { AnimatePresence, motion } from "framer-motion";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
 import { speak } from "@/core/tts/speech";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
+import { AnswerCanvas } from "@/features/answer-canvas/answer-canvas";
+import {
+  AssistRequestError,
+  type AssistMode,
+  type AssistPayload,
+  type CanvasSubmission,
+} from "@/features/answer-canvas/types";
 import {
   buildIntentKey,
   getStoredIntent,
@@ -25,6 +32,7 @@ import {
   Play,
   Send,
   Sparkles,
+  Timer,
   Volume2,
 } from "lucide-react";
 
@@ -95,7 +103,6 @@ export function LessonDetailClient({
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [index, setIndex] = useState(0);
-  const [answer, setAnswer] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [hint, setHint] = useState(false);
@@ -103,6 +110,7 @@ export function LessonDetailClient({
   const [replayCount, setReplayCount] = useState(0);
   const [rate, setRate] = useState(lesson.defaultPlaybackRate);
   const [playing, setPlaying] = useState(false);
+  const [predicting, setPredicting] = useState(false);
   const [startedAt, setStartedAt] = useState(Date.now());
   const [tutorOpen, setTutorOpen] = useState(false);
   const [question, setQuestion] = useState("");
@@ -134,8 +142,9 @@ export function LessonDetailClient({
 
   function move(next: number) {
     pendingIntentRef.current = null;
+    draftAttemptIdRef.current = crypto.randomUUID();
     setIndex(next);
-    setAnswer("");
+    setPredicting(false);
     setError("");
     setHint(false);
     setHintCount(0);
@@ -151,7 +160,14 @@ export function LessonDetailClient({
     replayCount: number;
     hintCount: number;
     playbackRate: number;
+    confidence?: number;
+    assistMode?: CanvasSubmission["assistMode"];
   }
+
+  // The attempt id is fixed before submission so the assist seed
+  // (sha256(clientAttemptId + mode)) and the eventual Attempt row agree.
+  const draftAttemptIdRef = useRef<string>("");
+  if (!draftAttemptIdRef.current) draftAttemptIdRef.current = crypto.randomUUID();
 
   const pendingIntentRef = useRef<{
     clientAttemptId: string;
@@ -167,13 +183,39 @@ export function LessonDetailClient({
         clientAttemptId: stored.key,
         payload: stored.payload,
       };
+      draftAttemptIdRef.current = stored.key;
     } else {
       pendingIntentRef.current = null;
     }
   }, [exercise?.id, userId]);
 
-  async function submit() {
-    const trimmed = answer.trim();
+  async function fetchAssist(mode: AssistMode): Promise<AssistPayload> {
+    const response = await fetch("/api/attempt/assist", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        exerciseId: exercise.id,
+        lessonId: lesson.id,
+        clientAttemptId: pendingIntentRef.current?.clientAttemptId ?? draftAttemptIdRef.current,
+        mode,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const code = typeof payload.code === "string" ? payload.code : "ASSIST_FAILED";
+      const message =
+        code === "ASSIST_LIMIT"
+          ? "Bạn đã dùng hết trợ giúp cho bài này."
+          : response.status === 404
+            ? "Bài này không hỗ trợ trợ giúp."
+            : payload.error || "Không lấy được trợ giúp. Thử lại nhé.";
+      throw new AssistRequestError(code, message, response.status);
+    }
+    return payload as AssistPayload;
+  }
+
+  async function submit(submission: CanvasSubmission) {
+    const trimmed = submission.answer.trim();
     if (!trimmed) return setError("Nhập câu trả lời trước nhé.");
     setLoading(true);
     setError("");
@@ -191,15 +233,18 @@ export function LessonDetailClient({
       }
 
       if (!intent || intent.payload.exerciseId !== exercise.id) {
-        const clientAttemptId = crypto.randomUUID();
+        const clientAttemptId = draftAttemptIdRef.current || crypto.randomUUID();
         const payload: AttemptIntentPayload = {
           exerciseId: exercise.id,
           lessonId: lesson.id,
           submittedAnswer: trimmed,
           completionTimeMs: Math.max(1, Date.now() - startedAt),
           replayCount,
-          hintCount,
+          // Old "Gợi ý" clicks plus every assist hintCost paid in the canvas.
+          hintCount: hintCount + submission.hintCount,
           playbackRate: rate,
+          ...(submission.confidence ? { confidence: submission.confidence } : {}),
+          assistMode: submission.assistMode,
         };
         intent = { clientAttemptId, payload };
         pendingIntentRef.current = intent;
@@ -301,24 +346,32 @@ export function LessonDetailClient({
 
             {audioAvailable && (
               <div className="mt-6 flex flex-wrap items-center gap-2 rounded-2xl bg-[#18332d] p-3 text-white">
-                <button onClick={() => { setReplayCount((value) => value + 1); void play(); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#f7d779] px-4 text-sm font-black text-[#18332d]">{playing ? <Volume2 className="h-4 w-4 animate-pulse" /> : <Play className="h-4 w-4" />} {playing ? "Đang nghe" : "Nghe"}</button>
+                {predicting ? (
+                  <span className="flex min-h-11 items-center gap-2 rounded-xl bg-white/10 px-4 text-sm font-black text-[#f7d779]"><Timer className="h-4 w-4" /> Đoán trước đã</span>
+                ) : (
+                  <button onClick={() => { setReplayCount((value) => value + 1); void play(); }} className="flex min-h-11 items-center gap-2 rounded-xl bg-[#f7d779] px-4 text-sm font-black text-[#18332d]">{playing ? <Volume2 className="h-4 w-4 animate-pulse" /> : <Play className="h-4 w-4" />} {playing ? "Đang nghe" : "Nghe"}</button>
+                )}
                 {[.75, .9, 1, 1.15].map((speed) => <button key={speed} onClick={() => setRate(speed)} className={`min-h-9 rounded-lg px-2 text-xs font-black ${rate === speed ? "bg-white text-[#18332d]" : "text-white/60"}`}>{speed}x</button>)}
                 {lesson.segments.length > 1 && <span className="ml-auto text-xs font-bold text-white/50">{lesson.segments.length} đoạn</span>}
               </div>
             )}
 
-            <div className="mt-6 flex items-center justify-between">
-              <label htmlFor="answer" className="text-sm font-black">Câu trả lời</label>
-              <button onClick={() => { setHint(true); setHintCount((value) => value + 1); }} className="flex min-h-10 items-center gap-1.5 px-2 text-xs font-black text-[#d18b25]"><HelpCircle className="h-4 w-4" /> Gợi ý</button>
+            <div className="mt-6 flex items-center justify-end">
+              <button onClick={() => { setHint(true); setHintCount((value) => value + 1); }} className="flex min-h-10 items-center gap-1.5 px-2 text-xs font-black text-[#d18b25]"><HelpCircle className="h-4 w-4" /> Gợi ý{hintCount > 0 && <span className="rounded-md bg-[#fff1c9] px-1.5 text-[10px]">{hintCount}</span>}</button>
             </div>
             <AnimatePresence>{hint && <motion.div initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} className="mt-2 rounded-2xl bg-[#fff1c9] px-4 py-3 text-sm font-bold text-[#795c19]">{hintText}</motion.div>}</AnimatePresence>
-            <textarea id="answer" value={answer} onChange={(event) => setAnswer(event.target.value)} rows={4} className="mt-3 block w-full resize-none rounded-2xl border-2 border-[#ded8cc] bg-white px-4 py-3 text-sm font-bold outline-none placeholder:text-[#a4aaa6] focus:border-[#176b55]" placeholder="Nhập đáp án…" />
             {error && <p role="alert" className="mt-2 text-sm font-bold text-[#d6534d]">{error}</p>}
-
-            <div className="mt-4 flex gap-2">
-              <button onClick={submit} disabled={loading || !answer.trim()} className="min-h-12 flex-1 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white disabled:opacity-40">{loading ? "Đang chấm…" : "Kiểm tra"}</button>
-              {index < lesson.exercises.length - 1 && <button onClick={() => move(index + 1)} className="flex min-h-12 items-center gap-1 rounded-2xl bg-[#eee7da] px-4 text-sm font-black">Tiếp <ArrowRight className="h-4 w-4" /></button>}
-            </div>
+            <AnswerCanvas
+              key={exercise?.id}
+              exerciseKey={exercise?.id ?? ""}
+              hasAudio={audioAvailable}
+              allowAssist={metadata.answerMode !== "open"}
+              fetchAssist={fetchAssist}
+              onSubmit={submit}
+              submitting={loading}
+              onPredictingChange={setPredicting}
+              secondaryAction={index < lesson.exercises.length - 1 ? <button onClick={() => move(index + 1)} className="flex min-h-12 items-center gap-1 rounded-2xl bg-[#eee7da] px-4 text-sm font-black">Tiếp <ArrowRight className="h-4 w-4" /></button> : null}
+            />
           </motion.section>
 
           <details className="paper-card group mt-4 rounded-[24px] px-5 py-4">

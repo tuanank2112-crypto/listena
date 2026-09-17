@@ -55,6 +55,17 @@ turso db shell listena-production-20260917 "PRAGMA integrity_check; PRAGMA forei
 
 Kỳ vọng: 31 bảng, `integrity_check=ok`, `foreign_key_check` không trả dòng nào.
 
+#### Lưu ý Plan13 (D2): migration `20260916000000_release_hardening_mutations` KHÔNG additive
+
+File này DROP + tạo lại `VocabularyMastery` (tạo `new_VocabularyMastery` → INSERT SELECT → DROP → RENAME) chỉ để thêm cột `revision INTEGER NOT NULL DEFAULT 0`. Nó **đã áp thành công trên Production ngày 2026-09-17 16:30** nên rủi ro còn lại chỉ nằm ở database mới hoặc khi quay lui. Với database mới, áp riêng file này trong **một transaction** và dừng ngay ở lỗi đầu tiên, để không bao giờ tồn tại trạng thái "đã DROP nhưng chưa RENAME":
+
+```bash
+{ printf '.bail on\nBEGIN;\n'; cat prisma/migrations/20260916000000_release_hardening_mutations/migration.sql; printf 'COMMIT;\n'; } \
+  | turso db shell listena-production-20260917
+```
+
+Chi tiết quay lui: xem mục 4.
+
 ### 2.3 Tạo chủ sở hữu giáo trình
 
 [`scripts/import-dataset.ts:52`](../scripts/import-dataset.ts) yêu cầu tồn tại một user vai trò `TEACHER`. Production tạo một tài khoản hệ thống với mật khẩu băm không dùng được, để không ai đăng nhập bằng nó.
@@ -81,7 +92,9 @@ Kỳ vọng theo bản ghi Plan05: 5 bài học, 116 từ vựng, 20 đoạn, 54
 | `MIGRATION_WRITE_MODE` | `enabled` |
 | `NEXTAUTH_URL` | `https://listena-n-listen-ai.vercel.app` |
 
-Ba biến AI đã đặt xong trong phiên này: `KIRAAI_API_KEY`, `KIRAAI_MODEL=claude-sonnet-4-6`, `KIRAAI_BASE_URL=https://vyceai.com/v1`.
+Ba biến AI đã đặt xong trong phiên này (17/09 chiều): `KIRAAI_API_KEY`, `KIRAAI_MODEL=claude-sonnet-4-6`, `KIRAAI_BASE_URL=https://vyceai.com/v1`.
+
+**Cập nhật 17/09 tối — BẮT BUỘC trước lần deploy kế tiếp:** provider Kira đã bị gỡ khỏi code (chỉ còn Vyce). Biến mới là `AI_PROVIDER=vyce`, `VYCE_API_KEY`, `VYCE_MODEL=claude-sonnet-4-6`, `VYCE_BASE_URL=https://vyceai.com/v1` cho CẢ Production lẫn Preview (kiểu `encrypted`, không phải `sensitive`). Phải `vercel env rm` bốn biến cũ (`AI_PROVIDER`, `KIRAAI_API_KEY`, `KIRAAI_MODEL`, `KIRAAI_BASE_URL`) rồi `vercel env add` bốn biến mới. Nếu còn `AI_PROVIDER=kira` hoặc `KIRAAI_API_KEY`, ứng dụng fail-closed: log lỗi "AI provider configuration is stale" và mọi tính năng AI báo chưa sẵn sàng.
 
 Lưu ý thao tác: `vercel env add` **không ghi đè** biến đã tồn tại, phải `vercel env rm` trước.
 
@@ -113,3 +126,22 @@ Ghi receipt vào ledger Plan12, cập nhật não, đánh dấu cổng Plan07 `s
 - **`MIGRATION_WRITE_MODE=enabled` mở hàng rào ghi.** Đây là điều kiện bắt buộc để đăng ký và học được, nhưng cũng nghĩa là Production nhận ghi thật từ lúc đó.
 - **Chưa có tên miền riêng.** Vercel chỉ có `listena-n-listen-ai.vercel.app`; `NEXTAUTH_URL` phải khớp đúng chuỗi này nếu không đăng nhập sẽ hỏng.
 - **Dữ liệu D1 cũ không được nhập.** Cloudflare Worker và D1 vẫn là tài sản quay lui theo Plan07. Production mới bắt đầu rỗng; nếu muốn mang dữ liệu người học cũ sang thì đó là một quyết định riêng cần xuất bản ghi D1 và kiểm chứng.
+
+## 4. Rollback và migration không additive (bổ sung Plan13 SPEC-P134 §3)
+
+Từ Plan13 mọi migration mới **bắt buộc additive** (`ALTER TABLE ... ADD COLUMN ... DEFAULT`, không DROP). Ngoại lệ lịch sử duy nhất là `20260916000000_release_hardening_mutations` (mục 2.2): nó tạo lại bảng `VocabularyMastery` nên nếu bị ngắt giữa chừng trên một database áp **không** có transaction thì bảng SRS có thể biến mất.
+
+- **Đã áp ở đâu:** Production `listena-production-20260917` (16:30 ngày 2026-09-17, thành công; `PRAGMA integrity_check=ok`, `foreign_key_check` rỗng). Không cần làm gì thêm trên Production.
+- **Áp trên database mới:** dùng lệnh transaction + `.bail on` ở mục 2.2. `PRAGMA foreign_keys=OFF` bên trong file là no-op trong transaction; điều đó chấp nhận được vì không bảng nào tham chiếu tới `VocabularyMastery` và `defer_foreign_keys` vẫn có hiệu lực.
+- **Nếu lần áp bị ngắt giữa chừng (không có transaction):** kiểm tra trước khi sửa, không chạy lại file mù:
+  ```sql
+  SELECT name FROM sqlite_master WHERE type='table' AND name IN ('VocabularyMastery','new_VocabularyMastery');
+  ```
+  - Chỉ còn `new_VocabularyMastery` (đã DROP, chưa RENAME): `ALTER TABLE "new_VocabularyMastery" RENAME TO "VocabularyMastery";` rồi tạo lại hai index `VocabularyMastery_userId_nextReviewAt_idx` và `VocabularyMastery_userId_vocabularyItemId_key` đúng như trong file migration; sau đó áp phần còn lại của file (các `CREATE INDEX` phía dưới `RedefineTables`).
+  - Còn cả hai bảng (INSERT SELECT xong nhưng chưa DROP): `DROP TABLE "new_VocabularyMastery";` rồi áp lại toàn bộ file trong transaction.
+- **Quay lui code về trước Plan12/Plan13:** không cần quay lui schema; cột `revision` (và mọi cột Plan13 có DEFAULT) vô hại với code cũ. **CẤM** DROP cột/bảng để "dọn" khi quay lui.
+- **Kiểm chứng sau bất kỳ thao tác nào ở trên:** chạy verifier chỉ-đọc, hợp đồng kỳ vọng được suy ra từ chính `prisma/migrations/**` (không còn hằng số 27/48/45):
+  ```bash
+  MIGRATION_TARGET_DATABASE_URL=<url> MIGRATION_TARGET_AUTH_TOKEN=<token> npm run migration:verify
+  npm run migration:verify -- --self-test   # tự kiểm verifier trên SQLite tạm, phải exit 0
+  ```

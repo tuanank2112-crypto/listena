@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { getToken } from "next-auth/jwt";
 import { requireAuthSecret } from "@/lib/auth-secret";
 import { resolveMigrationWriteMode } from "@/lib/migration-write-gate";
+import { canUseLearnerApi, isLearnerApiPath, roleForbiddenResponse } from "@/server/auth/roles";
 
 const publicPaths = [
   "/login",
@@ -91,6 +92,13 @@ export async function proxy(req: NextRequest) {
           { error: "Email verification is required.", code: "EMAIL_NOT_VERIFIED" },
           { status: 403 },
         );
+      }
+
+      // Learner study APIs are closed to TEACHER sessions in one place
+      // (Plan13 P130 §6). ADMIN keeps access; an anonymous request falls
+      // through to the route's own 401 so the two cases stay distinguishable.
+      if (token && isLearnerApiPath(pathname) && !canUseLearnerApi(token.role as string)) {
+        return roleForbiddenResponse();
       }
     }
 

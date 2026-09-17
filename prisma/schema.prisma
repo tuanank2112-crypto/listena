@@ -203,6 +203,21 @@ model AccountActionToken {
   @@index([purpose, expiresAt])
 }
 
+/// Plan13 P130 login throttle. One row per (kind, sha256 subject); the
+/// failure counter is bumped with an atomic libSQL upsert in
+/// src/server/auth/login-throttle.ts and the row is deleted on success.
+model AuthAttempt {
+  id              String    @id @default(uuid())
+  subjectKind     String // 'EMAIL' | 'IP'
+  subject         String // sha256 hex of the normalized email or client IP
+  failedCount     Int       @default(0)
+  windowStartedAt DateTime
+  lockedUntil     DateTime?
+  updatedAt       DateTime
+
+  @@unique([subjectKind, subject])
+}
+
 model FeedbackMessage {
   id             String                 @id @default(uuid())
   userId         String
@@ -381,6 +396,10 @@ model Attempt {
   enrichmentState          String   @default("NOT_REQUESTED")
   enrichmentLeaseId        String?
   enrichmentLeaseExpiresAt DateTime?
+  // Plan13 P133 Answer Canvas: confidence bet 1..3 (NULL = no bet) and the
+  // assist mode used ('FREE' | 'TILES' | 'SKELETON'). Additive, nullable.
+  confidence               Int?
+  assistMode               String?
   createdAt                DateTime @default(now())
 
   user       User           @relation(fields: [userId], references: [id])
@@ -525,6 +544,10 @@ model AIInteraction {
   traceId            String?
   success            Boolean  @default(true)
   createdAt          DateTime @default(now())
+  // Plan13 (SPEC-P131 §1): explicit expiry of an ai_call_reservation lease.
+  // NULL on rows written before the migration; readers fall back to
+  // createdAt + AI_REQUEST_PENDING_LEASE_MS for those.
+  leaseExpiresAt     DateTime?
 
   user    User?            @relation(fields: [userId], references: [id])
   session LearningSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
@@ -672,6 +695,11 @@ model PersonalizedLesson {
   createdAt          DateTime                 @default(now())
   readyAt            DateTime?
   expiresAt          DateTime?
+  // Plan13 (SPEC-P131 §4): the async generation lease. Stale checks and the
+  // personalization budget window read this mark, never createdAt, so a reused
+  // FAILED row cannot be treated as expired the moment it is reclaimed.
+  generationStartedAt DateTime?
+  generationAttempt   Int                      @default(0)
 
   user       User                           @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabulary PersonalizedLessonVocabulary[]
@@ -710,6 +738,10 @@ model PersonalizedLessonAttempt {
   feedbackVi       String
   gradingMethod    String
   responseTimeMs   Int?
+  // Plan13 P133 Answer Canvas (migration 20260917230500_plan13_answer_canvas)
+  hintCount        Int      @default(0)
+  confidence       Int?
+  assistMode       String?
   createdAt        DateTime @default(now())
 
   lesson PersonalizedLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
@@ -717,6 +749,12 @@ model PersonalizedLessonAttempt {
 
   @@unique([lessonId, clientAttemptId])
   @@index([userId, lessonId, createdAt])
+  // Plan13 (SPEC-P131 §4, PL2): migration 20260917230200_plan13_ai_reliability
+  // also creates the partial unique index
+  //   "PersonalizedLessonAttempt_one_graded_per_exercise"
+  //   ON ("lessonId", "exerciseId", "userId") WHERE "score" IS NOT NULL
+  // Prisma cannot express a partial index, so it lives only in SQL. One graded
+  // attempt per exercise per learner: a resubmission replays the stored result.
 }
 
 // A run is issued by the server and owns every answer key. The browser sees

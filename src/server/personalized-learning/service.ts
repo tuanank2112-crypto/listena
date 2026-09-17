@@ -3,45 +3,44 @@ import "server-only";
 import { createHash, randomUUID } from "node:crypto";
 import type { CefrLevel } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import logger from "@/lib/logger";
 import {
   libSqlBoolean,
   libSqlTimestamp,
   executeAtomicLibSqlBatch,
   type LibSqlBatchStatement,
 } from "@/lib/libsql-batch";
-import {
-  MASTERY_INITIAL,
-  MASTERY_MAX,
-  MASTERY_MIN,
-  MASTERY_NEW_WEIGHT,
-  MASTERY_OLD_WEIGHT,
-} from "@/core/constants";
+import { MASTERY_INITIAL, MASTERY_MAX, MASTERY_MIN } from "@/core/constants";
 import { AIUnavailableError, isAIProviderError } from "@/server/ai/errors";
 import {
   createConfiguredStructuredAIProvider,
   type JsonSchema,
+  type StructuredAIProvider,
 } from "@/server/ai/openai-responses-provider";
 import {
   reserveUserAICall,
   settleUserAICall,
+  type AICallReservation,
 } from "@/server/ai/request-budget";
-import { updateMastery } from "@/core/learner-model/mastery";
+import { difficultyFromMastery } from "@/server/personalized-learning/calibration";
 import {
-  CALIBRATION_CONFIDENCE,
-  CALIBRATION_FINAL_EVIDENCE,
-  CALIBRATION_MIN_EVIDENCE,
-  CALIBRATION_MIN_SKILLS,
-  difficultyFromMastery,
-} from "@/server/personalized-learning/calibration";
+  buildPersonalizedCalibrationStatement,
+  CALIBRATION_RECHECK_INTERVAL_MS,
+} from "@/server/personalized-learning/calibration-sql";
 import {
   normalizeAnswer,
   normalizeLemma,
+  normalizePersonalizedLessonDraft,
+  summarizeZodIssues,
   PERSONALIZED_LESSON_JSON_SCHEMA,
+  PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS,
+  PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS,
   PersonalizedLessonContentSchema,
   type PersonalizedLessonDraft,
   PersonalizedLessonDraftSchema,
   type PersonalizedLessonContent,
   PersonalizedLessonValidatorSchema,
+  SkillKeySchema,
   type SkillKey,
   toStoredPersonalizedLesson,
 } from "@/server/personalized-learning/contracts";
@@ -51,11 +50,15 @@ import {
   PERSONALIZED_LESSON_DAILY_LIMIT,
 } from "@/server/personalized-learning/generation-budget";
 
-const PROMPT_VERSION = "personalized-lesson-responses-1.0";
-// A GENERATING row is only reclaimable once the request that owns it can no
-// longer be running: 180s provider timeout + 200s route budget headroom.
+const PROMPT_VERSION = "personalized-lesson-compact-1.1";
+/**
+ * A GENERATING row is only reclaimable once the request that owns it can no
+ * longer be running: 180s provider timeout + 200s route budget headroom. The
+ * clock starts at `generationStartedAt` (Plan13 PL1), not `createdAt`.
+ */
 const GENERATION_STALE_MS = 210_000;
-const ACTIVE_GENERATION_RETRY_SECONDS = 45;
+/** Client polling cadence for the async 202 flow (Plan13 SPEC-P131 §4). */
+export const PERSONALIZED_GENERATION_POLL_SECONDS = 3;
 const TARGET_SKILLS: SkillKey[] = [
   "listening",
   "vocabulary",
@@ -63,6 +66,13 @@ const TARGET_SKILLS: SkillKey[] = [
   "grammar",
   "communication",
 ];
+/**
+ * Plan13 SPEC-P132 §8: one mastery formula for every AdaptiveEvidence source.
+ * `performance = clamp(score / clamp(difficulty, 0.6, 1.8), 0, 1)` and
+ * `new = old + alpha * (performance - old)`; personalized lessons use
+ * alpha 0.2 (games 0.18). The SQL below mirrors this exactly.
+ */
+const PERSONALIZED_MASTERY_ALPHA = 0.2;
 
 export class PersonalizedLearningError extends Error {
   constructor(
@@ -119,6 +129,7 @@ type StoredLessonRow = {
 
 export type PublicPersonalizedLesson = {
   id: string;
+  status: "READY";
   title: string;
   targetSkill: SkillKey;
   cefrLevel: CefrLevel;
@@ -129,16 +140,59 @@ export type PublicPersonalizedLesson = {
   readyAt: string | null;
 };
 
-export async function provisionPersonalizedLesson(
+/**
+ * What `GET /api/learner/personalized-lessons/{id}` returns while a lesson is
+ * not READY. It never contains content or answers.
+ */
+export type PendingPersonalizedLesson = {
+  id: string;
+  status: "GENERATING" | "FAILED";
+  targetSkill: SkillKey;
+  failureCode: string | null;
+  generationAttempt: number;
+  generationStartedAt: string | null;
+  createdAt: string;
+  retryAfterSeconds: number;
+};
+
+export type PersonalizedLessonStatus = PublicPersonalizedLesson | PendingPersonalizedLesson;
+
+/**
+ * Result of the claim step of the async generation flow (Plan13 SPEC-P131 §4).
+ * `claimed` carries everything `runPersonalizedLessonGeneration` needs so the
+ * provider call can run after the 202 response has been sent.
+ */
+export type PersonalizedGenerationClaim =
+  | { kind: "ready"; lesson: PublicPersonalizedLesson }
+  | { kind: "in-progress"; lessonId: string; retryAfterSeconds: number }
+  | {
+      kind: "claimed";
+      lessonId: string;
+      userId: string;
+      generationKey: string;
+      sourceSnapshotHash: string;
+      snapshot: LearnerSnapshot;
+      provider: StructuredAIProvider;
+      reservation: AICallReservation;
+      retryAfterSeconds: number;
+    };
+
+export type PersonalizedGenerationResult =
+  | { status: "READY"; lesson: PublicPersonalizedLesson }
+  | { status: "FAILED"; failureCode: string };
+
+/**
+ * Step 1 of the async flow: create or reclaim the GENERATING row, stamp the
+ * generation lease and reserve the learner's AI call. Cheap and synchronous:
+ * budget/limit errors surface immediately as typed 429s. No provider call.
+ */
+export async function claimPersonalizedLessonGeneration(
   userId: string,
   requestedSkill?: SkillKey,
-): Promise<{ lesson: PublicPersonalizedLesson; reused: boolean }> {
+): Promise<PersonalizedGenerationClaim> {
   const snapshot = await buildLearnerSnapshot(userId, requestedSkill);
   const sourceSnapshotHash = hashSnapshot(snapshot);
-  // A fresh private lease prevents a late response from a previous attempt
-  // from turning a newer GENERATING row into READY.
-  const generationKey = randomUUID();
-  let row = await prisma.personalizedLesson.findUnique({
+  const existing = await prisma.personalizedLesson.findUnique({
     where: {
       userId_targetSkill_sourceSnapshotHash: {
         userId,
@@ -148,26 +202,33 @@ export async function provisionPersonalizedLesson(
     },
   });
 
-  if (row?.status === "READY") {
-    return { lesson: toPublicPersonalizedLesson(row), reused: true };
+  if (existing?.status === "READY") {
+    return { kind: "ready", lesson: toPublicPersonalizedLesson(existing) };
   }
-  if (row?.status === "GENERATING" && !isStaleGeneration(row.createdAt)) {
-    throw new PersonalizedLearningError(
-      "AI_RATE_LIMITED",
-      429,
-      "Bài học AI đang được tạo. Vui lòng chờ trong giây lát.",
-      ACTIVE_GENERATION_RETRY_SECONDS,
-    );
+  if (
+    existing?.status === "GENERATING"
+    && !isStaleGeneration(existing.generationStartedAt ?? existing.createdAt)
+  ) {
+    return inProgress(existing.id);
   }
 
   await assertPersonalizationBudget(userId);
 
-  if (row) {
-    row = await prisma.personalizedLesson.update({
-      where: { id: row.id },
+  // A fresh private lease prevents a late response from a previous attempt
+  // from turning a newer GENERATING row into READY.
+  const generationKey = randomUUID();
+  const now = new Date();
+  let lessonId: string;
+  if (existing) {
+    // Compare-and-swap on the previous key: a concurrent claim of the same
+    // FAILED/stale row loses here and is told to poll instead.
+    const reclaimed = await prisma.personalizedLesson.updateMany({
+      where: { id: existing.id, generationKey: existing.generationKey },
       data: {
         status: "GENERATING",
         generationKey,
+        generationStartedAt: now,
+        generationAttempt: { increment: 1 },
         title: null,
         objectivesJson: "[]",
         contentJson: null,
@@ -178,9 +239,11 @@ export async function provisionPersonalizedLesson(
         readyAt: null,
       },
     });
+    if (reclaimed.count !== 1) return inProgress(existing.id);
+    lessonId = existing.id;
   } else {
     try {
-      row = await prisma.personalizedLesson.create({
+      const created = await prisma.personalizedLesson.create({
         data: {
           userId,
           status: "GENERATING",
@@ -189,9 +252,13 @@ export async function provisionPersonalizedLesson(
           difficulty: snapshot.difficulty,
           sourceSnapshotHash,
           generationKey,
+          generationStartedAt: now,
+          generationAttempt: 1,
           promptVersion: PROMPT_VERSION,
         },
+        select: { id: true },
       });
+      lessonId = created.id;
     } catch (error) {
       if (!isUniqueConstraint(error)) throw error;
       const concurrent = await prisma.personalizedLesson.findUnique({
@@ -204,14 +271,10 @@ export async function provisionPersonalizedLesson(
         },
       });
       if (concurrent?.status === "READY") {
-        return { lesson: toPublicPersonalizedLesson(concurrent), reused: true };
+        return { kind: "ready", lesson: toPublicPersonalizedLesson(concurrent) };
       }
-      throw new PersonalizedLearningError(
-        "AI_RATE_LIMITED",
-        429,
-        "Bài học AI đang được tạo. Vui lòng chờ trong giây lát.",
-        ACTIVE_GENERATION_RETRY_SECONDS,
-      );
+      if (concurrent) return inProgress(concurrent.id);
+      throw error;
     }
   }
 
@@ -223,18 +286,54 @@ export async function provisionPersonalizedLesson(
     const reservation = await reserveUserAICall({
       userId,
       purpose: "personalized_lesson",
-      requestIdentity: `${row.id}:${sourceSnapshotHash}`,
+      requestIdentity: `${lessonId}:${sourceSnapshotHash}:${generationKey}`,
       provider: provider.providerName,
       model: provider.modelName,
     });
+    return {
+      kind: "claimed",
+      lessonId,
+      userId,
+      generationKey,
+      sourceSnapshotHash,
+      snapshot,
+      provider,
+      reservation,
+      retryAfterSeconds: PERSONALIZED_GENERATION_POLL_SECONDS,
+    };
+  } catch (error) {
+    await markGenerationFailed(lessonId, generationKey, failureCodeOf(error));
+    throw error;
+  }
+}
+
+/**
+ * Step 2 of the async flow: the provider call plus persistence. Runs after the
+ * 202 response (`after()` in the route) and therefore never throws: every
+ * outcome is written to the row (READY or FAILED) for the client to poll, and
+ * the AI reservation is always settled.
+ */
+export async function runPersonalizedLessonGeneration(
+  claim: Extract<PersonalizedGenerationClaim, { kind: "claimed" }>,
+): Promise<PersonalizedGenerationResult> {
+  const { provider, reservation, snapshot } = claim;
+  let settled = false;
+  const settle = async (outcome: Parameters<typeof settleUserAICall>[1]) => {
+    if (settled) return;
+    settled = true;
+    await settleUserAICall(reservation, outcome);
+  };
+  try {
     let response;
     try {
       response = await provider.generateJson<unknown>({
         purpose: "personalized_lesson",
         systemPrompt: [
-          "You create a private English self-study lesson for one Vietnamese learner.",
+          "You create a short private English self-study lesson for one Vietnamese learner.",
           "Use only the supplied learner snapshot and verified curriculum grounding.",
           "Make all exercise answers objectively gradable; never ask for private data.",
+          "Be compact: 4 to 5 vocabulary items, exactly 4 exercises, a transcript of at most",
+          `${PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS} characters, and omit optional fields (ipa, meaningEn, partOfSpeech, exampleSentence) unless essential.`,
           "Return exactly the requested schema. Do not describe your reasoning.",
         ].join(" "),
         input: {
@@ -246,34 +345,47 @@ export async function provisionPersonalizedLesson(
               Math.max(0.6, snapshot.difficulty - 0.2),
               Math.min(1.8, snapshot.difficulty + 0.2),
             ],
-            exerciseCount: "4 to 6",
-            vocabularyCount: "4 to 8",
+            exerciseCount: "exactly 4",
+            vocabularyCount: "4 to 5",
+            transcriptMaxChars: PERSONALIZED_LESSON_TRANSCRIPT_MAX_CHARS,
           },
         },
         schemaName: "personalized_lesson",
         schema: PERSONALIZED_LESSON_JSON_SCHEMA as JsonSchema,
-        safetyIdentifier: userId,
-        maxOutputTokens: 2_200,
+        safetyIdentifier: claim.userId,
+        maxOutputTokens: PERSONALIZED_LESSON_MAX_OUTPUT_TOKENS,
       });
     } catch (error) {
-      await settleUserAICall(reservation, {
+      await settle({
         success: false,
         provider: provider.providerName,
         model: provider.modelName,
-        failureReason: isAIProviderError(error)
-          ? error.details.reason
-          : "unknown",
+        failureReason: isAIProviderError(error) ? error.details.reason : "unknown",
       });
       throw error;
     }
-    const draft = PersonalizedLessonDraftSchema.safeParse(response.output);
+    // Lenient shape repair first (slice/trim/renumber), then strict Zod.
+    const draft = PersonalizedLessonDraftSchema.safeParse(
+      normalizePersonalizedLessonDraft(response.output),
+    );
     if (
       !draft.success ||
       draft.data.targetSkill !== snapshot.targetSkill ||
       draft.data.cefrLevel !== snapshot.cefrLevel ||
       Math.abs(draft.data.difficulty - snapshot.difficulty) > 0.21
     ) {
-      await settleUserAICall(reservation, {
+      // Paths and codes only: never learner content or answers.
+      logger.warn(
+        {
+          lessonId: claim.lessonId,
+          requestId: response.requestId,
+          validation: draft.success
+            ? `snapshot-mismatch:targetSkill=${draft.data.targetSkill !== snapshot.targetSkill};cefr=${draft.data.cefrLevel !== snapshot.cefrLevel};difficulty=${Math.abs(draft.data.difficulty - snapshot.difficulty) > 0.21}`
+            : summarizeZodIssues(draft.error.issues),
+        },
+        "Personalized lesson draft rejected by validation",
+      );
+      await settle({
         success: false,
         provider: response.provider,
         model: response.model,
@@ -288,7 +400,7 @@ export async function provisionPersonalizedLesson(
       });
     }
 
-    await settleUserAICall(reservation, {
+    await settle({
       success: true,
       provider: response.provider,
       model: response.model,
@@ -296,40 +408,84 @@ export async function provisionPersonalizedLesson(
     });
 
     const persisted = await persistGeneratedPersonalizedLesson({
-      lessonId: row.id,
-      userId,
-      sourceSnapshotHash,
+      lessonId: claim.lessonId,
+      userId: claim.userId,
+      sourceSnapshotHash: claim.sourceSnapshotHash,
       draft: draft.data,
       response,
-      generationKey,
+      generationKey: claim.generationKey,
     });
-    return { lesson: toPublicPersonalizedLesson(persisted), reused: false };
+    return { status: "READY", lesson: toPublicPersonalizedLesson(persisted) };
   } catch (error) {
-    await prisma.personalizedLesson.updateMany({
-      where: { id: row.id, status: "GENERATING", generationKey },
-      data: {
-        status: "FAILED",
-        failureCode: isAIProviderError(error) ? error.code : "AI_UNAVAILABLE",
+    const failureCode = failureCodeOf(error);
+    logger.warn(
+      {
+        lessonId: claim.lessonId,
+        failureCode,
+        reason: isAIProviderError(error) ? error.details.reason : undefined,
+        errorName: error instanceof Error ? error.name : "unknown",
       },
+      "Personalized lesson generation failed",
+    );
+    await markGenerationFailed(claim.lessonId, claim.generationKey, failureCode);
+    return { status: "FAILED", failureCode };
+  } finally {
+    if (!settled) {
+      // Only reachable if persistence threw before settle ran (it cannot), but
+      // a leaked PENDING lease would block the learner for 210s, so close it.
+      try {
+        await settle({ success: false, failureReason: "unknown" });
+      } catch {
+        // The lease self-expires.
+      }
+    }
+  }
+}
+
+function inProgress(lessonId: string): PersonalizedGenerationClaim {
+  return {
+    kind: "in-progress",
+    lessonId,
+    retryAfterSeconds: PERSONALIZED_GENERATION_POLL_SECONDS,
+  };
+}
+
+function failureCodeOf(error: unknown) {
+  return isAIProviderError(error) ? error.code : "AI_UNAVAILABLE";
+}
+
+async function markGenerationFailed(
+  lessonId: string,
+  generationKey: string,
+  failureCode: string,
+) {
+  try {
+    await prisma.personalizedLesson.updateMany({
+      where: { id: lessonId, status: "GENERATING", generationKey },
+      data: { status: "FAILED", failureCode },
     });
-    if (isAIProviderError(error)) throw error;
-    throw new AIUnavailableError({ reason: "schema_validation_failed" });
+  } catch (error) {
+    // The row stays GENERATING until GENERATION_STALE_MS, after which it is
+    // reclaimable; the learner is never blocked beyond one lease.
+    logger.warn({ error, lessonId }, "Could not mark personalized lesson FAILED");
   }
 }
 
 async function assertPersonalizationBudget(userId: string) {
   const now = new Date();
+  const windowStart = new Date(now.getTime() - PERSONALIZED_LESSON_ACTIVE_WINDOW_MS);
   const [activeGeneration, recentGenerations] = await Promise.all([
     prisma.personalizedLesson.findFirst({
       where: {
         userId,
         status: "GENERATING",
-        createdAt: {
-          gte: new Date(now.getTime() - PERSONALIZED_LESSON_ACTIVE_WINDOW_MS),
-        },
+        OR: [
+          { generationStartedAt: { gte: windowStart } },
+          { generationStartedAt: null, createdAt: { gte: windowStart } },
+        ],
       },
       orderBy: { createdAt: "desc" },
-      select: { createdAt: true },
+      select: { createdAt: true, generationStartedAt: true },
     }),
     prisma.aIInteraction.findMany({
       where: {
@@ -345,7 +501,9 @@ async function assertPersonalizationBudget(userId: string) {
   ]);
   const decision = evaluatePersonalizationBudget({
     now,
-    activeGenerationCreatedAt: activeGeneration?.createdAt,
+    activeGenerationCreatedAt: activeGeneration
+      ? activeGeneration.generationStartedAt ?? activeGeneration.createdAt
+      : undefined,
     successfulGenerationTimes: recentGenerations.map((item) => item.createdAt),
   });
   if (!decision.allowed) {
@@ -371,6 +529,36 @@ export async function getOwnedPersonalizedLesson(
   return toPublicPersonalizedLesson(lesson);
 }
 
+/**
+ * Owner-scoped status for the polling client: READY returns the public
+ * lesson, GENERATING/FAILED return a content-free status envelope (not 404).
+ */
+export async function getOwnedPersonalizedLessonStatus(
+  userId: string,
+  lessonId: string,
+): Promise<PersonalizedLessonStatus> {
+  const lesson = await prisma.personalizedLesson.findFirst({
+    where: { id: lessonId, userId },
+  });
+  if (!lesson || lesson.status === "ARCHIVED") throw privateNotFound();
+  if (lesson.status === "READY") return toPublicPersonalizedLesson(lesson);
+  const targetSkill = SkillKeySchema.safeParse(lesson.targetSkill);
+  const stale = lesson.status === "GENERATING"
+    && isStaleGeneration(lesson.generationStartedAt ?? lesson.createdAt);
+  return {
+    id: lesson.id,
+    // A GENERATING row whose lease expired is reported as FAILED so the client
+    // offers "retry" instead of polling a dead generation forever.
+    status: stale ? "FAILED" : lesson.status,
+    targetSkill: targetSkill.success ? targetSkill.data : "vocabulary",
+    failureCode: stale ? lesson.failureCode ?? "GENERATION_TIMEOUT" : lesson.failureCode,
+    generationAttempt: lesson.generationAttempt,
+    generationStartedAt: lesson.generationStartedAt?.toISOString() ?? null,
+    createdAt: lesson.createdAt.toISOString(),
+    retryAfterSeconds: PERSONALIZED_GENERATION_POLL_SECONDS,
+  };
+}
+
 export async function listOwnedPersonalizedLessons(userId: string) {
   const lessons = await prisma.personalizedLesson.findMany({
     where: { userId, status: "READY" },
@@ -387,6 +575,10 @@ export async function submitPersonalizedLessonAttempt(input: {
   answer: string;
   clientAttemptId: string;
   responseTimeMs?: number;
+  /** Plan13 P133: assist cost paid in the Answer Canvas (default 0). */
+  hintCount?: number;
+  confidence?: number | null;
+  assistMode?: string | null;
 }): Promise<{
   attempt: {
     id: string;
@@ -416,6 +608,11 @@ export async function submitPersonalizedLessonAttempt(input: {
     },
   });
   if (existing) return { attempt: toAttemptResponse(existing, true) };
+  // Plan13 PL2: one graded attempt per exercise per learner. A resubmission
+  // with a new clientAttemptId replays the stored result and mints no new
+  // evidence (the partial unique index in the migration is the hard fence).
+  const graded = await findGradedExerciseAttempt(lesson.id, input.userId, input.exerciseId);
+  if (graded) return { attempt: toAttemptResponse(graded, true) };
 
   const content = parseLessonContent(lesson.contentJson);
   const validator = parseLessonValidator(lesson.validatorJson);
@@ -460,8 +657,18 @@ export async function submitPersonalizedLessonAttempt(input: {
       },
     });
     if (duplicate) return { attempt: toAttemptResponse(duplicate, true) };
+    const gradedRace = await findGradedExerciseAttempt(lesson.id, input.userId, input.exerciseId);
+    if (gradedRace) return { attempt: toAttemptResponse(gradedRace, true) };
     throw error;
   }
+}
+
+function findGradedExerciseAttempt(lessonId: string, userId: string, exerciseId: string) {
+  return prisma.personalizedLessonAttempt.findFirst({
+    where: { lessonId, userId, exerciseId },
+    orderBy: { createdAt: "asc" },
+    select: { id: true, score: true, correct: true, feedbackVi: true },
+  });
 }
 
 type GeneratedLessonPersistenceInput = {
@@ -490,6 +697,9 @@ type PersonalizedAttemptInput = {
   answer: string;
   clientAttemptId: string;
   responseTimeMs?: number;
+  hintCount?: number;
+  confidence?: number | null;
+  assistMode?: string | null;
 };
 
 type AttemptPersistenceResult = {
@@ -746,16 +956,12 @@ async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
   const attemptId = randomUUID();
   const evidenceId = randomUUID();
   const skillMasteryId = randomUUID();
-  const now = libSqlTimestamp(new Date());
-  const initialMastery = updateMastery({
-    oldMastery: MASTERY_INITIAL,
-    attemptScore: input.score,
-    hintCount: 0,
-    replayCount: 0,
-    difficulty: input.lesson.difficulty,
-  }).newMastery;
-  const performanceContribution =
-    input.score * (1 / input.lesson.difficulty) * MASTERY_NEW_WEIGHT;
+  const nowDate = new Date();
+  const now = libSqlTimestamp(nowDate);
+  const performance = masteryPerformance(input.score, input.lesson.difficulty);
+  const initialMastery = roundMastery(
+    MASTERY_INITIAL + PERSONALIZED_MASTERY_ALPHA * (performance - MASTERY_INITIAL),
+  );
   const results = await executeAtomicLibSqlBatch([
     atomicPersonalizedAttemptInsert({
       attemptId,
@@ -788,9 +994,10 @@ async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
       ],
     },
     {
+      // Mirrors applySkillMasteryUpdate (SPEC-P132 §8): new = old + alpha * (performance - old).
       sql: `UPDATE "SkillMastery"
             SET "masteryScore" = ROUND(
-                  MIN(?, MAX(?, ("masteryScore" * ?) + ?)) * 1000
+                  MIN(?, MAX(?, "masteryScore" + (? - "masteryScore") * ?)) * 1000
                 ) / 1000,
                 "evidenceCount" = "evidenceCount" + 1,
                 "lastUpdatedAt" = ?
@@ -799,8 +1006,8 @@ async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
       values: [
         MASTERY_MAX,
         MASTERY_MIN,
-        MASTERY_OLD_WEIGHT,
-        performanceContribution,
+        performance,
+        PERSONALIZED_MASTERY_ALPHA,
         now,
         input.input.userId,
         input.lesson.targetSkill,
@@ -808,10 +1015,13 @@ async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
         evidenceId,
       ],
     },
-    atomicPersonalizedCalibrationUpdate({
+    buildPersonalizedCalibrationStatement({
       userId: input.input.userId,
       evidenceId,
-      updatedAt: now,
+      now,
+      recheckCutoff: libSqlTimestamp(
+        new Date(nowDate.getTime() - CALIBRATION_RECHECK_INTERVAL_MS),
+      ),
     }),
   ]);
 
@@ -836,7 +1046,23 @@ async function persistPersonalizedLessonAttemptWithAtomicBatch(input: {
     },
   });
   if (duplicate) return { row: duplicate, idempotent: true };
+  const graded = await findGradedExerciseAttempt(
+    input.lesson.id,
+    input.input.userId,
+    input.input.exerciseId,
+  );
+  if (graded) return { row: graded, idempotent: true };
   throw privateNotFound();
+}
+
+/** SPEC-P132 §8: performance = clamp(score / clamp(difficulty, 0.6, 1.8), 0, 1). */
+export function masteryPerformance(score: number, difficulty: number) {
+  const boundedDifficulty = Math.min(1.8, Math.max(0.6, Number.isFinite(difficulty) ? difficulty : 1));
+  return Math.min(1, Math.max(0, score * (1 / boundedDifficulty)));
+}
+
+function roundMastery(value: number) {
+  return Math.round(Math.min(MASTERY_MAX, Math.max(MASTERY_MIN, value)) * 1000) / 1000;
 }
 
 function atomicPersonalizedAttemptInsert(input: {
@@ -851,8 +1077,8 @@ function atomicPersonalizedAttemptInsert(input: {
 }): LibSqlBatchStatement {
   return {
     sql: `INSERT INTO "PersonalizedLessonAttempt"
-            ("id", "lessonId", "userId", "exerciseId", "clientAttemptId", "submittedAnswer", "normalizedAnswer", "score", "correct", "feedbackVi", "gradingMethod", "responseTimeMs", "createdAt")
-          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SERVER_EXACT', ?, ?
+            ("id", "lessonId", "userId", "exerciseId", "clientAttemptId", "submittedAnswer", "normalizedAnswer", "score", "correct", "feedbackVi", "gradingMethod", "responseTimeMs", "hintCount", "confidence", "assistMode", "createdAt")
+          SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'SERVER_EXACT', ?, ?, ?, ?, ?
           WHERE EXISTS (
             SELECT 1 FROM "PersonalizedLesson"
             WHERE "id" = ? AND "userId" = ? AND "status" = 'READY'
@@ -860,6 +1086,11 @@ function atomicPersonalizedAttemptInsert(input: {
             AND NOT EXISTS (
               SELECT 1 FROM "PersonalizedLessonAttempt"
               WHERE "lessonId" = ? AND "clientAttemptId" = ?
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM "PersonalizedLessonAttempt"
+              WHERE "lessonId" = ? AND "exerciseId" = ? AND "userId" = ?
+                AND "score" IS NOT NULL
             )
           ON CONFLICT("lessonId", "clientAttemptId") DO NOTHING`,
     values: [
@@ -874,11 +1105,17 @@ function atomicPersonalizedAttemptInsert(input: {
       libSqlBoolean(input.correct),
       input.feedbackVi,
       input.input.responseTimeMs ?? null,
+      input.input.hintCount ?? 0,
+      input.input.confidence ?? null,
+      input.input.assistMode ?? null,
       input.createdAt,
       input.lesson.id,
       input.input.userId,
       input.lesson.id,
       input.input.clientAttemptId,
+      input.lesson.id,
+      input.input.exerciseId,
+      input.input.userId,
     ],
   };
 }
@@ -908,83 +1145,6 @@ function atomicPersonalizedEvidenceInsert(input: {
       input.input.responseTimeMs ?? null,
       input.createdAt,
       input.attemptId,
-    ],
-  };
-}
-
-function atomicPersonalizedCalibrationUpdate(input: {
-  userId: string;
-  evidenceId: string;
-  updatedAt: string | number;
-}): LibSqlBatchStatement {
-  return {
-    sql: `WITH "recentEvidence" AS (
-            SELECT "skillKey", "score", "confidence"
-            FROM "AdaptiveEvidence"
-            WHERE "userId" = ?
-            ORDER BY "createdAt" DESC
-            LIMIT 24
-          ),
-          "calibration" AS (
-            SELECT
-              COALESCE(SUM(CASE WHEN "confidence" >= ? THEN 1 ELSE 0 END), 0) AS "qualifyingCount",
-              COUNT(DISTINCT CASE WHEN "confidence" >= ? THEN "skillKey" END) AS "qualifyingSkillCount",
-              AVG(CASE WHEN "confidence" >= ? THEN "score" END) AS "averageScore"
-            FROM "recentEvidence"
-          )
-          UPDATE "LearnerProfile"
-          SET "calibrationStatus" = CASE
-                WHEN (SELECT "qualifyingSkillCount" FROM "calibration") < ?
-                  OR (SELECT "qualifyingCount" FROM "calibration") < ?
-                  THEN CASE WHEN "calibrationStatus" = 'CALIBRATED' THEN 'CALIBRATED' ELSE 'UNASSESSED' END
-                WHEN (SELECT "qualifyingCount" FROM "calibration") < ? THEN 'CALIBRATING'
-                ELSE 'CALIBRATED'
-              END,
-              "estimatedCefrLevel" = CASE
-                WHEN (SELECT "qualifyingSkillCount" FROM "calibration") >= ?
-                  AND (SELECT "qualifyingCount" FROM "calibration") >= ?
-                  AND (SELECT "averageScore" FROM "calibration") >= 0.65
-                  THEN CASE "estimatedCefrLevel"
-                    WHEN 'A1' THEN 'A2' WHEN 'A2' THEN 'B1' WHEN 'B1' THEN 'B2'
-                    WHEN 'B2' THEN 'C1' WHEN 'C1' THEN 'C2' ELSE 'C2'
-                  END
-                WHEN (SELECT "qualifyingSkillCount" FROM "calibration") >= ?
-                  AND (SELECT "qualifyingCount" FROM "calibration") >= ?
-                  AND (SELECT "averageScore" FROM "calibration") <= 0.35
-                  THEN CASE "estimatedCefrLevel"
-                    WHEN 'C2' THEN 'C1' WHEN 'C1' THEN 'B2' WHEN 'B2' THEN 'B1'
-                    WHEN 'B1' THEN 'A2' WHEN 'A2' THEN 'A1' ELSE 'A1'
-                  END
-                ELSE "estimatedCefrLevel"
-              END,
-              "calibratedAt" = CASE
-                WHEN "calibrationStatus" <> 'CALIBRATED'
-                  AND (SELECT "qualifyingSkillCount" FROM "calibration") >= ?
-                  AND (SELECT "qualifyingCount" FROM "calibration") >= ?
-                  THEN ?
-                ELSE "calibratedAt"
-              END,
-              "updatedAt" = ?
-          WHERE "userId" = ?
-            AND EXISTS (SELECT 1 FROM "AdaptiveEvidence" WHERE "id" = ?)`,
-    values: [
-      input.userId,
-      CALIBRATION_CONFIDENCE,
-      CALIBRATION_CONFIDENCE,
-      CALIBRATION_CONFIDENCE,
-      CALIBRATION_MIN_SKILLS,
-      CALIBRATION_MIN_EVIDENCE,
-      CALIBRATION_FINAL_EVIDENCE,
-      CALIBRATION_MIN_SKILLS,
-      CALIBRATION_FINAL_EVIDENCE,
-      CALIBRATION_MIN_SKILLS,
-      CALIBRATION_FINAL_EVIDENCE,
-      CALIBRATION_MIN_SKILLS,
-      CALIBRATION_FINAL_EVIDENCE,
-      input.updatedAt,
-      input.updatedAt,
-      input.userId,
-      input.evidenceId,
     ],
   };
 }
@@ -1081,6 +1241,7 @@ function toPublicPersonalizedLesson(
   }
   return {
     id: row.id,
+    status: "READY",
     title: row.title,
     targetSkill: row.targetSkill as SkillKey,
     cefrLevel: row.cefrLevel,
@@ -1140,15 +1301,14 @@ function privateNotFound() {
   );
 }
 
-function isStaleGeneration(createdAt: Date) {
-  return Date.now() - createdAt.getTime() > GENERATION_STALE_MS;
+function isStaleGeneration(startedAt: Date) {
+  return Date.now() - startedAt.getTime() > GENERATION_STALE_MS;
 }
 
+/** Prisma P2002 or a raw libSQL UNIQUE violation (the partial index has no Prisma name). */
 function isUniqueConstraint(error: unknown) {
-  return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "P2002"
-  );
+  if (typeof error !== "object" || error === null) return false;
+  if ("code" in error && (error as { code?: unknown }).code === "P2002") return true;
+  const message = error instanceof Error ? error.message : "";
+  return /UNIQUE constraint failed|SQLITE_CONSTRAINT_UNIQUE/i.test(message);
 }

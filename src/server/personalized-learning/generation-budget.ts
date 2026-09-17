@@ -1,6 +1,11 @@
 export const PERSONALIZED_LESSON_MIN_INTERVAL_MS = 5 * 60 * 1_000;
 export const PERSONALIZED_LESSON_DAILY_LIMIT = 8;
-export const PERSONALIZED_LESSON_ACTIVE_WINDOW_MS = 90 * 1_000;
+/**
+ * Must equal the generation lease (GENERATION_STALE_MS, 210s): a GENERATING
+ * row younger than this blocks a second generation; an older one is stale
+ * and reclaimable (Plan13 PL1; the previous 90s disagreed with the 210s lease).
+ */
+export const PERSONALIZED_LESSON_ACTIVE_WINDOW_MS = 210 * 1_000;
 
 export type PersonalizationBudgetDecision =
   | { allowed: true }
