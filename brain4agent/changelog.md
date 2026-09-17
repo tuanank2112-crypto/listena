@@ -1,18 +1,16 @@
 # Changelog
 
-## Root review 2026-09-17 — mục 1.0.0 bên dưới CHƯA được nghiệm thu
-
-Root review độc lập xác nhận phần local là thật (484 test/92 files, 24/24 E2E, type-check 0, lint 0/32, build PASS, dev.db nguyên vẹn), nhưng mục "1.0.0" bên dưới **không phải bản phát hành**: mọi cổng Production còn trống, chưa commit, chưa tag, chưa có phê duyệt cutover, và còn 7 finding mở trong đó 1 lỗi P1 trên đường hosted. Version trong `package.json` phải hạ về mức chưa phát hành. Chi tiết: [Root code review](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md).
-
-## 1.0.0 — 2026-09-17 (Master completion release candidate; local qualified; CHƯA NGHIỆM THU)
+## 0.5.0 — 2026-09-17 (Ứng viên hoàn thiện P120–P126; kiểm định cục bộ; CHƯA PHÁT HÀNH)
 - **Đã chứng minh thực tế (Proven):**
-  - Tính toàn vẹn giao dịch (P120/P121): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc bất kể bài học bị unpublish; chặn tạo client-intent mới khi intent đang pending; scoped intent theo chủ sở hữu (owner-scoped).
+  - Tính toàn vẹn giao dịch (P120/P121): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc bất kể bài học bị unpublish; chặn tạo client-intent mới khi intent đang pending; scoped intent theo chủ sở hữu (owner-scoped) và dọn dẹp intent khi đăng xuất hoặc đổi tài khoản.
+  - Sửa lỗi gating mutex (Finding F1/F2): `libsql-batch.ts` suy ra việc kích hoạt mutex cục bộ từ `resolveDatabaseConfig()`, chỉ bật trên SQLite file cục bộ (`file:`) và tắt trên Turso hosted (`APP_RUNTIME=vercel`); được bảo vệ bởi 4 test case hồi quy.
   - Lập kế hoạch nhân quả (P123): `p11-v1` và `CausalBasis` bổ sung mở rộng tương thích ngược với `p08-v1`. Invariant: kỹ năng yếu không có quan sát thực tế thuộc đúng skill tuyệt đối không sinh tuyên bố bằng chứng; matched refs / cited refs = 100%, foreign refs = 0. Planner GET hoàn toàn read-only (0 writes, 0 provider calls).
-  - Bộ kiểm định chất lượng sư phạm (P124): Bộ công cụ `npm run eval:learning` với bộ dữ liệu 12 ca nhiều lượt (4 Mission, 4 Coach, 4 Quest) bao phủ 9 dạng lỗi/biên ngữ cảnh. Chạy offline 12/12 ca PASS (156/156 checks), bảo vệ file người dùng `eval/report.md`. Khung 5 tiêu chí chấm điểm chất lượng độc lập (Correctness, Level Fit, Actionable Hint, Contextual Relevance, Learner Retry).
-  - Khung thử nghiệm có kiểm soát (P125): Đặc tả [docs/PILOT_PROGRAM_SPEC.md](docs/PILOT_PROGRAM_SPEC.md) và công cụ `npm run pilot:analyze` phân tích cohort 5–8 người học người lớn có sự đồng thuận (consent), theo dõi 14 ngày (Baseline → Transfer → Delayed Retention).
-  - Sẵn sàng vận hành & khôi phục (P126): Tài liệu [docs/RUNBOOK_INCIDENT.md](docs/RUNBOOK_INCIDENT.md) ứng phó 4 kịch bản sự cố; script `scripts/verify-backup-restore.ts` chứng minh bài tập sao lưu / khôi phục dữ liệu đạt 100% data fidelity.
-  - Bộ kiểm thử toàn diện: 480/480 Vitest unit/integration tests qua 90 files PASS (100%), 24/24 Playwright E2E tests PASS, 0 lỗi TypeScript, 0 lỗi ESLint (32 cảnh báo <= 33). Database `prisma/dev.db` được bảo toàn nguyên vẹn 100%.
+  - Kiểm tra hợp đồng orchestration nhiều lượt (P124): Bộ công cụ `npm run eval:learning` với bộ dữ liệu 12 ca nhiều lượt (4 Mission, 4 Coach, 4 Quest) chạy offline với provider tất định bao phủ 9 dạng lỗi/biên ngữ cảnh. Chạy offline 12/12 ca PASS (156/156 checks), bảo vệ file người dùng `eval/report.md`. Khung 5 tiêu chí chấm điểm chất lượng độc lập (Correctness, Level Fit, Actionable Hint, Contextual Relevance, Learner Retry) sẵn sàng cho reviewer đánh giá; chất lượng sư phạm thực tế thuộc gate live T115-02 và còn ⬜.
+  - Khung thử nghiệm có kiểm soát (P125): Đặc tả [docs/PILOT_PROGRAM_SPEC.md](docs/PILOT_PROGRAM_SPEC.md) và công cụ `npm run pilot:analyze` phân tích cohort 5–8 người học người lớn có sự đồng thuận (consent), theo dõi 14 ngày (Baseline → Transfer → Delayed Retention); dữ liệu mẫu hiện tại là template tổng hợp, chưa tuyển người học thật.
+  - Vận hành & bài tập khôi phục cục bộ (P126): Tài liệu [docs/RUNBOOK_INCIDENT.md](docs/RUNBOOK_INCIDENT.md) ứng phó 4 kịch bản sự cố; script `scripts/verify-backup-restore.ts` chứng minh bài tập sao lưu / khôi phục dữ liệu đạt 100% data fidelity trong phạm vi SQLite cục bộ với schema tổng hợp (bài tập khôi phục Turso thật trên hosted vẫn là điều kiện Go của P126 trước khi cutover).
+  - Bộ kiểm thử toàn diện: Vitest unit/integration tests qua 93 files PASS (100%), 24/24 Playwright E2E tests PASS, 0 lỗi TypeScript, 0 lỗi ESLint (32 cảnh báo <= 33). Database `prisma/dev.db` được bảo toàn nguyên vẹn 100%.
 - **Những gì KHÔNG claim (Explicit Non-claims):**
+  - Không claim phiên bản 1.0.0 phát hành: Dự án giữ nguyên `current_version` là 0.5.0 theo bậc thang phiên bản trong Plan12 01-CONTRACTS; 1.0.0 chỉ được gắn sau khi mọi cổng Production đạt và người dùng phê duyệt cutover.
   - Không tuyên bố chấm điểm phát âm (pronunciation scoring) hay Speech-to-Text (STT) thời gian thực.
   - Không tuyên bố chứng chỉ CEFR hay hiệu quả học tập nhân quả (causal pedagogical efficacy) ngoài các số liệu pilot khả thi có sự đồng thuận.
   - Không cam kết SLA thời gian phản hồi của nhà cung cấp AI bên thứ ba khi xảy ra sự cố mạng diện rộng.

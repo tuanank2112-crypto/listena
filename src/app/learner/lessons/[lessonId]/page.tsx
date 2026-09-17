@@ -12,6 +12,7 @@ export default async function LessonDetailPage({
   const { lessonId } = await params;
   const session = await auth();
   const userId = session?.user?.id;
+  if (!userId) return null;
 
   const lesson = await prisma.lesson.findUnique({
     where: { id: lessonId },
@@ -25,13 +26,11 @@ export default async function LessonDetailPage({
 
   if (!lesson || lesson.status !== "PUBLISHED") notFound();
 
-  const lastAttempts = userId
-    ? await prisma.attempt.findMany({
-        where: { userId, lessonId },
-        orderBy: { createdAt: "desc" },
-        distinct: ["exerciseId"],
-      })
-    : [];
+  const lastAttempts = await prisma.attempt.findMany({
+    where: { userId, lessonId },
+    orderBy: { createdAt: "desc" },
+    distinct: ["exerciseId"],
+  });
   const learningContext = getUnitLearningContext(getDatasetUnit(lesson.title));
   // Correct answers remain on the server for `/api/attempt`; the learner page
   // receives only content needed to render the question.
@@ -42,7 +41,7 @@ export default async function LessonDetailPage({
 
   return (
     <LessonDetailClient
-      userId={userId ?? "anonymous"}
+      userId={userId}
       lesson={JSON.parse(JSON.stringify(publicLesson))}
       lastAttemptMap={Object.fromEntries(lastAttempts.map((attempt) => [attempt.exerciseId, attempt]))}
       learningContext={learningContext}

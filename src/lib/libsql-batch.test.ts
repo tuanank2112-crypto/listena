@@ -18,6 +18,7 @@ import {
   isDatabaseUnavailableError,
   libSqlTimestamp,
   rowAs,
+  shouldSerializeLocally,
   withLibSqlWriteTransaction,
 } from "./libsql-batch";
 
@@ -159,6 +160,30 @@ describe("rowAs helper", () => {
     expect(casted.nullableCol).toBeNull();
     expect(casted.strNum).toBe("42.5");
     expect(casted.bigNum).toBe(BigInt("9007199254740993"));
+  });
+});
+
+describe("shouldSerializeLocally (process mutex gating)", () => {
+  it("serializes on local relative file SQLite", () => {
+    expect(shouldSerializeLocally({ DATABASE_URL: "file:./x.db" })).toBe(true);
+  });
+
+  it("serializes on local absolute file SQLite", () => {
+    expect(shouldSerializeLocally({ DATABASE_URL: "file:/tmp/x.db" })).toBe(true);
+  });
+
+  it("does NOT serialize on hosted Turso with vercel runtime and no DATABASE_URL", () => {
+    expect(
+      shouldSerializeLocally({
+        APP_RUNTIME: "vercel",
+        TURSO_DATABASE_URL: "libsql://test-db.turso.io",
+        TURSO_AUTH_TOKEN: "valid-turso-token",
+      }),
+    ).toBe(false);
+  });
+
+  it("does NOT serialize and does not throw on invalid/missing environment", () => {
+    expect(shouldSerializeLocally({})).toBe(false);
   });
 });
 

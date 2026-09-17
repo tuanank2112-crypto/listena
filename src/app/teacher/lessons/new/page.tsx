@@ -25,7 +25,7 @@ function simpleHash(str: string): string {
 export default function NewLessonPage() {
   const router = useRouter();
   const { data: session } = useSession();
-  const userId = session?.user?.id ?? "anonymous";
+  const userId = session?.user?.id;
 
   const [mode, setMode] = useState<"manual" | "ai">("manual");
   const [generating, setGenerating] = useState(false);
@@ -44,6 +44,10 @@ export default function NewLessonPage() {
   const [courseId, setCourseId] = useState("");
 
   const handleAIGenerate = async () => {
+    if (!userId) {
+      setError("Vui lòng đăng nhập để thực hiện thao tác này");
+      return;
+    }
     setGenerating(true);
     setError("");
     const objectives = aiObjectives.split("\n").filter(Boolean);
@@ -90,6 +94,10 @@ export default function NewLessonPage() {
   };
 
   const handleManualCreate = async () => {
+    if (!userId) {
+      setError("Vui lòng đăng nhập để thực hiện thao tác này");
+      return;
+    }
     setPublishing(true);
     setError("");
     const signature = JSON.stringify({ courseId, title, topic, level, transcript });
@@ -206,7 +214,7 @@ export default function NewLessonPage() {
               className="mt-1 block w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
               placeholder="Luyện nghe từ vựng về nhà hàng&#10;Nhận biết câu hỏi về giá cả" />
           </div>
-          <button onClick={handleAIGenerate} disabled={generating || !aiTopic}
+          <button onClick={handleAIGenerate} disabled={generating || !aiTopic || !userId}
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-500 hover:to-cyan-500 disabled:opacity-50">
             {generating ? <><Loader2 className="h-4 w-4 animate-spin" /> AI đang tạo bài học...</> : <><Sparkles className="h-4 w-4" /> Tạo bài học với AI</>}
           </button>
@@ -248,7 +256,7 @@ export default function NewLessonPage() {
               className="mt-1 block w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-white placeholder-slate-500 focus:border-indigo-500/50 focus:outline-none focus:ring-1 focus:ring-indigo-500/30"
               placeholder="Nhập nội dung bài nghe..." />
           </div>
-          <button onClick={handleManualCreate} disabled={publishing || !title || !transcript || !courseId}
+          <button onClick={handleManualCreate} disabled={publishing || !title || !transcript || !courseId || !userId}
             className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/20 transition-all hover:from-indigo-500 hover:to-cyan-500 disabled:opacity-50">
             {publishing ? <><Loader2 className="h-4 w-4 animate-spin" /> Đang tạo...</> : <><Send className="h-4 w-4" /> Tạo bài học</>}
           </button>

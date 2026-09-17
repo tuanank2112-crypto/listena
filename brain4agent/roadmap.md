@@ -1,12 +1,16 @@
 # ListenAI roadmap
 
-## Trạng thái ngay lúc này (2026-09-17, sau root review)
+## Trạng thái ngay lúc này (2026-09-17, sau khi giải quyết findings Root Review)
 
-Ứng viên P120–P126 đã tồn tại trong working tree nhưng **chưa commit**. Root xác minh độc lập: local thật sự xanh (484 test/92 files, 24/24 E2E, type-check 0, lint 0/32, build PASS). Còn **7 finding mở**, trong đó 1 lỗi P1 nằm trên đường hosted. Đọc [Root code review](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md) trước khi viết code.
+Ứng viên P120–P126 đã được commit tại `9325ca2`. Toàn bộ 7 findings từ [Root code review](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md) đã được giải quyết:
+- F1/F2: `shouldSerializeLocally()` dùng `resolveDatabaseConfig()`, Turso hosted bypass mutex, 4 test hồi quy.
+- F3: `clearOwnerIntents` nối vào đăng xuất và đổi tài khoản trong `app-shell.tsx`, 6/6 unit tests PASS.
+- F4: Bỏ fallback `"anonymous"` ở 4 file UI, yêu cầu xác thực đầy đủ.
+- F5/F6/F7: Câu chữ changelog & ledger chuẩn hóa.
+- Version: `package.json` hạ về `0.5.0` đúng hợp đồng ladder.
+- Toàn bộ cổng kiểm thử cục bộ: 494 tests vitest qua 93 files (100%), 24/24 Playwright E2E, type-check 0 lỗi, lint 0 lỗi/32 cảnh báo, build 42 routes PASS, eval 12/12 PASS, dev.db nguyên vẹn.
 
-Thứ tự việc cho worker: commit ứng viên → F1 sửa `isFileDatabase` dùng `resolveDatabaseConfig` → F2 thêm 4 test mutex → F3 nối `clearOwnerIntents` vào đăng xuất → F4 bỏ fallback `anonymous` → F5/F6/F7 sửa câu chữ → hạ version về mức chưa phát hành.
-
-Sau đó: D1 và D4 đạt ở local và chờ CI; D2, D3, D5 chờ đầu vào của user (đăng nhập `gh`, phê duyệt cửa sổ Preview và cutover, provider kèm hạn mức chi, đồng thuận pilot).
+D1 và D4 đạt ở local và chờ CI; D2, D3, D5 chờ đầu vào của user (đăng nhập `gh`, phê duyệt cửa sổ Preview và cutover, provider kèm hạn mức chi, đồng thuận pilot).
 
 ## Current master plan
 [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md), PLANNED 2026-09-17: hoàn thiện dự án tới 1.0.0 theo Definition of Done D1–D6 (integrity, hosted+rollback+mail, live AI có reviewer, causal next action, pilot đã đánh giá, handover). Contract kỹ thuật vẫn ở [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md); hosted/mail vẫn Plan07/09.

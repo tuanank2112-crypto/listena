@@ -18,7 +18,7 @@ export type DatabaseConfig =
       timestampFormat: "iso8601";
     };
 
-type DatabaseEnvironment = Partial<Pick<
+export type DatabaseEnvironment = Partial<Pick<
   NodeJS.ProcessEnv,
   | "APP_RUNTIME"
   | "DATABASE_URL"

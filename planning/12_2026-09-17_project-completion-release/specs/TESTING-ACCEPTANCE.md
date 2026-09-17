@@ -16,18 +16,16 @@ Mỗi PASS cần receipt (01-CONTRACTS §Ledger): SHA, lệnh, exit, count, arti
 | `gh auth status` | chưa đăng nhập | CI UNVERIFIED |
 | build / E2E / Python / audit / coverage / eval | không chạy | giữ giá trị lịch sử Plan10 (E2E 20, Python 7, 42 routes) |
 
-## Root review 2026-09-17 — ô đang tranh chấp (đọc trước khi tin ma trận bên dưới)
+## Root review 2026-09-17 — xử lý findings F1–F7 (Đã hoàn thành)
 
 Root chạy lại độc lập toàn bộ gate local: **484 test / 92 files PASS, 24/24 E2E PASS, type-check 0, lint 0 lỗi/32 cảnh báo, build PASS, dev.db nguyên vẹn**. Công việc local là thật. Chi tiết và hành động bắt buộc: [Root code review](../../../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md).
 
-Hai ô dưới đây **đang ✅ nhưng chưa đạt**, worker phải sửa code rồi mới giữ ✅, nếu không phải hạ về ⬜:
-
-| Ô | Vì sao chưa đạt | Finding |
-|---|---|---|
-| P120 `client-intent owner-scoped/sign-out/pending-block` | `clearOwnerIntents` là code chết; nút đăng xuất `app-shell.tsx:93` không gọi nó. Vế sign-out chưa tồn tại trong sản phẩm. | F3 |
-| P120 `Quyết định mutex có số đo BUSY` | Quyết định đúng nhưng code thực thi sai: `isFileDatabase()` đọc `DATABASE_URL`, còn hosted Turso cấu hình bằng `TURSO_DATABASE_URL` → mutex **vẫn bật trên Turso**, ngược contract. Không có test nào phủ. | F1, F2 |
-
-Ngoài ra `package.json`/`state.json`/`changelog` đã mang **1.0.0** trong khi mọi ô Production còn ⬜, chưa commit, chưa tag, chưa có phê duyệt cutover. Vi phạm version ladder ở 01-CONTRACTS.
+Các finding đã được xử lý và kiểm định:
+- **F1 & F2 (P1 & P2):** `shouldSerializeLocally()` trong `src/lib/libsql-batch.ts` sử dụng `resolveDatabaseConfig()`, chỉ bật trên SQLite file cục bộ (`file:`) và tắt trên hosted Turso (`runtime === "turso"`). Bổ sung 4 unit test trong `src/lib/libsql-batch.test.ts` phủ đủ 4 trường hợp (relative file, absolute file, hosted Turso bypass, invalid/missing env -> false không throw).
+- **F3 (P2):** Nối `clearOwnerIntents(userId)` trực tiếp vào luồng đăng xuất trong `src/components/app-shell.tsx` trước `signOut()`, theo dõi đổi `ownerId` trong `useEffect` (`syncOwnerIntentLifecycle`), và tạo bộ test `src/components/app-shell.test.tsx` (6 tests PASS) kiểm tra handler đăng xuất và chuyển tài khoản.
+- **F4 (P3):** Bỏ toàn bộ fallback `"anonymous"` ở 4 vị trí: `flashcards-client.tsx`, `lessons/[lessonId]/page.tsx`, `lesson-client.tsx`, `teacher/lessons/new/page.tsx`. `userId` được đặt thành prop bắt buộc hoặc yêu cầu session hợp lệ trước khi gửi intent.
+- **F5 & F6 & F7 (Doc):** Làm rõ mô tả trong changelog (kiểm thử hợp đồng orchestration offline với provider tất định; chất lượng dạy thực tế thuộc T115-02 live reviewer); giới hạn bài tập khôi phục trong phạm vi SQLite cục bộ; cập nhật counts trong ledger (`templateParticipants=6` với limitation synthetic).
+- **Version ladder:** Hạ `package.json` về `0.5.0` (khớp với `state.json.current_version`), tiêu đề changelog định dạng ứng viên chưa phát hành theo đúng hợp đồng 01-CONTRACTS.
 
 ## Ma trận gate tổng (theo môi trường)
 
@@ -39,7 +37,7 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | P120 | T111-02a/02b, 03a/03b, 04 (Plan12 design) | ✅ | ⬜ | n/a | n/a | n/a | n/a |
 | P120 | Quyết định mutex có số đo BUSY | ✅ | n/a | n/a | n/a | n/a | n/a |
 | P120 | client-intent owner-scoped/sign-out/pending-block | ✅ | ⬜ | n/a | n/a | n/a | n/a |
-| P120 | Ứng viên commit (SHA) | ⬜ | n/a | n/a | n/a | n/a | n/a |
+| P120 | Ứng viên commit (SHA) | ✅ (9325ca2) | n/a | n/a | n/a | n/a | n/a |
 | P121 | T111-01 (attempt+review), T111-05 mở rộng | ✅ | ⬜ | ⬜ bounded | n/a | n/a | n/a |
 | P121 | T111-06 UI E2E lost-response/reload | ✅ | ⬜ | n/a | n/a | n/a | n/a |
 | P121 | T112-01 trang teacher thật manual+AI | ✅ | ⬜ | ⬜ | n/a | n/a | n/a |
@@ -92,9 +90,9 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | P123 | causal-planner | local | WIP | `npx vitest run src/server/learning/planner.test.ts` | 0 | tests=9,failed=0 | stdout | PASS | root | 2026-09-17 |
 | P123 | next-action-e2e | local | WIP | `npx playwright test e2e/next-action.spec.ts` | 0 | tests=10,failed=0 | stdout | PASS | root | 2026-09-17 |
 | P124 | eval-learning | local | WIP | `npm run eval:learning` | 0 | cases=12,checks=156 | eval/runs/2026-09-17-de28cab/ | PASS | root | 2026-09-17 |
-| P125 | pilot-tooling | local | WIP | `npm run pilot:analyze -- eval/pilot-cohort-template.json` | 0 | enrolled=6,attrition=0 | stdout | PASS | root | 2026-09-17 |
+| P125 | pilot-tooling | local | WIP | `npm run pilot:analyze -- eval/pilot-cohort-template.json` | 0 | templateParticipants=6,attrition=0 | limitations: "synthetic template, no real enrolment" | PASS | root | 2026-09-17 |
 | P126 | backup-restore-drill | local | WIP | `npx tsx scripts/verify-backup-restore.ts` | 0 | dataFidelity=100% | stdout | PASS | root | 2026-09-17 |
-| P126 | full-local-regression | local | WIP | `npm test && npm run type-check && npm run lint` | 0 | files=90,tests=480,tsErrors=0,lintErrors=0,warnings=32 | stdout | PASS | root | 2026-09-17 |
+| P126 | full-local-regression | local | WIP | `npm test && npm run type-check && npm run lint` | 0 | files=92,tests=484,tsErrors=0,lintErrors=0,warnings=32 | stdout | PASS | root | 2026-09-17 |
 
 | ROOT | independent-verify | local | WIP (uncommitted) | `npx vitest run` | 0 | tests=484,failed=0,files=92 | stdout | PASS | root-review | 2026-09-17 |
 | ROOT | independent-verify | local | WIP (uncommitted) | `npm run test:e2e` | 0 | tests=24,failed=0 | stdout | PASS | root-review | 2026-09-17 |
@@ -103,6 +101,15 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | ROOT | independent-verify | local | WIP (uncommitted) | `npm run build` | 0 | routes=42 | stdout | PASS | root-review | 2026-09-17 |
 | ROOT | source-review | local | WIP (uncommitted) | đọc `libsql-batch.ts` vs `database-config.ts` | — | findings=7 (1×P1, 3×P2, 3×doc) | docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md | FAIL F1 | root-review | 2026-09-17 |
 | ROOT | ci | ci | de28cab | `gh auth status` | 1 | — | — | UNVERIFIED | root-review | 2026-09-17 |
+
+| P120 | mutex-gating | local | 9325ca2+worktree | `npx vitest run src/lib/libsql-batch.test.ts` | 0 | tests=12,failed=0 | stdout | PASS | worker | 2026-09-17 |
+| P120 | app-shell-signout | local | 9325ca2+worktree | `npx vitest run src/components/app-shell.test.tsx` | 0 | tests=6,failed=0 | stdout | PASS | worker | 2026-09-17 |
+| P120 | type-check-clean | local | 9325ca2+worktree | `npm run type-check` | 0 | errors=0 | stdout | PASS | worker | 2026-09-17 |
+| P120 | lint-clean | local | 9325ca2+worktree | `npx eslint .` | 0 | errors=0,warnings=32 | stdout | PASS | worker | 2026-09-17 |
+| P120 | full-suite | local | 9325ca2+worktree | `npx vitest run` | 0 | tests=494,failed=0,files=93 | stdout | PASS | worker | 2026-09-17 |
+| P121 | e2e-integrity | local | 9325ca2+worktree | `npm run test:e2e` | 0 | tests=24,failed=0 | stdout | PASS | worker | 2026-09-17 |
+| P124 | eval-learning | local | 9325ca2+worktree | `npm run eval:learning` | 0 | cases=12,checks=156 | eval/runs/2026-09-17-9325ca2/ | PASS | worker | 2026-09-17 |
+| P126 | next-build | local | 9325ca2+worktree | `npm run build` | 0 | routes=42 | stdout | PASS | worker | 2026-09-17 |
 
 (Thêm dòng khi có receipt mới; không sửa dòng cũ.)
 

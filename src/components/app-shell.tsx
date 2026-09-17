@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
+import { clearOwnerIntents } from "@/lib/client-intent";
 import {
   BarChart3,
   BrainCircuit,
@@ -35,12 +37,36 @@ const teacherNav = [
   { href: "/teacher/courses", label: "Khóa học", icon: GraduationCap },
 ];
 
+export async function handleAppSignOut(ownerId?: string | null): Promise<void> {
+  if (ownerId) {
+    clearOwnerIntents(ownerId);
+  }
+  await signOut({ callbackUrl: "/" });
+}
+
+export function syncOwnerIntentLifecycle(
+  currentOwnerId: string | undefined,
+  previousOwnerId: string | undefined,
+): void {
+  if (previousOwnerId && currentOwnerId !== previousOwnerId) {
+    clearOwnerIntents(previousOwnerId);
+  }
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { data: session } = useSession();
   const isTeacher = session?.user?.role === "TEACHER" || session?.user?.role === "ADMIN";
   const navItems = isTeacher ? teacherNav : learnerNav;
   const userName = session?.user?.name || "Learner";
+
+  const previousOwnerIdRef = useRef<string | undefined>(session?.user?.id);
+
+  useEffect(() => {
+    const currentOwnerId = session?.user?.id;
+    syncOwnerIntentLifecycle(currentOwnerId, previousOwnerIdRef.current);
+    previousOwnerIdRef.current = currentOwnerId;
+  }, [session?.user?.id]);
 
   return (
     <div className="min-h-screen text-[#18332d]">
@@ -90,7 +116,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           >
             <MessageSquareText className="h-4 w-4" /> Phản hồi
           </Link>
-          <button onClick={() => signOut({ callbackUrl: "/" })} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]">
+          <button onClick={() => handleAppSignOut(session?.user?.id)} className="mt-3 flex min-h-10 w-full items-center justify-center gap-2 rounded-xl text-xs font-bold text-[#7b857f] hover:bg-white/70 hover:text-[#18332d]">
             <LogOut className="h-4 w-4" /> Đăng xuất
           </button>
         </div>

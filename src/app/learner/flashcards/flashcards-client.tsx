@@ -27,12 +27,12 @@ interface ReviewIntentPayload {
 }
 
 export function FlashcardsClient({
-  userId = "anonymous",
+  userId,
   flashcards,
   dueCount,
   totalCount,
 }: {
-  userId?: string;
+  userId: string;
   flashcards: Flashcard[];
   dueCount: number;
   totalCount: number;

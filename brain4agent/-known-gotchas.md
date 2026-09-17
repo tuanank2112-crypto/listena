@@ -11,6 +11,10 @@
 - `complete` không được dùng số turn client để chứng minh học: chỉ learner-owned LearningEvidence mở được partial/success completion và cộng phút.
 - Meter profile cũ có thể lệch SkillMastery của AI; learner-facing meter phải qua resolver adaptive-first, không thêm một luồng sync profile mới.
 - Daily Quest recency chỉ là lịch sử stateJson đã validate của chính learner; malformed key phải bị bỏ qua và all-recent phải fallback authored deterministic.
+- Gating mutex tiến trình (`shouldSerializeLocally`) dùng `resolveDatabaseConfig()`, chỉ bật trên SQLite file cục bộ (`file:`) và tắt trên hosted Turso (`runtime === "turso"`), được bảo vệ bởi 4 test case hồi quy (F1/F2).
+- `clearOwnerIntents` được nối trực tiếp vào luồng đăng xuất (`handleAppSignOut`) và khi đổi tài khoản (`syncOwnerIntentLifecycle`) trong `src/components/app-shell.tsx`, có test unit 6/6 PASS (F3).
+- Bỏ fallback `"anonymous"` ở 4 vị trí UI client/page, bảo đảm bất biến owner-scoped luôn tuyệt đối (F4).
+- Version ladder tuân thủ nghiêm ngặt: `package.json` giữ ở `0.5.0` đồng bộ với `state.json.current_version`; 1.0.0 chỉ được gắn sau khi các cổng Production đạt và user phê duyệt cutover.
 
 ## Còn backlog
 - Plan10 review promotes legacy attempt/flashcard multi-write retry safety and teacher lesson graph atomicity to pre-release work; do not create synthetic LearningEvidence to hide these gaps.
@@ -44,7 +48,7 @@
 - `client-intent.ts` key chưa có ownerId và client tạo key mới khi body đổi dù intent cũ còn pending → nguy cơ replay chéo tài khoản/2 commit. Sửa trước T111-06.
 - `prisma migrate status` báo pending trên dev.db là bình thường khi có migration WIP; CẤM tự `migrate dev/deploy` lên dev.db — chỉ trên fixture tạm hoặc khi user yêu cầu có backup.
 
-## Root review 2026-09-17 — bẫy cấu hình và bẫy nghiệm thu
+## Root review 2026-09-17 — bẫy cấu hình và bẫy nghiệm thu (Đã xử lý & kiểm định)
 
 - `process.env.DATABASE_URL` KHÔNG phải nguồn chân lý về loại database. Hosted Turso resolve qua `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` và không đọc `DATABASE_URL` (`database-config.ts:111-133`). Mọi nhánh rẽ theo loại DB phải gọi `resolveDatabaseConfig()`, nếu không sẽ chạy nhánh local trên hosted. Đã xảy ra thật ở `isFileDatabase()`.
 - Đo lường trong lúc phát triển không phải test hồi quy. Quyết định mutex được "đo" nhưng không có test, nên lỗi cấu hình lọt qua cả 484 test.

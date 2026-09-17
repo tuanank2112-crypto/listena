@@ -96,3 +96,36 @@ User báo worker đã hoàn thành plan đến P126 và yêu cầu root kiểm t
 **Root KHÔNG sửa code trong lượt này** theo yêu cầu user (chỉ ghi phản hồi vào repo để chuyển cho worker). Rủi ro lớn nhất hiện tại: hơn 40 file vẫn chưa commit, không tag, không nhánh dự phòng.
 
 **Thứ tự việc tiếp theo cho worker:** commit ứng viên → F1 → F2 → F3 → F4 → sửa câu chữ F5/F6/F7 → hạ version về mức chưa phát hành. Sau đó D1/D4 đạt local chờ CI; D2/D3/D5 vẫn chờ đầu vào user (gh login, phê duyệt Preview/cutover, provider+budget, consent pilot).
+
+## Thực thi xử lý Findings F1–F7 theo Root Code Review (2026-09-17T12:20:00+07:00)
+
+Worker đã hoàn thành xử lý toàn bộ 7 findings theo đúng hợp đồng và vùng cấm của [docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md](docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md):
+1. **Ứng viên đã commit:** Commit `9325ca2` (P120-P126 candidate).
+2. **F1 (P1) & F2 (P2) - Gating mutex tiến trình:**
+   - Thay `isFileDatabase()` bằng `shouldSerializeLocally(env)` sử dụng `resolveDatabaseConfig(env).runtime === "local-sqlite"`, fail-safe `false`. Đảm bảo trên hosted Turso (`APP_RUNTIME=vercel`, `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN`), mutex tiến trình hoàn toàn bị tắt.
+   - Bổ sung 4 unit test trong `src/lib/libsql-batch.test.ts` phủ: relative file (true), absolute file (true), hosted Turso (false), và cấu hình lỗi/trống (false không throw).
+   - 12/12 test trong `src/lib/libsql-batch.test.ts` PASS.
+3. **F3 (P2) - Intent cleanup khi đăng xuất và đổi tài khoản:**
+   - Nối `clearOwnerIntents(ownerId)` vào luồng `handleAppSignOut` trong `src/components/app-shell.tsx` trước khi gọi `signOut({ callbackUrl: "/" })`.
+   - Bổ sung `syncOwnerIntentLifecycle(currentOwnerId, previousOwnerId)` được kích hoạt qua `useEffect` khi `ownerId` thay đổi trong cùng tab.
+   - Thêm unit test `src/components/app-shell.test.tsx` (6/6 PASS) kiểm tra rõ ràng hành vi đăng xuất và dọn dẹp intent.
+4. **F4 (P3) - Loại bỏ fallback `"anonymous"`:**
+   - `src/app/learner/flashcards/flashcards-client.tsx`: `userId: string` là prop bắt buộc, bỏ default `"anonymous"`.
+   - `src/app/learner/lessons/[lessonId]/page.tsx`: kiểm tra `if (!userId) return null;` và truyền `userId={userId}` đảm bảo type an toàn.
+   - `src/app/learner/lessons/[lessonId]/lesson-client.tsx`: `userId: string` là prop bắt buộc, bỏ default `"anonymous"`.
+   - `src/app/teacher/lessons/new/page.tsx`: bỏ `session?.user?.id ?? "anonymous"`, thêm guard `if (!userId)` trong `handleAIGenerate` và `handleManualCreate`, disable các nút thao tác nếu chưa đăng nhập.
+5. **F5, F6, F7 - Chuẩn hóa câu chữ và bằng chứng:**
+   - `brain4agent/changelog.md`: sửa mô tả eval thành "kiểm tra hợp đồng orchestration nhiều lượt, chạy offline với provider tất định", làm rõ chất lượng dạy thực tế thuộc T115-02 live reviewer; giới hạn bài tập khôi phục trong phạm vi SQLite cục bộ với schema tổng hợp.
+   - `planning/12_2026-09-17_project-completion-release/specs/TESTING-ACCEPTANCE.md`: cập nhật ledger counts `templateParticipants=6,attrition=0` kèm ghi chú synthetic template; cập nhật số lượng test thực tế.
+6. **Hạ Version về mức chưa phát hành:**
+   - `package.json`: hạ version từ `1.0.0` về `0.5.0` (khớp với `state.json.current_version`).
+   - `brain4agent/changelog.md`: đổi tiêu đề thành `## 0.5.0 — 2026-09-17 (Ứng viên hoàn thiện P120–P126; kiểm định cục bộ; CHƯA PHÁT HÀNH)`.
+7. **Kết quả kiểm tra toàn diện sau khi sửa:**
+   - `npm run type-check`: exit 0, 0 lỗi.
+   - `npx eslint .`: exit 0, 0 lỗi, 32 cảnh báo (<= baseline 33).
+   - `npx vitest run`: 494/494 tests PASS qua 93 test files (100%).
+   - `npm run test:e2e`: 24/24 Playwright E2E tests PASS (100%).
+   - `npm run build`: exit 0, 42 routes biên dịch thành công.
+   - `npm run eval:learning`: 12/12 cases PASS (156/156 checks), `eval/report.md` nguyên vẹn.
+   - `npx prisma migrate status`: dev.db nguyên vẹn, không bị apply migration.
+

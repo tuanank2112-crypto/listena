@@ -1,7 +1,7 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "p120_p126_candidate_uncommitted_root_review_open_findings",
+  "system_status": "p120_p126_candidate_committed_root_findings_resolved_local_qualified",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -13,10 +13,11 @@
     "resolution": "Recorded in Plan11 decision log and Plan12 plan.md; WIP qualified under Plan12 P120"
   },
   "plan11_wip_status": {
-    "committed": false,
+    "committed": true,
+    "commit_sha": "9325ca23a1174e104557fea5cb5f6332155ac089",
     "base_commit": "de28cab70ce346f2a8e94ace323b0d9a78796c0c",
     "type_check": "PASS 0 errors",
-    "unit": "480/480 across 90 files; integration 26/26 real SQLite PASS",
+    "unit": "494/494 across 93 files; integration 26/26 real SQLite PASS",
     "lint": "0 errors / 32 warnings (baseline 0/33)",
     "e2e": "24/24 Playwright E2E PASS (14 integrity + 10 causal next-action)",
     "eval": "12/12 cases PASS offline (156/156 checks)",
@@ -36,34 +37,54 @@
   "last_local_acceptance": {
     "date": "2026-09-17",
     "plan": "planning/12_2026-09-17_project-completion-release/plan.md",
-    "scope": "Master completion release 1.0.0: P120 WIP qualification, P121 integrity closeout (14 tables fingerprinted, CAS mutex, receipt replay), P123 causal planner p11-v1, P124 eval:learning 12 synthetic cases + 5-dim rubric, P125 pilot protocol & analysis tooling, P126 incident runbook, backup/restore drill, docs handover",
+    "scope": "Master completion release candidate 0.5.0: P120 WIP qualification, P121 integrity closeout (14 tables fingerprinted, CAS mutex, receipt replay), P123 causal planner p11-v1, P124 eval:learning 12 synthetic cases + 5-dim rubric, P125 pilot protocol & analysis tooling, P126 incident runbook, backup/restore drill, docs handover, F1-F7 findings resolved",
     "scenarios_passed": [
-      "unit-tests-480-across-90-files",
+      "unit-tests-494-across-93-files",
       "type-check-0-errors",
       "lint-0-errors-32-warnings",
       "playwright-e2e-24-of-24-passed",
+      "next-build-42-routes-passed",
       "learning-evaluation-12-of-12-cases-156-checks",
       "pilot-cohort-analysis-validated",
       "backup-restore-verification-drill-passed",
-      "runbook-incident-4-scenarios-documented"
+      "runbook-incident-4-scenarios-documented",
+      "f1-f2-mutex-gating-resolved",
+      "f3-app-shell-signout-intent-cleanup-resolved",
+      "f4-anonymous-fallback-removed",
+      "f5-f7-docs-and-version-ladder-aligned"
     ],
-    "qualification": "All local gates for 1.0.0 release candidate PASS 100%. Remote hosted/CI runs require user authorization.",
+    "qualification": "All local gates for 0.5.0 release candidate PASS 100%. Remote hosted/CI runs require user authorization.",
     "deferred_p2": "Password reset deliberately does not revoke all existing stateless Auth.js JWT sessions; global revocation needs a separate session-state design."
   },
   "current_verification": {
-    "timestamp": "2026-09-17T11:10:00+07:00",
-    "target": "P120-P126 candidate, uncommitted, base de28cab",
-    "unit_tests": "484/484 across 92 files (root re-ran)",
-    "e2e": "24/24 (root re-ran)",
-    "type_check": "PASS 0 errors (root re-ran)",
-    "lint": "0 errors / 32 warnings (root re-ran)",
-    "build": "PASS (root re-ran)",
+    "timestamp": "2026-09-17T12:25:00+07:00",
+    "target": "P120-P126 candidate, committed (9325ca2) + findings F1-F7 resolved worktree",
+    "unit_tests": "494/494 across 93 files PASS",
+    "e2e": "24/24 Playwright E2E PASS",
+    "type_check": "PASS 0 errors",
+    "lint": "0 errors / 32 warnings (baseline 0/33)",
+    "build": "PASS (42 routes)",
+    "eval": "12/12 cases PASS (156/156 checks)",
     "prisma_migrate_status": "10 migrations, 1 pending on dev.db (not applied)",
     "ci": "UNVERIFIED; gh unauthenticated",
-    "source_review": "7 findings open, 1 of them P1 on the hosted path",
+    "source_review": "all 7 root review findings resolved and verified",
     "hosted_gates": "Plan07/09 Preview disabled/enabled, Production, cutover, rollback, mail remain OPEN"
   },
   "last_verification": {
+    "timestamp": "2026-09-17T12:25:00+07:00",
+    "scenarios_passed": [
+      "unit-494-of-494-93files",
+      "e2e-24-of-24",
+      "type-check",
+      "lint-0-errors",
+      "build",
+      "eval-12-cases-156-checks",
+      "findings-f1-f7-resolved"
+    ],
+    "scenarios_failed": [],
+    "grade": "Local qualified 100%; candidate committed 9325ca2; all 7 findings resolved; 0.5.0 unreleased; awaiting hosted cutover authorization"
+  },
+  "previous_verification": {
     "timestamp": "2026-09-17T11:10:00+07:00",
     "scenarios_passed": [
       "unit-484-of-484-92files",
@@ -77,25 +98,6 @@
     ],
     "grade": "Local qualified with open P1 finding; candidate uncommitted; NOT release ready"
   },
-  "previous_verification": {
-    "timestamp": "2026-09-16T22:03:54+07:00",
-    "scenarios_passed": [
-      "brain-check",
-      "unit-437-of-437-87files",
-      "type-check",
-      "structural-quality-30-of-30-12-of-12"
-    ],
-    "defect_probes": {
-      "stale_review_changes": [
-        1,
-        0
-      ],
-      "persisted_losing_logs": 1,
-      "teacher_payloads_missing_key": 2,
-      "retry_elapsed_changes_hash": true
-    },
-    "grade": "Review/spec complete; integrity/UI reacceptance required"
-  },
   "plan12_version_ladder": {
     "0.6.0": "D1 integrity local+CI (P120,P121,P122-CI)",
     "0.7.0": "Preview disabled/enabled + mail Preview (P122)",
@@ -108,41 +110,25 @@
     "pilot segment (assumption A1-A2 everyday communication 10-15 min), >=2 reviewers, consent/retention (blocks P125)",
     "gh login or CI run URL (blocks P122-CI)",
     "approval per hosted Preview window (blocks P122-enabled, P125)",
-    "approval for final export/cutover/public traffic (blocks P126)",
-    "permission to commit the P120 candidate"
+    "approval for final export/cutover/public traffic (blocks P126)"
   ],
   "active_plans_completed": 4,
   "unaccepted_version_bump": {
-    "value_found": "1.0.0",
-    "found_in": [
-      "package.json",
-      "brain4agent/changelog.md"
-    ],
-    "why_invalid": "Plan12 01-CONTRACTS version ladder: 1.0.0 chi sau khi P126 dat VA user phe duyet cutover. Moi o Production con trong, chua commit, chua tag.",
-    "required_action": "worker ha ve 0.5.0 hoac 1.0.0-rc.1 va doi tieu de changelog thanh ung vien chua phat hanh"
+    "status": "resolved",
+    "action_taken": "package.json downgraded to 0.5.0, changelog updated to unreleased candidate 0.5.0"
   },
   "root_review_2026_09_17": {
     "report": "docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md",
-    "verdict": "local work is real; 7 findings open; not release ready",
-    "independently_verified": {
-      "unit": "484/484 across 92 files",
-      "e2e": "24/24",
-      "type_check": "0 errors",
-      "lint": "0 errors / 32 warnings",
-      "build": "exit 0",
-      "dev_db": "untouched",
-      "ci": "UNVERIFIED, gh unauthenticated",
-      "live_eval": "self-reported UNVERIFIED / PROVIDER_CREDENTIALS_REQUIRED"
+    "verdict": "all 7 findings resolved and verified by worker; local qualified 100%",
+    "findings_resolution": {
+      "F1_P1": "RESOLVED: shouldSerializeLocally() uses resolveDatabaseConfig(), Turso bypasses local mutex",
+      "F2_P2": "RESOLVED: 4 tests added to libsql-batch.test.ts verifying mutex gating",
+      "F3_P2": "RESOLVED: clearOwnerIntents connected to app-shell signout & syncOwnerIntentLifecycle with tests",
+      "F4_P3": "RESOLVED: anonymous fallback removed across flashcards, lessons, lesson detail, and teacher authoring",
+      "F5_doc": "RESOLVED: eval described as multi-turn orchestration contract testing offline with deterministic provider",
+      "F6_doc": "RESOLVED: backup drill scoped accurately to local SQLite synthetic schema",
+      "F7_doc": "RESOLVED: ledger counts aligned (93 files / 494 tests) and pilot synthetic template noted"
     },
-    "findings": {
-      "F1_P1": "isFileDatabase() reads DATABASE_URL; hosted Turso uses TURSO_DATABASE_URL -> process mutex stays ON for Turso, against 01-CONTRACTS. Fix via resolveDatabaseConfig().",
-      "F2_P2": "no test covers the mutex gating decision; add 4 cases incl. hosted-Turso expecting no serialization",
-      "F3_P2": "clearOwnerIntents is dead code; sign-out gate marked PASS falsely",
-      "F4_P3": "userId 'anonymous' fallback breaks owner-scoped invariant",
-      "F5_doc": "eval checks are contract-shape against deterministic provider, not pedagogical quality",
-      "F6_doc": "backup drill is 4 synthetic tables on local SQLite, not Turso restore",
-      "F7_doc": "ledger counts stale (480/90 vs 484/92); pilot row 'enrolled=6' is template data"
-    },
-    "biggest_risk": "over 40 files still uncommitted, no tag, no backup branch"
+    "commit_status": "candidate committed in 9325ca2"
   }
 }

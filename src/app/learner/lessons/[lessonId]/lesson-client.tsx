@@ -82,12 +82,12 @@ function parseMetadata(value: string | null): ExerciseMetadata {
 }
 
 export function LessonDetailClient({
-  userId = "anonymous",
+  userId,
   lesson,
   lastAttemptMap: _lastAttemptMap,
   learningContext,
 }: {
-  userId?: string;
+  userId: string;
   lesson: LessonData;
   lastAttemptMap?: Record<string, { score: number | null }>;
   learningContext: LearningContext | null;

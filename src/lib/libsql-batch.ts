@@ -3,6 +3,7 @@ import {
   isDatabaseUnavailableError,
 } from "@/lib/database-errors";
 import { getAtomicLibSqlClient, toLibSqlTimestamp } from "@/lib/prisma";
+import { resolveDatabaseConfig, type DatabaseEnvironment } from "@/lib/database-config";
 
 export {
   DATABASE_UNAVAILABLE,
@@ -92,13 +93,16 @@ async function beginWriteTransactionWithRetry(
 // Process mutex is local/E2E only to serialize file-backed SQLite transactions; Turso serializes at server.
 let localFileTxLockTail: Promise<void> = Promise.resolve();
 
-function isFileDatabase(): boolean {
-  const url = process.env.DATABASE_URL;
-  return !url || url.startsWith("file:");
+export function shouldSerializeLocally(env: DatabaseEnvironment = process.env): boolean {
+  try {
+    return resolveDatabaseConfig(env).runtime === "local-sqlite";
+  } catch {
+    return false; // fail-safe: không bật mutex khi cấu hình không xác định
+  }
 }
 
 function acquireLocalFileTxLock(): Promise<() => void> {
-  if (!isFileDatabase()) {
+  if (!shouldSerializeLocally()) {
     return Promise.resolve(() => {});
   }
   let release!: () => void;
