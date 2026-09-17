@@ -7,7 +7,22 @@ import { prisma } from "@/lib/prisma";
 import type { Role } from "@prisma/client";
 import { LoginSchema } from "@/server/validation/schemas";
 
-const authSecret = requireAuthSecret();
+/**
+ * Resolved per read, not at module load.
+ *
+ * Importing this module must not require a runtime secret. Next collects route
+ * configuration at build time by importing every route, and on Vercel the
+ * secret is a Sensitive environment variable, which is deliberately absent
+ * during a build. Resolving eagerly therefore failed the production build
+ * rather than the request, which is both the wrong moment and the wrong signal.
+ *
+ * The fail-closed guarantee is unchanged: the getter still calls
+ * `requireAuthSecret`, so a hosted request with no configured secret throws
+ * exactly as before, at the point where a session would otherwise be issued.
+ */
+function readAuthSecret() {
+  return requireAuthSecret();
+}
 
 /** The code is safe to show only after a successful password check. */
 export class EmailNotVerifiedError extends CredentialsSignin {
@@ -97,5 +112,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   // Kept in one resolver with Proxy so a deployment cannot issue a session
   // that its request boundary rejects.
-  secret: authSecret,
+  get secret() {
+    return readAuthSecret();
+  },
 });
