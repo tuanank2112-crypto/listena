@@ -150,7 +150,7 @@
   },
   "ai_provider_incident_2026_09_17": {
     "report": "docs/AI_PROVIDER_OUTAGE_2026-09-17.md",
-    "status": "FIXED locally, proven with a real conversation; hosted config untouched",
+    "status": "FIXED on local with a new provider; hosted verification blocked",
     "root_cause": "KIRAAI_MODEL pointed at a non-existent model (qwen3.8-flash-free in .env, glm-5.3-flash-free in .env.example) -> provider returned 404 model_not_found on every tutor call",
     "ruled_out": [
       "api key valid: GET /models -> 200 with 46 models",
@@ -169,6 +169,41 @@
       "P3": "each AI failure leaves a status=UNKNOWN row in LearningSessionStartRequest with no UI recovery path"
     },
     "why_it_survived": "every test uses a deterministic provider, so no test ever touched the real model catalogue",
-    "hosted_warning": "Preview/Production still carry the old model id and will fail identically until updated"
+    "hosted_warning": "Preview/Production still carry the old model id and will fail identically until updated",
+    "provider_switch": {
+      "from": "https://kiraai.vn/api/v1 (only free+active model went into maintenance within hours)",
+      "to": "https://vyceai.com/v1",
+      "model": "claude-sonnet-4-6",
+      "catalogue": [
+        "claude-sonnet-4-6",
+        "deepseek-v4.1",
+        "deepseek-v4-flash",
+        "deepseek-v4-flash-lr",
+        "agnes-3.0-flash",
+        "grok-imagine-2"
+      ],
+      "note": "OpenAI-compatible Chat Completions, so the existing provider class was reused; base URL allowlist extended in code"
+    },
+    "code_fixes": [
+      "AIMisconfiguredError / AI_MISCONFIGURED separates permanent config defects from outages",
+      "401/403/404/400 classified permanent; 5xx stays retryable",
+      "upstream error.code and error.type logged; upstream message deliberately not read",
+      "misconfigured start settles FAILED, not UNKNOWN, so the learner is not stranded",
+      "DEFAULT_MODEL no longer names a non-existent model",
+      "base URL moved from a single pinned origin to an in-code allowlist",
+      "npm run ai:doctor [-- --probe] validates config against the live catalogue"
+    ]
+  },
+  "vercel_state_2026_09_17": {
+    "github": "pushed to origin/codex/vercel-turso-migration at c2e8f8c",
+    "preview_deployment": "listena-egyxkd2vj-n-listen-ai.vercel.app, status Ready",
+    "env_updated": "KIRAAI_API_KEY, KIRAAI_MODEL, KIRAAI_BASE_URL replaced for BOTH Production and Preview (branch-scoped duplicates removed)",
+    "preview_blocked_by": "Vercel Deployment Protection (SSO) plus MIGRATION_WRITE_MODE fence; AI session start is a write, so no CLI smoke test is possible",
+    "production_blocked_by": "Production has no TURSO_DATABASE_URL, no TURSO_AUTH_TOKEN and no APP_RUNTIME. resolveApplicationRuntime fails closed when VERCEL_* markers exist without APP_RUNTIME, so every database request would error.",
+    "root_decision": "did NOT run vercel deploy --prod; publishing a fail-closed app is not what deploy approval meant",
+    "user_decisions_needed": [
+      "provision a Production Turso database + APP_RUNTIME=vercel + data import (this is the Plan07/P126 cutover)",
+      "or open a bounded Preview write window (MIGRATION_WRITE_MODE=enabled) to smoke-test AI on hosted"
+    ]
   }
 }

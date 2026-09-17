@@ -173,3 +173,23 @@ User bao moi lan bam "Hoc cung AI" deu nhan "Gia su AI hien chua san sang", va n
 **Bay moi truong:** chay `npm run build` khi `next dev` dang chay lam hong `.next`, cac route API long nhau (`/turns`, `/events`, `/complete`) tra 404 HTML du file ton tai. Sua bang dung dev, xoa `.next`, chay lai.
 
 **Canh bao hosted:** Preview va Production van mang model cu, se hong y het cho toi khi doi.
+
+## Doi nha cung cap AI + deploy (2026-09-17T15:10+07:00)
+
+User yeu cau lam tiep ba viec con mo, cung cap nha cung cap moi (Vyce AI) va yeu cau day len GitHub + Vercel ca Preview lan Production.
+
+**Nha cung cap moi:** Kira dua model mien phi duy nhat (`ling-3.0-flash-free`) vao maintenance chi vai gio sau khi chon; luc do khong con model nao vua free vua active. Chuyen sang Vyce AI. Endpoint that la `https://vyceai.com/v1` (khong phai `/api/v1`; moi duong dan khac tra HTML cua SPA). Giao thuc OpenAI-compatible nen dung lai nguyen provider hien co. Danh muc 6 model; dang dung `claude-sonnet-4-6`.
+
+**Chat luong quan sat tren app that:** cau sai co y "I lose it yesterday" -> AI recast "When did you lose it?", coach tieng Viet "'lose' -> 'lost'", detectedError grammar co giai thich, act RECAST, score 0.7. Tot hon han model mien phi truoc.
+
+**Da sua trong code (commit c2e8f8c):** `AIMisconfiguredError`/`AI_MISCONFIGURED` tach sai-cau-hinh khoi su-co-tam-thoi; 401/403/404/400 vinh vien, 5xx van retry; log `error.code`/`error.type` cua upstream (co y khong doc `message` vi co the vong lai noi dung request); start request settle `FAILED` thay vi `UNKNOWN`; `DEFAULT_MODEL` khong con tro model khong ton tai; base URL doi tu ghim cung mot origin sang allowlist trong code de them nha cung cap ma van fail-closed; them `npm run ai:doctor`. Them 4 test hoi quy. Suite 498/93 xanh, type-check 0, lint 0.
+
+**GitHub:** da push, HEAD `c2e8f8c`.
+
+**Vercel:** da thay `KIRAAI_API_KEY`/`KIRAAI_MODEL`/`KIRAAI_BASE_URL` cho CA Production lan Preview, xoa ban branch-scoped trung lap. Deploy Preview `listena-egyxkd2vj` status Ready.
+
+**HAI RAO CAN, root DUNG lai:**
+1. Preview bat Deployment Protection (SSO) va co hang rao ghi `MIGRATION_WRITE_MODE`; khoi tao phien AI la thao tac ghi nen khong smoke-test duoc qua CLI.
+2. **Production chua he duoc cau hinh database**: khong co `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` hay `APP_RUNTIME`. Theo `resolveApplicationRuntime`, khi co marker `VERCEL_*` ma thieu `APP_RUNTIME` thi ung dung **fail closed**, nghia la moi request cham DB deu loi. Deploy prod luc nay se cong bo mot site loi toan bo.
+
+Root **khong chay `vercel deploy --prod`**. Phe duyet "deploy" khong the hieu la phe duyet cong bo mot ung dung hong. Can user quyet: cap Turso Production + `APP_RUNTIME` + nhap du lieu (dung la buoc cutover P126 trong Plan07), hoac mo cua so ghi Preview co gioi han de kiem chung AI tren hosted.

@@ -70,3 +70,10 @@
 - App KHONG phan biet sai cau hinh (404 vinh vien) voi qua tai (429/503 tam thoi): cung mot thong bao. Nguoi dung thu lai vo han, nguoi van hanh khong biet minh cau hinh sai.
 - `ling-3.0-flash-free` la model duy nhat vua free vua active (2026-09-17) nhung rate-limit gat: 3 lan goi lien tiep cho 429/200/200. Pilot phai dung model tra phi.
 - CAM chay `npm run build` khi `next dev` dang chay: hong thu muc `.next` dung chung, cac route API long nhau tra 404 HTML du file ton tai. Sua: dung dev, `rm -rf .next`, chay lai.
+
+## Deploy 2026-09-17
+
+- Production tren Vercel CHUA co `TURSO_DATABASE_URL`/`APP_RUNTIME`. `resolveApplicationRuntime` fail-closed khi thay marker `VERCEL_*` ma thieu `APP_RUNTIME`, nen deploy prod se cho mot site loi moi request cham DB. Kiem `vercel env ls production` truoc khi deploy.
+- Preview bat Deployment Protection (SSO) nen curl chi nhan redirect toi `vercel.com/sso-api`; khong smoke-test duoc bang dong lenh. Cong voi `MIGRATION_WRITE_MODE` disabled thi thao tac ghi (khoi tao phien AI) cung bi chan.
+- `vercel env add` KHONG ghi de bien da ton tai; phai `vercel env rm` truoc roi moi add, va nho ca ban branch-scoped lan ban chung, neu khong Preview van giu gia tri cu.
+- `vercel link` ghi `.env.local` (chi `VERCEL_OIDC_TOKEN`). File nay uu tien cao hon `.env` trong Next, nen kiem lai sau khi link keo theo bien la.
