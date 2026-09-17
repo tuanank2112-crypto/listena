@@ -1,7 +1,7 @@
 {
   "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "production_live_all_env_encrypted_awaiting_user_retry",
+  "system_status": "production_live_mission_tutor_proven_working",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -257,6 +257,23 @@
       ],
       "resolution": "removed each one and recreated via POST /v10 with type encrypted; all now read back as encrypted with a non-empty value",
       "deployment": "listena-k5vuvs8nf-n-listen-ai.vercel.app, Ready"
+    },
+    "ai_evidence_from_db": {
+      "source": "AIInteraction table on the production Turso database",
+      "timeline": [
+        "09:44:54 start_mission model=null FAILED provider_not_configured (env still empty)",
+        "09:52:22 start_mission model=null FAILED schema_validation_failed",
+        "09:52:48 start_mission claude-sonnet-4-6 SUCCEEDED",
+        "09:52:59 start_mission claude-sonnet-4-6 SUCCEEDED, session 005f2628 is ACTIVE with an AI opening turn",
+        "10:33:24 personalized_lesson claude-sonnet-4-6 FAILED timeout"
+      ],
+      "conclusion": "the Mission tutor works on production; the failure the user hit was personalized lesson generation timing out, which is a latency-margin problem, not a configuration one",
+      "correction": "the earlier diagnosis that the AI env vars were empty was wrong for this failure: the 10:33 record already carried the right model"
+    },
+    "timeout_fix": {
+      "measured": "lesson-sized generation ~34s for claude-sonnet-4-6 and deepseek-v4-flash; agnes-3.0-flash exceeded 90s",
+      "change": "provider DEFAULT_TIMEOUT_MS 45s -> 50s, sized against the 60s route budget",
+      "commit": "24f380a"
     }
   },
   "build_lesson_2026_09_17": {

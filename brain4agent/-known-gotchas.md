@@ -106,3 +106,11 @@
 - Cach DUY NHAT dung duoc: `vercel env rm <KEY> production --yes` roi `POST /v10/projects/{id}/env` voi `type:'encrypted'`. Sau do doc lai bang `GET ...?decrypt=true`: dung thi `type=encrypted` va `len>0`.
 - Quy tac kiem tra nhanh: bat ky bien production nao hien `type=sensitive` va `len=0` deu phai coi la RONG cho den khi chung minh nguoc lai. Bien `encrypted` co `len>0` moi la co gia tri that.
 - Trieu chung nguoi dung thay khi KIRAAI_* rong: "Gia su AI hien chua san sang. Vui long thu lai sau." (reason `provider_not_configured`), KHAC voi thong bao sai cau hinh cua `AI_MISCONFIGURED`. Dung trieu chung nay de phan biet bien rong voi model sai.
+
+## Chan doan AI tren Production: dung bang AIInteraction, dung doan (2026-09-17)
+
+- Bang `AIInteraction` tren database la nguon chan ly tot nhat de chan doan AI: cot `success`, `schemaValid`, `model` va nhat la `fallbackReason` ghi ro dang `AI_CALL_FAILED:<purpose>:<reason>`. Tra bang nay TRUOC khi doan nguyen nhan.
+- Bai hoc: root da doan sai hai lan (sai model, roi bien rong) trong khi ban ghi da noi ro `personalized_lesson:timeout`. Sổ `LearningSessionStartRequest` va `AIInteraction` cho ca moc thoi gian, du de doi chieu voi thoi diem sua cau hinh.
+- Cung mot thong bao "Gia su AI hien chua san sang" den tu NHIEU nguyen nhan khac nhau: `provider_not_configured`, `schema_validation_failed`, `timeout`, `upstream_failure`. Chi co `fallbackReason` moi phan biet duoc.
+- Mission tutor va personalized lesson la HAI duong khac nhau. Mission co the chay tot trong khi sinh bai hoc ca nhan hoa that bai; dung ket luan "AI hong" tu mot nut bam.
+- Bien thoi gian: moi route AI khai `maxDuration = 60`. Sinh bai hoc do duoc ~34s. Timeout provider 45s qua sat nen bi cat oan; da nang len 50s.
