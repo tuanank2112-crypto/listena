@@ -8,7 +8,8 @@ import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency
 import logger from "@/lib/logger";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Must exceed the 180s provider timeout in kira-chat-completions-provider.ts.
+export const maxDuration = 200;
 
 export async function POST(req: Request) {
   try {

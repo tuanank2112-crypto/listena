@@ -52,7 +52,9 @@ import {
 } from "@/server/personalized-learning/generation-budget";
 
 const PROMPT_VERSION = "personalized-lesson-responses-1.0";
-const GENERATION_STALE_MS = 90_000;
+// A GENERATING row is only reclaimable once the request that owns it can no
+// longer be running: 180s provider timeout + 200s route budget headroom.
+const GENERATION_STALE_MS = 210_000;
 const ACTIVE_GENERATION_RETRY_SECONDS = 45;
 const TARGET_SKILLS: SkillKey[] = [
   "listening",

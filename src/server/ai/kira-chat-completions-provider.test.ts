@@ -251,7 +251,7 @@ describe("KiraChatCompletionsProvider", () => {
     );
   });
 
-  it("waits past 20 seconds for a queued Kira generation, but remains bounded", async () => {
+  it("waits through a gateway-scale 125 second generation, but remains bounded", async () => {
     vi.useFakeTimers();
     let resolveResponse: ((response: Response) => void) | undefined;
     const fetchMock = vi.fn(
@@ -274,7 +274,9 @@ describe("KiraChatCompletionsProvider", () => {
       schema: { type: "object", additionalProperties: false, properties: {} },
       maxOutputTokens: 1,
     });
-    await vi.advanceTimersByTimeAsync(20_001);
+    // 2026-09-17: the vyceai.com gateway was measured holding a lesson-sized
+    // generation for about 125s before answering. A 50s cap aborted those.
+    await vi.advanceTimersByTimeAsync(125_000);
     resolveResponse?.(
       new Response(
         JSON.stringify({
@@ -285,6 +287,45 @@ describe("KiraChatCompletionsProvider", () => {
     );
 
     await expect(pending).resolves.toMatchObject({ output: { answer: "OK" } });
+  });
+
+  it("aborts at the 180 second bound with a typed timeout, even when configured higher", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          (init.signal as AbortSignal).addEventListener("abort", () =>
+            reject(new DOMException("aborted", "AbortError")),
+          );
+        }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({
+      apiKey: "test-kira-key",
+      timeoutMs: 600_000,
+    });
+
+    const pending = provider.generateJson<{ answer: string }>({
+      purpose: "personalized_lesson",
+      systemPrompt: "Test prompt",
+      input: {},
+      schemaName: "answer",
+      schema: { type: "object", additionalProperties: false, properties: {} },
+      maxOutputTokens: 1,
+    });
+    const settled = pending.then(
+      () => "resolved",
+      (error: unknown) => error,
+    );
+    await vi.advanceTimersByTimeAsync(179_999);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await vi.advanceTimersByTimeAsync(1);
+
+    const error = await settled;
+    expect(error).toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "timeout", provider: "kira" },
+    });
   });
 
   it("accepts one complete JSON Markdown fence, then leaves schema validation to callers", async () => {

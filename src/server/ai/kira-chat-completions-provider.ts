@@ -51,22 +51,24 @@ const SUPPORTED_ENDPOINTS: ReadonlyArray<{ origin: string; path: string }> = [
  * `GET /models` before changing this.
  */
 const DEFAULT_MODEL = "ling-3.0-flash-free";
-// Free-tier upstreams can queue a valid generation longer than the 20-second
-// default used by the direct OpenAI provider. HTTP wall time does not consume
-// Serverless execution time, while the cap keeps a stalled learner request bounded.
 /**
- * Sized against the 60s route budget, not picked round.
+ * Sized against the provider, not against a round number.
  *
- * Every AI route declares `maxDuration = 60`, and a full lesson generation was
- * measured at about 34s against the configured provider. At 45s a normal
- * generation that ran slightly long was aborted by us rather than completing:
- * production recorded `AI_CALL_FAILED:personalized_lesson:timeout` while the
- * same request succeeded locally. 50s keeps roughly ten seconds for schema
- * validation and the commit, so the platform limit still arrives after ours and
- * the learner gets a typed state instead of a cut connection.
+ * The configured upstream (vyceai.com) is an API gateway in front of the model
+ * vendors. Measured on 2026-09-17 with a lesson-sized request (2,200 output
+ * tokens): completions arrived after 25-28s on a good try, 74s on a slow one,
+ * and the gateway itself gave up at about 125s on the worst ones. A 50s cap
+ * therefore aborted a valid generation about half the time and the learner
+ * only ever saw "Gia sư AI hiện chưa sẵn sàng" (reason `timeout`).
+ *
+ * 180s (decision 2026-09-17 18:50, user) is long enough to outlast the
+ * gateway's own timeout, so a stalled request ends with the upstream's typed
+ * failure instead of ours, while still bounding the learner's wait. Every AI
+ * route declares `maxDuration = 200` so the platform limit arrives after this
+ * one; keep the two in step when changing either.
  */
-const DEFAULT_TIMEOUT_MS = 50_000;
-const MAX_TIMEOUT_MS = 60_000;
+const DEFAULT_TIMEOUT_MS = 180_000;
+const MAX_TIMEOUT_MS = 180_000;
 const MAX_OUTPUT_TOKENS = 4_000;
 const MAX_INPUT_CHARS = 32_000;
 const MAX_SCHEMA_CHARS = 32_000;

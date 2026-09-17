@@ -11,7 +11,8 @@ import {
 import { personalizedLearningErrorResponse } from "./http";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+// Must exceed the 180s provider timeout in kira-chat-completions-provider.ts.
+export const maxDuration = 200;
 
 function learnerId(session: Session | null) {
   if (!session?.user?.id) return null;
