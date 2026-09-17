@@ -84,3 +84,12 @@
 - He qua: khong the xac minh gia tri bien sensitive bang cach doc. Chi xac minh duoc bang hanh vi, tuc deploy roi goi thu.
 - `vercel env add` doc gia tri tu stdin nhung trong moi truong nay (Git Bash va PowerShell deu vay) khong nhan duoc gia tri qua ong dan hay chuyen huong file, van bao "Added". Dung `PATCH /v9/projects/{id}/env/{envId}` voi token trong `%APPDATA%/com.vercel.cli/Data/auth.json` neu can chac chan.
 - `vercel env add` khong ghi de bien da ton tai; phai `rm` truoc, va nho ca ban branch-scoped lan ban chung.
+
+## Production cutover 2026-09-17
+
+- Bien Vercel loai `sensitive` KHONG co mat trong buoc build, chi co luc chay. Bat ky code nao doc bi mat o CAP MODULE se lam hong build production. Giai bang getter/lazy, dung bo fail-closed.
+- Vercel CAM doi type cua bien `sensitive` (`PATCH` tra 400). Muon co ban `encrypted` phai tao bien moi ten khac hoac xoa roi tao lai.
+- `vercel env add` trong du an nay tao bien loai `sensitive` mac dinh, nen khong dung de cap gia tri can co luc build.
+- Domain `listena-n-listen-ai.vercel.app` bi SSO protection (302). Alias `listena.vercel.app` moi la duong vao cong khai. Kiem ca hai truoc khi ket luan production hong.
+- Prisma migration SQL co dong chu thich `-- CreateTable` truoc moi lenh. Khi tu tach cau lenh de chay tren Turso, phai LOC DONG chu thich truoc roi moi tach theo `;`, neu loc theo `startsWith('--')` se bo het moi lenh.
+- Production co the len song nhung van khong dung duoc: Plan09 doi xac minh email truoc khi dang nhap, nen thieu cau hinh mail la khong ai vao duoc. Kiem `RESEND_API_KEY`/`EMAIL_FROM` truoc khi tuyen bo san sang.

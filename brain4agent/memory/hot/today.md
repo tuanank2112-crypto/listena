@@ -193,3 +193,19 @@ User yeu cau lam tiep ba viec con mo, cung cap nha cung cap moi (Vyce AI) va yeu
 2. **Production chua he duoc cau hinh database**: khong co `TURSO_DATABASE_URL`, `TURSO_AUTH_TOKEN` hay `APP_RUNTIME`. Theo `resolveApplicationRuntime`, khi co marker `VERCEL_*` ma thieu `APP_RUNTIME` thi ung dung **fail closed**, nghia la moi request cham DB deu loi. Deploy prod luc nay se cong bo mot site loi toan bo.
 
 Root **khong chay `vercel deploy --prod`**. Phe duyet "deploy" khong the hieu la phe duyet cong bo mot ung dung hong. Can user quyet: cap Turso Production + `APP_RUNTIME` + nhap du lieu (dung la buoc cutover P126 trong Plan07), hoac mo cua so ghi Preview co gioi han de kiem chung AI tren hosted.
+
+## Production len song (2026-09-17T16:30+07:00)
+
+User trao toan quyen va cung cap token Turso. Root thuc thi toan bo runbook cutover.
+
+**Da lam:** tao database Turso moi `listena-production-20260917` trong group `listena-staging` (KHONG dung lai staging chuan hay ban preview dung mot lan); ap 10 migration bang 131 cau lenh SQL -> 31 bang, 91 index, `integrity_check=ok`, `foreign_key_check` 0 vi pham; tao chu so huu giao trinh `curriculum-owner@listena.system` voi bam mat khau khong dung duoc; nhap giao trinh 1 course/5 lesson/54 exercise/116 tu vung; dat bien Production (TURSO_DATABASE_URL, TURSO_AUTH_TOKEN, APP_RUNTIME=vercel, MIGRATION_WRITE_MODE=enabled, NEXTAUTH_URL, AUTH_SECRET moi); deploy `--prod`.
+
+**Su co build va cach sua:** lan deploy dau that bai `Failed to collect configuration for /api/attempt` vi `AuthSecretConfigurationError`. Nguyen nhan: `config.ts` doc auth secret o CAP MODULE, ma bien Vercel loai `sensitive` KHONG co mat luc build. Da sua thanh getter (commit `486626d`) kem test hoi quy; hanh vi fail-closed luc chay khong doi. Deploy lai thanh cong.
+
+**Nghiem thu tren production that:** trang chu 200 tren alias `https://listena.vercel.app`; mutation chua dang nhap tra 401; **dang ky that tra 201** va ghi duoc hang vao Turso cung mot `AccountActionToken`.
+
+**RAO CAN CUOI, chua vuot duoc:** Plan09 bat buoc xac minh email truoc khi dang nhap, nhung production thieu `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`, `SUPPORT_EMAIL` (chi co `EMAIL_PROVIDER`). Dang ky tra `verificationEmailSent=false`, tai khoan dung o trang thai chua xac minh. Hau qua: **khong ai dang nhap duoc**, va do moi endpoint AI deu doi phien dang nhap nen **AI tren production van UNVERIFIED**. Root bi chan quyen ghi vao database production de tu xac minh tai khoan thu, va do la hang rao dung.
+
+**Can user:** khoa Resend cung dia chi gui va dia chi ho tro. Sau do root dat 4 bien, deploy lai, hoan tat dang ky-xac minh-dang nhap va kiem chung AI tren production.
+
+**Luu y bao mat:** khoa Turso va khoa AI deu chi nam trong `.env` (da gitignore) va bien moi truong Vercel; khong co khoa nao trong commit.

@@ -1,7 +1,7 @@
 {
   "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "p122_ci_qualified_d1_integrity_closed_v0.6.0",
+  "system_status": "production_live_login_blocked_by_missing_mail_config",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -205,5 +205,38 @@
       "provision a Production Turso database + APP_RUNTIME=vercel + data import (this is the Plan07/P126 cutover)",
       "or open a bounded Preview write window (MIGRATION_WRITE_MODE=enabled) to smoke-test AI on hosted"
     ]
+  },
+  "production_2026_09_17": {
+    "public_url": "https://listena.vercel.app",
+    "note": "listena-n-listen-ai.vercel.app returns 302 (Vercel SSO protection); the alias is the public entry point",
+    "deployment": "listena-itxmuim68-n-listen-ai.vercel.app, status Ready",
+    "turso_database": "listena-production-20260917 (group listena-staging, aws-ap-northeast-1)",
+    "schema": "31 tables, 91 indexes, integrity_check ok, foreign_key_check 0 violations",
+    "curriculum": "1 course, 5 lessons, 54 exercises, 116 vocabulary items",
+    "curriculum_owner": "curriculum-owner@listena.system, TEACHER, unusable password hash, cannot sign in",
+    "env_set": [
+      "TURSO_DATABASE_URL",
+      "TURSO_AUTH_TOKEN",
+      "APP_RUNTIME=vercel",
+      "MIGRATION_WRITE_MODE=enabled",
+      "NEXTAUTH_URL",
+      "AUTH_SECRET",
+      "KIRAAI_* (3)"
+    ],
+    "verified": {
+      "home_page": "200 on the alias",
+      "unauthenticated_mutation": "401",
+      "registration": "201, row persisted in Turso, AccountActionToken created"
+    },
+    "blocked": {
+      "login": "Plan09 requires a verified email before sign-in; production lacks RESEND_API_KEY, EMAIL_FROM, EMAIL_REPLY_TO, SUPPORT_EMAIL so no verification mail is sent and verificationEmailSent=false",
+      "ai_on_production": "UNVERIFIED: every AI endpoint needs a signed-in session, which cannot be obtained until mail works"
+    },
+    "root_could_not": "write to the production database to verify the test account; blocked by the shared-resource guard, which is the correct guard"
+  },
+  "build_lesson_2026_09_17": {
+    "symptom": "production build failed: Failed to collect configuration for /api/attempt, caused by AuthSecretConfigurationError",
+    "cause": "the auth secret was resolved at module load, and Vercel Sensitive variables are absent during a build",
+    "fix": "commit 486626d resolves it behind a getter; fail-closed behaviour unchanged, regression test added"
   }
 }
