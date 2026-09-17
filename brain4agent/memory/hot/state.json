@@ -14,7 +14,7 @@
   },
   "plan11_wip_status": {
     "committed": true,
-    "commit_sha": "9325ca23a1174e104557fea5cb5f6332155ac089",
+    "commit_sha": "0b057c7d1b22264e8320210e0452e4099c9315b9",
     "base_commit": "de28cab70ce346f2a8e94ace323b0d9a78796c0c",
     "type_check": "PASS 0 errors",
     "unit": "494/494 across 93 files; integration 26/26 real SQLite PASS",
@@ -58,7 +58,7 @@
   },
   "current_verification": {
     "timestamp": "2026-09-17T12:25:00+07:00",
-    "target": "P120-P126 candidate, committed (9325ca2) + findings F1-F7 resolved worktree",
+    "target": "P120-P126 candidate, committed (0b057c7, resolving F1-F7 on 9325ca2)",
     "unit_tests": "494/494 across 93 files PASS",
     "e2e": "24/24 Playwright E2E PASS",
     "type_check": "PASS 0 errors",
@@ -82,7 +82,7 @@
       "findings-f1-f7-resolved"
     ],
     "scenarios_failed": [],
-    "grade": "Local qualified 100%; candidate committed 9325ca2; all 7 findings resolved; 0.5.0 unreleased; awaiting hosted cutover authorization"
+    "grade": "Local qualified 100%; candidate committed 0b057c7; all 7 findings resolved; 0.5.0 unreleased; awaiting hosted cutover authorization"
   },
   "previous_verification": {
     "timestamp": "2026-09-17T11:10:00+07:00",
@@ -129,6 +129,6 @@
       "F6_doc": "RESOLVED: backup drill scoped accurately to local SQLite synthetic schema",
       "F7_doc": "RESOLVED: ledger counts aligned (93 files / 494 tests) and pilot synthetic template noted"
     },
-    "commit_status": "candidate committed in 9325ca2"
+    "commit_status": "candidate committed in 0b057c7"
   }
 }

@@ -128,4 +128,5 @@ Worker đã hoàn thành xử lý toàn bộ 7 findings theo đúng hợp đồn
    - `npm run build`: exit 0, 42 routes biên dịch thành công.
    - `npm run eval:learning`: 12/12 cases PASS (156/156 checks), `eval/report.md` nguyên vẹn.
    - `npx prisma migrate status`: dev.db nguyên vẹn, không bị apply migration.
-
+8. **Commit ứng viên hoàn thiện:**
+   - Commit `0b057c7d1b22264e8320210e0452e4099c9315b9`: "fix(plan12): resolve root code review findings F1-F7 and sync brain documentation" (21 files, +345/-128, new test `src/components/app-shell.test.tsx`).
