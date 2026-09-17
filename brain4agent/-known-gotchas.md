@@ -114,3 +114,11 @@
 - Cung mot thong bao "Gia su AI hien chua san sang" den tu NHIEU nguyen nhan khac nhau: `provider_not_configured`, `schema_validation_failed`, `timeout`, `upstream_failure`. Chi co `fallbackReason` moi phan biet duoc.
 - Mission tutor va personalized lesson la HAI duong khac nhau. Mission co the chay tot trong khi sinh bai hoc ca nhan hoa that bai; dung ket luan "AI hong" tu mot nut bam.
 - Bien thoi gian: moi route AI khai `maxDuration = 60`. Sinh bai hoc do duoc ~34s. Timeout provider 45s qua sat nen bi cat oan; da nang len 50s.
+
+## Sinh bai hoc dai qua Vyce treo ngat quang (2026-09-17 18:45)
+
+- "Gia su AI hien chua san sang" tren duong `personalized_lesson` = `timeout` do PHAN BO thoi gian sinh 2200 token qua vyceai.com rat rong: do 5 lan claude-sonnet-4-6 khong cat: 27s, 28s, 74s, va 2 lan treo ~125s roi gateway tra trang HTML (khong phai JSON). deepseek-v4-flash 3/3 treo. Mission (1200 token) on dinh 5-11s. Tang timeout 45->50s (24f380a) khong du; route budget 60s cung khong du.
+- Tai hien tai local bang chinh `KiraChatCompletionsProvider` voi timeout 50s: cung input, lan 1 OK 25s, lan 2 timeout. Khi thay loi nay, chay lai probe do phan bo, dung doan cau hinh.
+- `npm run ai:doctor` KHONG tu nap `.env` (tsx thuan): chay `set -a; . ./.env; set +a` truoc, neu khong no bao `AI_PROVIDER (unset)` va ket luan sai.
+- Trong phien auto-mode nay, classifier chan doc token Vercel (`%APPDATA%/com.vercel.cli/Data/auth.json`) va moi goi API production; `vercel`/`turso` CLI khong co tren PATH. Muon doc AIInteraction production phai co user cap quyen/CLI, khong lach.
+- Quyet dinh 18:50: timeout provider 180s, `maxDuration = 200`, `GENERATION_STALE_MS` 210s. Ba so nay phai doi cung nhau (provider < route < stale). Vercel Hobby chi cho >60s khi bat Fluid compute (tran 300s); deploy tu choi = plan chua cho, KHONG phai loi code.

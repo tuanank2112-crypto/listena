@@ -1,7 +1,7 @@
 {
   "current_version": "0.6.0",
   "brain_template_version": "1.4.0",
-  "system_status": "production_live_mission_tutor_proven_working",
+  "system_status": "production_live_timeout_raised_to_180s_pending_deploy",
   "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -280,5 +280,42 @@
     "symptom": "production build failed: Failed to collect configuration for /api/attempt, caused by AuthSecretConfigurationError",
     "cause": "the auth secret was resolved at module load, and Vercel Sensitive variables are absent during a build",
     "fix": "commit 486626d resolves it behind a getter; fail-closed behaviour unchanged, regression test added"
+  },
+  "ai_latency_probe_2026_09_17": {
+    "trigger": "user reported Gia su AI hien chua san sang again at 18:30+07 and asked to re-check the brain",
+    "brain_boot": "init_brain.js --check reported BRN-011 (state.json trailing newline), fixed in write mode, exit 0",
+    "local_config": "ai:doctor --probe OK with .env loaded (kira / vyceai.com/v1 / claude-sonnet-4-6); local dev server not running, so the failure was on production",
+    "production_access": "blocked: auto-mode classifier denied Vercel API reads and token access; vercel/turso CLI absent from PATH; AIInteraction on production not read this session",
+    "reproduction": "KiraChatCompletionsProvider timeout 50s, personalized_lesson schema, 2200 tokens: run1 OK 25.4s, run2 same input FAIL timeout (exact learner message). Mission-sized 4/4 OK 5.0-10.2s",
+    "uncut_latency": {
+      "claude-sonnet-4-6": [
+        "125.6s HTML",
+        "125.7s HTML",
+        "28.3s OK 1352tok",
+        "74.2s OK 1007tok",
+        "27.2s OK 1138tok"
+      ],
+      "deepseek-v4-flash": [
+        "125.3s HTML",
+        "125.4s HTML",
+        "125.7s HTML"
+      ]
+    },
+    "conclusion": "personalized lesson generation completes under 50s in about 3 of 7 tries; gateway hangs ~125s in 3 of 8; not a configuration defect; 24f380a (50s) is pushed but no production deployment recorded after listena-k5vuvs8nf and would not fix the distribution anyway",
+    "options_for_user": [
+      "(a) async generation: 202 + GENERATING row + client polling (recommended; schema already has status/generationKey)",
+      "(b) maxDuration 300 with Fluid compute + provider timeout ~120s",
+      "(c) different provider/model for long generations",
+      "(d) deploy 24f380a so production matches HEAD"
+    ],
+    "not_done": "no code change, no deploy, no commit",
+    "user_decision_18_50": "raise timeout to ~3 minutes because Vyce is an API gateway",
+    "change": {
+      "provider_timeout": "180s default and max (was 50s/60s)",
+      "routes_maxDuration": "200 on learning-sessions, turns, tutor, personalized-lessons, teacher/generate-lesson (was 60)",
+      "generation_stale_ms": "210000 (was 90000)",
+      "pending_lease_ms": "kept 30000",
+      "hosted_condition": "Vercel must allow 200s (Hobby needs Fluid compute, cap 300s); unverified this session"
+    }
   }
 }

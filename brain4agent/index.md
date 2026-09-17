@@ -5,7 +5,7 @@
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
 | Review ứng viên hiện tại | commit 9325ca2 + findings worktree | [Root code review 2026-09-17](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md) — 7 findings F1–F7 đã được worker giải quyết hoàn tất; local 100% xanh (494 test/24 E2E/build 42 routes) |
-| Su co AI provider | .env / .env.example / kira provider | [Chan doan 2026-09-17](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md) — **doc truoc khi dung den AI**: model khong ton tai lam hong toan bo tinh nang AI; da sua; con 3 van de mo |
+| Su co AI provider | .env / .env.example / kira provider | [Chan doan 2026-09-17](../docs/AI_PROVIDER_OUTAGE_2026-09-17.md) — **doc truoc khi dung den AI**: model khong ton tai (da sua) → 18:45 tai phat do Vyce treo/cham khi sinh bai hoc dai (muc 9, cho user chon huong sua); Mission van on |
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
 | Kế hoạch tổng hiện tại | planning/12_2026-09-17_project-completion-release | [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md) — VERSION 0.6.0 QUALIFIED: D1 local + CI ✅ (GitHub Actions run 35187260657, 15/15 steps PASS), P120/P121 integrity ✅, P123 causal planner p11-v1 ✅, P124 eval:learning ✅, P125 pilot tooling ✅, P126 runbook/backup/handover ✅; findings F1–F7 resolved; ready for Preview/Production gates. |
 | Contract kỹ thuật | planning/11_2026-09-16_ai-native-evidence-gates | [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md) — QUALIFIED/SUBSUMED: P110–P112 đã được Plan12 P120 nghiệm thu, sửa lỗi TS/lint/test-design và commit trong 9325ca2; receipt/write-tx/causal/eval/pilot contracts vẫn là nguồn đặc tả chi tiết |

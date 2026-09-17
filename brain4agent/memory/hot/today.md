@@ -209,3 +209,21 @@ User trao toan quyen va cung cap token Turso. Root thuc thi toan bo runbook cuto
 **Can user:** khoa Resend cung dia chi gui va dia chi ho tro. Sau do root dat 4 bien, deploy lai, hoan tat dang ky-xac minh-dang nhap va kiem chung AI tren production.
 
 **Luu y bao mat:** khoa Turso va khoa AI deu chi nam trong `.env` (da gitignore) va bien moi truong Vercel; khong co khoa nao trong commit.
+
+## Kiem tra lai nao khi user bao "Gia su AI hien chua san sang" (2026-09-17T18:45+07:00)
+
+User bao lai loi nay va yeu cau "check lai nao". Boot: `init_brain.js --check` bao CAN NANG CAP (BRN-011 state.json thieu newline cuoi, tu sua), da chay che do GHI, exit 0.
+
+**Doi chieu nao voi thuc te:** `.env` local dung (kira / vyceai.com/v1 / claude-sonnet-4-6); `npm run ai:doctor -- --probe` (phai nap `.env` truoc, script KHONG tu doc `.env`) -> OK, model ton tai, completion nho thanh cong. Dev server local KHONG chay (localhost:3000 = 000), production 200/401 binh thuong -> loi user gap la tren production. Root khong doc duoc AIInteraction production: auto-mode classifier chan ca Vercel API (Production Reads / Credential Exploration), vercel/turso CLI khong co tren PATH. Khong lach.
+
+**Tai hien duoc loi tai local bang chinh class `KiraChatCompletionsProvider` (timeout 50s, dung schema/prompt cua personalized_lesson, max 2200 token):** lesson#1 OK 25.4s; lesson#2 cung input -> FAIL 50.0s `AI_UNAVAILABLE reason=timeout`, dung nguyen van thong bao user thay. Mission-sized (1200 token) 4/4 OK: 7.3s / 5.0s / 10.2s / 8.9s.
+
+**Do khong cat (raw fetch, toi 150s) sinh bai hoc tren Vyce:** claude-sonnet-4-6 5 lan: 125.6s HTML, 125.7s HTML, 28.3s OK (1352 token), 74.2s OK (1007 token), 27.2s OK (1138 token). deepseek-v4-flash 3 lan: 3/3 treo ~125s roi tra trang HTML (gateway Vyce het gio, khong phai JSON). Ket luan: **sinh bai hoc dai qua Vyce chi xong duoi 50s khoang 3/7 lan**; 1 lan xong o 74s (van vuot 60s route budget); 3 lan gateway treo. Khong phai loi cau hinh, khong phai key, khong phai model sai. Ban sua 24f380a (45s->50s) da push origin nhung state.json KHONG ghi deployment nao sau `listena-k5vuvs8nf`, va ke ca deploy cung chi cuu them vai lan; khong giai quyet duoc phan bo nay.
+
+**Phan loai lai su co:** Mission tutor (Hoc cung AI trong bai hoc / dashboard) on dinh <11s. Duong hong la `/learner/personalized-lessons` (Bai AI rieng) vi day la generation dai nhat (2200 token) chay DONG BO trong request Vercel 60s. Bang `PersonalizedLesson` da co status GENERATING/READY + generationKey + stale check, tuc mo hinh du lieu da san sang cho async nhung request thi chua.
+
+**Can user quyet (khong tu sua trong luot nay):** (a) tach sinh bai hoc khoi request: tra 202 + row GENERATING, client poll; hoac (b) tang `maxDuration` len 300 (can Fluid compute) + timeout provider ~120s; hoac (c) doi nha cung cap/model on dinh hon cho generation dai; va (d) deploy 24f380a de dong bo code prod voi HEAD. Root de xuat (a) vi 3/8 lan gateway treo toi 125s nen tang timeout khong du.
+
+## User chon tang timeout ~3 phut (2026-09-17T18:50+07:00)
+
+Ly do user: Vyce la API gateway. Da sua: provider DEFAULT/MAX timeout 50s/60s -> 180s/180s; `maxDuration` 60 -> 200 o 5 route AI; `GENERATION_STALE_MS` 90s -> 210s. Giu `AI_REQUEST_PENDING_LEASE_MS` 30s (chong bam don, khong phai bao ve one-at-a-time cho call dai). Plan07 SPEC-P71 dong "maxDuration = 60" da danh dau thay the. Dieu kien hosted: Vercel phai cho 200s (Hobby can Fluid compute, tran 300s) - chua kiem duoc vi khong truy cap duoc Vercel trong phien nay; neu deploy tu choi thi phai ha ve 60 hoac lam async.

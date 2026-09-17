@@ -141,3 +141,42 @@ act      : RECAST | skill: grammar | score: 0.7
 | Thêm `npm run ai:doctor [-- --probe]` | Kiểm cấu hình đối chiếu danh mục thật. Chính lệnh này phát hiện model miễn phí đã vào bảo trì |
 
 Bổ sung 4 test hồi quy: model không tồn tại, khóa bị từ chối, 5xx vẫn retryable, và danh sách cho phép base URL.
+
+---
+
+## 9. Tái phát 18:30 — không còn là cấu hình, mà là độ trễ sinh bài học dài qua Vyce
+
+User báo lại đúng thông báo cũ. Kiểm tra lại: `.env` đúng, `ai:doctor --probe` OK (nhớ nạp `.env` trước, script không tự đọc), dev local không chạy nên lỗi là trên production. Root không đọc được `AIInteraction` production trong phiên này (classifier chặn Vercel API, CLI vắng).
+
+**Tái hiện tại local bằng chính `KiraChatCompletionsProvider`** (timeout 50s, prompt/schema `personalized_lesson`, 2.200 token): cùng một input, lần 1 xong 25,4s; lần 2 timeout 50,0s → `AI_UNAVAILABLE reason=timeout` → đúng nguyên văn thông báo user thấy. Mission (1.200 token) 4/4 OK trong 5–10s.
+
+**Đo không cắt (raw fetch, tối đa 150s), cùng prompt:**
+
+| Model | Kết quả từng lần |
+|---|---|
+| `claude-sonnet-4-6` | 125,6s HTML · 125,7s HTML · 28,3s OK (1.352 token) · 74,2s OK (1.007 token) · 27,2s OK (1.138 token) |
+| `deepseek-v4-flash` | 125,3s HTML · 125,4s HTML · 125,7s HTML |
+
+"HTML" = gateway của Vyce hết giờ ở ~120s và trả trang HTML thay vì JSON; ứng dụng đã cắt ở 45–50s từ trước đó. Tức là sinh bài học dài hoàn tất dưới 50s chỉ khoảng 3/7 lần, và có lần xong ở 74s vẫn vượt `maxDuration = 60`.
+
+**Kết luận:** đường "Bài AI riêng" (`/api/learner/personalized-lessons`, chạy đồng bộ trong request) không chịu nổi phân bố độ trễ này. Tăng timeout 45→50s (commit 24f380a, đã push, chưa thấy deploy) không giải quyết được. Bảng `PersonalizedLesson` đã có `status GENERATING/READY`, `generationKey` và stale check, nghĩa là mô hình dữ liệu sẵn sàng cho sinh bất đồng bộ; chỉ request là chưa.
+
+**Lựa chọn cần user quyết:**
+1. Sinh bài học bất đồng bộ: trả 202 + row GENERATING, client poll tới READY (đề xuất, vì gateway treo tới 125s nên tăng timeout không đủ).
+2. Tăng `maxDuration` lên 300 (cần Fluid compute trên Vercel) và timeout provider ~120s; vẫn chịu 4/8 lần treo.
+3. Dùng nhà cung cấp/model khác cho generation dài; giữ Vyce cho Mission.
+4. Ít nhất deploy 24f380a để production khớp HEAD.
+
+## 10. Quyết định 18:50 — tăng timeout lên 180s
+
+User chọn hướng 2 (Vyce là API gateway, chấp nhận chờ ~3 phút). Đã sửa:
+
+| Nơi | Trước | Sau |
+|---|---|---|
+| `kira-chat-completions-provider.ts` `DEFAULT_TIMEOUT_MS` / `MAX_TIMEOUT_MS` | 50s / 60s | 180s / 180s |
+| `maxDuration` ở 5 route AI | 60 | 200 |
+| `personalized-learning/service.ts` `GENERATION_STALE_MS` | 90s | 210s |
+
+Giữ nguyên `AI_REQUEST_PENDING_LEASE_MS = 30s`: lease này chỉ chống bấm dồn, nâng theo timeout sẽ khoá học viên tới 200s nếu function bị nền tảng giết trước khi settle.
+
+Điều kiện hosted: Vercel phải cho phép `maxDuration = 200` (Hobby cần Fluid compute, trần 300s; Pro trần 800s). Nếu plan không cho, deploy sẽ báo lỗi và phải hạ về 60 hoặc chuyển sang sinh bất đồng bộ (hướng 1). Khi gateway treo ~125s, học viên sẽ chờ tới lúc gateway trả lỗi rồi nhận trạng thái typed, thay vì bị ứng dụng cắt ở 50s.

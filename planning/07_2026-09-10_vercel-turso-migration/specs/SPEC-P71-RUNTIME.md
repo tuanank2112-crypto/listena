@@ -10,7 +10,7 @@ Replace the production Cloudflare runtime branch with a Node/libSQL runtime suit
 2. Refactor `src/lib/prisma.ts` to implement the public `resolveDatabaseConfig`, `getDatabaseRuntime`, `prisma`, `getAtomicLibSqlClient`, and `toLibSqlTimestamp` contract in 01-CONTRACTS.
 3. Create an explicit configuration-error type suitable for route-level typed unavailable handling.
 4. Preserve local dev, scripts, Prisma generation, isolated E2E database setup, and the existing node-sqlite timestamp behavior.
-5. Require Node 24 through `.nvmrc` and `package.json` engines. Mark the bounded server routes `runtime = "nodejs"; maxDuration = 60`: `learning-sessions`, `learning-sessions/[sessionId]/turns`, `tutor`, `learner/personalized-lessons`, and `teacher/generate-lesson`.
+5. Require Node 24 through `.nvmrc` and `package.json` engines. Mark the bounded server routes `runtime = "nodejs"; maxDuration = 60` (**thay thế 2026-09-17 18:50: `maxDuration = 200`, timeout provider 180s — Plan12 nhật ký; không hạ lại 60**): `learning-sessions`, `learning-sessions/[sessionId]/turns`, `tutor`, `learner/personalized-lessons`, and `teacher/generate-lesson`.
 6. Add Vercel configuration only when it establishes a concrete contract. Do not add a speculative region, paid feature, analytics, or custom domain.
 
 ## Forbidden zones

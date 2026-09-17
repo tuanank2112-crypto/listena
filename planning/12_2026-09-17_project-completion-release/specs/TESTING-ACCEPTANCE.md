@@ -131,6 +131,16 @@ Ký hiệu: ✅ đạt có receipt · ⬜ chưa · 🟡 UNVERIFIED · n/a không
 | ROOT2 | ci-independent | ci | 34d554a | WebFetch GitHub Actions CI #16 | — | conclusion=success, job Build/Lint/Test passed | github.com/tuanank2112-crypto/listena/actions | PASS | root-review | 2026-09-17 |
 | ROOT2 | ci-independent | ci | f408433 | WebFetch GitHub Actions CI #15 | — | conclusion=success | actions/runs/35187260657 | PASS | root-review | 2026-09-17 |
 | ROOT2 | local-db-drift | local | 34d554a | PRAGMA table_info tren prisma/dev.db | — | resultJson=false, enrichmentState=false | stdout | BLOCKER cho test thu cong | root-review | 2026-09-17 |
+| D3 | ai-config-local | local | 831f962 | `set -a; . ./.env; set +a; npm run ai:doctor -- --probe` | 0 | catalogue=6, model found, probe OK | stdout | PASS | root | 2026-09-17 |
+| D3 | lesson-gen-latency | local→vyceai.com | 831f962 | scratchpad probe qua `KiraChatCompletionsProvider` timeout 50s, purpose personalized_lesson, 2200 token | — | run1=25.4s OK, run2=timeout 50.0s (AI_UNAVAILABLE) | stdout | FAIL 1/2 | root | 2026-09-17 |
+| D3 | lesson-gen-latency-uncut | local→vyceai.com | 831f962 | raw fetch /chat/completions, cùng prompt, không cắt (150s) | — | claude-sonnet-4-6: 125.6s HTML, 125.7s HTML, 28.3s OK, 74.2s OK, 27.2s OK; deepseek-v4-flash: 3/3 ~125s HTML | stdout | FAIL 4/8 (gateway hang), 1/8 >60s | root | 2026-09-17 |
+| D3 | mission-turn-latency | local→vyceai.com | 831f962 | scratchpad probe, purpose start_mission, 1200 token, timeout 50s | — | 7.3s / 5.0s / 10.2s / 8.9s, 4/4 OK | stdout | PASS | root | 2026-09-17 |
+| D3 | production-ai-evidence | production | (unknown deploy) | đọc AIInteraction / Vercel API | — | bị classifier auto-mode chặn; CLI vắng | — | UNVERIFIED | root | 2026-09-17 |
+| D3 | timeout-180s | local | WIP trên 831f962 | `npx vitest run src/server/ai/kira-chat-completions-provider.test.ts` | 0 | tests=12,failed=0 (125s survives, 180s aborts typed) | stdout | PASS | root | 2026-09-17 |
+| D3 | timeout-180s | local | WIP trên 831f962 | `npm run type-check` / `npx eslint .` | 0 / 0 | errors=0 / errors=0,warnings=32 | stdout | PASS | root | 2026-09-17 |
+| D3 | timeout-180s | local | WIP trên 831f962 | `npx vitest run` (chạy riêng; lần chạy song song với build có 2 file fail do tranh chấp, không tính) | 0 | tests=501,failed=0,files=94 | stdout | PASS | root | 2026-09-17 |
+| D3 | timeout-180s | local | WIP trên 831f962 | `npm run build` | 0 | 42 routes, compiled | stdout | PASS | root | 2026-09-17 |
+| D3 | timeout-180s-hosted | production | — | deploy với maxDuration=200 | — | chưa deploy; Vercel plan phải cho 200s | — | ⬜ | root | 2026-09-17 |
 
 (Thêm dòng khi có receipt mới; không sửa dòng cũ.)
 
