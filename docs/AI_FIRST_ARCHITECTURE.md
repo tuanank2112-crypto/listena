@@ -54,22 +54,42 @@ AI chỉ tạo dialogue, coaching act và intervention spec. State transition, s
 
 Session player dùng reducer với các trạng thái load/submit/retry/complete, hỗ trợ TTS và năm intervention. Game Hub đưa AI Mission lên trước; quiz/match/spell chỉ là Quick comeback và phải gửi result về `/api/game-session`.
 
-## Quality gates
+## Causal Next Action Planner (`p11-v1`)
 
-Trước khi merge thay đổi session runtime:
+Kể từ Plan 11/12, `planNextLearningAction(userId, now)` trả về DTO phiên bản `p11-v1` (tương thích ngược với `p08-v1`) kèm căn cứ nhân quả `basis`:
 
-1. `npm run type-check`
-2. `npm test`
-3. `npm run lint`
-4. `npm run test:e2e`
-5. `npm run build`
-6. `npx prisma validate && npx prisma migrate status`
+```ts
+export type CausalBasis =
+  | { kind: "EVIDENCE"; skillKey: string; refs: EvidenceRef[] }
+  | { kind: "DUE_REVIEW"; vocabularyItemId: string; dueAt: string }
+  | { kind: "DECLARED_GOAL"; intentRevision: number }
+  | { kind: "ACTIVE_SESSION"; sessionId: string }
+  | { kind: "INSUFFICIENT_EVIDENCE" };
+```
 
-E2E bắt buộc bao gồm login learner, mở mission, gửi một turn, nhận AI response và reload/resume.
+- **Bất biến nhân quả:** AI chỉ tuyên bố "AI có bằng chứng rằng bạn cần củng cố X" khi có bản ghi quan sát thực tế thuộc đúng `skillKey === X`. Nếu không có quan sát phù hợp, hệ thống chuyển sang Daily Quest theo mục tiêu khai báo (`DECLARED_GOAL`) hoặc nhiệm vụ khởi động (`INSUFFICIENT_EVIDENCE`).
+- **Idempotency & Replay:** Đọc kế hoạch hoàn toàn read-only (0 ghi DB, 0 gọi provider). Trạng thái phiên lưu vết và đề xuất kế tiếp duy trì nhất quán qua reload trang.
 
-## Rủi ro còn lại
+## Bộ kiểm định sư phạm & Đánh giá chất lượng (`eval:learning`)
 
-- Schema hiện dùng SQLite local, trong khi Render blueprint cấp PostgreSQL; cần thống nhất provider trước production deployment.
-- AI response hiện là request/response JSON, chưa stream token.
-- Voice input/STT và pronunciation scoring chưa nằm trong MVP.
-- Session concurrency có thể gọi provider thừa khi hai retry đến đồng thời, nhưng unique key ngăn lưu turn trùng.
+- CLI: `npm run eval:learning -- --mode offline|live --dataset eval/learning-cases.v1.jsonl --out-dir eval/runs/<date>-<sha>`
+- Bộ dữ liệu tổng hợp 12 ca nhiều lượt (≥4 Mission, ≥4 Lesson Coach, ≥4 Daily Quest) bao phủ: phản xạ ngôn ngữ thay thế, sửa lỗi sai dai dẳng, đầu vào mơ hồ/lạc đề, phòng thủ prompt injection, bám sát giáo trình, chuyển đổi mục tiêu giữa phiên, và khả năng chịu lỗi provider.
+- Ma trận 5 tiêu chí chấm điểm chất lượng (0, 1, 2): Đúng đắn ngôn ngữ (Correctness), Mức độ phù hợp (Level Fit), Gợi ý Socratic (Actionable Hint), Bám sát ngữ cảnh (Contextual Relevance), và Khuyến khích sửa sai (Learner Retry).
+
+## Thử nghiệm có kiểm soát (Pilot Study Protocol)
+
+- Tham khảo [docs/PILOT_PROGRAM_SPEC.md](PILOT_PROGRAM_SPEC.md).
+- Cohort 5–8 người lớn có sự đồng thuận (consent), theo dõi 14 ngày (Baseline → Formative Loop → Transfer Task → Delayed Retention).
+- Phân tích và kiểm tra tính toàn vẹn dữ liệu bằng công cụ `npm run pilot:analyze`.
+
+## Quality gates (1.0.0 Release)
+
+Trước khi nghiệm thu bất kỳ thay đổi nào:
+
+1. `npm run type-check` (0 lỗi)
+2. `npm test` (100% test files pass)
+3. `npm run lint` (0 lỗi, cảnh báo <= 32)
+4. `npm run eval:learning` (12/12 ca pass kiểm định cấu trúc)
+5. `npm run test:e2e` (toàn bộ suite Playwright pass)
+6. `npx tsx scripts/verify-backup-restore.ts` (100% data fidelity)
+

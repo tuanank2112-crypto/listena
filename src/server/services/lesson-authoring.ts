@@ -6,9 +6,8 @@
 import { randomUUID } from "node:crypto";
 import { prisma } from "@/lib/prisma";
 import {
-  executeAtomicLibSqlBatch,
   libSqlTimestamp,
-  type LibSqlBatchStatement,
+  withLibSqlWriteTransaction,
 } from "@/lib/libsql-batch";
 import {
   hashCanonicalPayload,
@@ -91,32 +90,68 @@ export async function reserveLessonCreationRequest(input: {
   const leaseDurationMs = input.mode === "AI" ? 120000 : 30000;
   const leaseExpiresAt = new Date(input.now.getTime() + leaseDurationMs);
 
-  // If previous request row was FAILED with same hash, update lease
+  // If previous request row was FAILED with same hash, update lease via CAS
   if (existing && existing.status === "FAILED") {
-    await prisma.lessonCreationRequest.update({
-      where: { id: existing.id },
+    const updated = await prisma.lessonCreationRequest.updateMany({
+      where: { id: existing.id, status: "FAILED" },
       data: {
         status: "PENDING",
         leaseExpiresAt,
         errorCode: null,
       },
     });
-    return { kind: "reserved", requestId: existing.id };
+    if (updated.count === 1) {
+      return { kind: "reserved", requestId: existing.id };
+    }
   }
 
-  await prisma.lessonCreationRequest.create({
-    data: {
-      id: requestId,
-      userId: input.userId,
-      clientRequestId: input.clientRequestId,
-      requestHash: input.requestHash,
-      mode: input.mode,
-      status: "PENDING",
-      leaseExpiresAt,
-    },
-  });
-
-  return { kind: "reserved", requestId };
+  try {
+    await prisma.lessonCreationRequest.create({
+      data: {
+        id: requestId,
+        userId: input.userId,
+        clientRequestId: input.clientRequestId,
+        requestHash: input.requestHash,
+        mode: input.mode,
+        status: "PENDING",
+        leaseExpiresAt,
+      },
+    });
+    return { kind: "reserved", requestId };
+  } catch (error) {
+    const rechecked = await prisma.lessonCreationRequest.findUnique({
+      where: {
+        userId_clientRequestId: {
+          userId: input.userId,
+          clientRequestId: input.clientRequestId,
+        },
+      },
+    });
+    if (rechecked) {
+      if (rechecked.requestHash !== input.requestHash || rechecked.mode !== input.mode) {
+        throw new IdempotencyConflictError(
+          "Client request ID already used with different parameters"
+        );
+      }
+      if (rechecked.status === "COMMITTED" && rechecked.lessonId) {
+        return { kind: "replay", lessonId: rechecked.lessonId };
+      }
+      if (rechecked.status === "PENDING") {
+        const remainingSeconds = Math.max(
+          1,
+          Math.ceil((rechecked.leaseExpiresAt.getTime() - input.now.getTime()) / 1000)
+        );
+        return { kind: "pending", retryAfterSeconds: Math.min(30, remainingSeconds) };
+      }
+      if (rechecked.status === "UNKNOWN") {
+        throw new OutcomePendingError(
+          15,
+          "Lesson creation outcome uncertain; do not retry automatically"
+        );
+      }
+    }
+    throw error;
+  }
 }
 
 export interface ValidatedLessonDraft {
@@ -226,111 +261,112 @@ export async function commitLessonGraph(input: {
     vocabMap.set(lemma, item.id);
   }
 
-  // 3. Assemble atomic statements
+  // 3. Execute atomic transaction
   const lessonId = randomUUID();
   const now = new Date();
   const nowTs = libSqlTimestamp(now);
-  const statements: LibSqlBatchStatement[] = [];
 
-  // Statement: Insert Lesson
-  statements.push({
-    sql: `INSERT INTO "Lesson" (
-      "id", "courseId", "title", "topic", "cefrLevel", "learningObjectives",
-      "transcript", "audioUrl", "accent", "defaultPlaybackRate", "estimatedMinutes",
-      "status", "createdById", "createdAt", "updatedAt"
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?)`,
-    values: [
-      lessonId,
-      resolvedCourseId,
-      input.draft.title,
-      input.draft.topic,
-      input.draft.cefrLevel,
-      input.draft.learningObjectives.join("\n"),
-      input.draft.transcript,
-      input.draft.audioUrl ?? null,
-      input.draft.accent ?? "us",
-      input.draft.defaultPlaybackRate ?? 1.0,
-      input.draft.estimatedMinutes ?? 10,
-      input.userId,
-      nowTs,
-      nowTs,
-    ],
-  });
-
-  // Statements: Segments
-  for (const s of input.draft.segments) {
-    statements.push({
-      sql: `INSERT INTO "LessonSegment" (
-        "id", "lessonId", "position", "text", "difficulty"
-      ) VALUES (?, ?, ?, ?, ?)`,
-      values: [randomUUID(), lessonId, s.position, s.text, s.difficulty ?? 1.0],
-    });
-  }
-
-  // Statements: Exercises
-  for (const e of input.draft.exercises) {
-    statements.push({
-      sql: `INSERT INTO "Exercise" (
-        "id", "lessonId", "type", "prompt", "correctAnswer", "difficulty", "position", "metadata"
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, '{}')`,
-      values: [
-        randomUUID(),
-        lessonId,
-        e.type,
-        e.prompt,
-        e.correctAnswer,
-        e.difficulty ?? 1.0,
-        e.position,
-      ],
-    });
-  }
-
-  // Statements: LessonVocabulary joins
-  for (const v of input.draft.vocabulary) {
-    const vocabId = vocabMap.get(v.lemma.trim().toLowerCase());
-    if (!vocabId) continue;
-    statements.push({
-      sql: `INSERT INTO "LessonVocabulary" (
-        "lessonId", "vocabularyItemId", "isTarget", "importance"
-      ) VALUES (?, ?, ?, ?)
-      ON CONFLICT("lessonId", "vocabularyItemId") DO NOTHING`,
-      values: [lessonId, vocabId, v.isTarget !== false ? 1 : 0, v.importance ?? 1.0],
-    });
-  }
-
-  // Statement: AI interaction trace if present
-  if (input.aiTrace) {
-    statements.push({
-      sql: `INSERT INTO "AIInteraction" (
-        "id", "userId", "purpose", "provider", "model", "promptVersion",
-        "inputHash", "validatedOutput", "latencyMs", "success", "createdAt"
-      ) VALUES (?, ?, 'lesson_generation', ?, ?, 'live-lesson-generation-1.0', ?, ?, ?, 1, ?)`,
-      values: [
-        randomUUID(),
-        input.userId,
-        input.aiTrace.provider,
-        input.aiTrace.model,
-        input.aiTrace.inputHash,
-        input.aiTrace.validatedOutput,
-        input.aiTrace.latencyMs,
-        nowTs,
-      ],
-    });
-  }
-
-  // Statement: Update LessonCreationRequest to COMMITTED
-  statements.push({
-    sql: `UPDATE "LessonCreationRequest" SET
-      "status" = 'COMMITTED',
-      "lessonId" = ?,
-      "updatedAt" = ?
-      WHERE "id" = ? AND "userId" = ?`,
-    values: [lessonId, nowTs, input.requestId, input.userId],
-  });
-
-  // Execute atomic batch
   try {
-    await executeAtomicLibSqlBatch(statements);
+    await withLibSqlWriteTransaction(async (tx) => {
+      // Statement: Insert Lesson
+      await tx.execute({
+        sql: `INSERT INTO "Lesson" (
+          "id", "courseId", "title", "topic", "cefrLevel", "learningObjectives",
+          "transcript", "audioUrl", "accent", "defaultPlaybackRate", "estimatedMinutes",
+          "status", "createdById", "createdAt", "updatedAt"
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'DRAFT', ?, ?, ?)`,
+        args: [
+          lessonId,
+          resolvedCourseId,
+          input.draft.title,
+          input.draft.topic,
+          input.draft.cefrLevel,
+          input.draft.learningObjectives.join("\n"),
+          input.draft.transcript,
+          input.draft.audioUrl ?? null,
+          input.draft.accent ?? "us",
+          input.draft.defaultPlaybackRate ?? 1.0,
+          input.draft.estimatedMinutes ?? 10,
+          input.userId,
+          nowTs,
+          nowTs,
+        ],
+      });
+
+      // Statements: Segments
+      for (const s of input.draft.segments) {
+        await tx.execute({
+          sql: `INSERT INTO "LessonSegment" (
+            "id", "lessonId", "position", "text", "difficulty"
+          ) VALUES (?, ?, ?, ?, ?)`,
+          args: [randomUUID(), lessonId, s.position, s.text, s.difficulty ?? 1.0],
+        });
+      }
+
+      // Statements: Exercises
+      for (const e of input.draft.exercises) {
+        await tx.execute({
+          sql: `INSERT INTO "Exercise" (
+            "id", "lessonId", "type", "prompt", "correctAnswer", "difficulty", "position", "metadata"
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, '{}')`,
+          args: [
+            randomUUID(),
+            lessonId,
+            e.type,
+            e.prompt,
+            e.correctAnswer,
+            e.difficulty ?? 1.0,
+            e.position,
+          ],
+        });
+      }
+
+      // Statements: LessonVocabulary joins
+      for (const v of input.draft.vocabulary) {
+        const vocabId = vocabMap.get(v.lemma.trim().toLowerCase());
+        if (!vocabId) continue;
+        await tx.execute({
+          sql: `INSERT INTO "LessonVocabulary" (
+            "lessonId", "vocabularyItemId", "isTarget", "importance"
+          ) VALUES (?, ?, ?, ?)
+          ON CONFLICT("lessonId", "vocabularyItemId") DO NOTHING`,
+          args: [lessonId, vocabId, v.isTarget !== false ? 1 : 0, v.importance ?? 1.0],
+        });
+      }
+
+      // Statement: AI interaction trace if present
+      if (input.aiTrace) {
+        await tx.execute({
+          sql: `INSERT INTO "AIInteraction" (
+            "id", "userId", "purpose", "provider", "model", "promptVersion",
+            "inputHash", "validatedOutput", "latencyMs", "success", "createdAt"
+          ) VALUES (?, ?, 'lesson_generation', ?, ?, 'live-lesson-generation-1.0', ?, ?, ?, 1, ?)`,
+          args: [
+            randomUUID(),
+            input.userId,
+            input.aiTrace.provider,
+            input.aiTrace.model,
+            input.aiTrace.inputHash,
+            input.aiTrace.validatedOutput,
+            input.aiTrace.latencyMs,
+            nowTs,
+          ],
+        });
+      }
+
+      // Statement: Update LessonCreationRequest to COMMITTED with CAS check on status = 'PENDING'
+      const updateLedgerRes = await tx.execute({
+        sql: `UPDATE "LessonCreationRequest" SET
+          "status" = 'COMMITTED',
+          "lessonId" = ?,
+          "updatedAt" = ?
+          WHERE "id" = ? AND "userId" = ? AND "status" = 'PENDING'`,
+        args: [lessonId, nowTs, input.requestId, input.userId],
+      });
+      if (updateLedgerRes.rowsAffected !== 1) {
+        throw new Error("Ledger commit failed: request was not in PENDING status or was concurrently modified");
+      }
+    });
   } catch (error) {
     // If atomic commit fails, mark ledger UNKNOWN for AI mode or FAILED for manual
     await prisma.lessonCreationRequest.update({
@@ -343,9 +379,9 @@ export async function commitLessonGraph(input: {
     throw error;
   }
 
-  // Fresh readback check
-  const committedLesson = await prisma.lesson.findUnique({
-    where: { id: lessonId },
+  // Fresh readback check (owner-scoped)
+  const committedLesson = await prisma.lesson.findFirst({
+    where: { id: lessonId, createdById: input.userId },
     select: { id: true },
   });
   if (!committedLesson) {
@@ -505,12 +541,6 @@ export async function generateLessonFromRequest(input: {
     throw new Error("AI tạo nội dung không hợp lệ, vui lòng thử lại");
   }
 
-  await settleUserAICall(aiBudgetReservation, {
-    success: true,
-    provider: aiProvider.providerName,
-    model: aiProvider.modelName,
-  });
-
   const aiTrace = {
     provider: aiProvider.providerName,
     model: aiProvider.modelName,
@@ -543,6 +573,16 @@ export async function generateLessonFromRequest(input: {
     aiTrace,
   });
 
+  try {
+    await settleUserAICall(aiBudgetReservation, {
+      success: true,
+      provider: aiProvider.providerName,
+      model: aiProvider.modelName,
+    });
+  } catch (settleError) {
+    logger.warn({ err: settleError, lessonId }, "Failed to settle AI budget after successful lesson commit");
+  }
+
   return { replayed: false, value: { lessonId } };
 }
 
@@ -567,13 +607,15 @@ export async function publishLesson(input: {
     throw new Error("Forbidden");
   }
 
+  const targetVocabCount = lesson.vocabulary.filter((v) => Boolean(v.isTarget)).length;
+
   if (
     lesson.segments.length < 1 ||
     lesson.exercises.length < 1 ||
-    lesson.vocabulary.length < 1
+    targetVocabCount < 1
   ) {
     throw new LessonGraphIncompleteError(
-      `Lesson cannot be published: graph requires >=1 segment, >=1 exercise, and >=1 vocabulary item (found ${lesson.segments.length} segments, ${lesson.exercises.length} exercises, ${lesson.vocabulary.length} vocabulary)`
+      `Lesson cannot be published: graph requires >=1 segment, >=1 exercise, and >=1 target vocabulary item (found ${lesson.segments.length} segments, ${lesson.exercises.length} exercises, ${targetVocabCount} target vocabulary)`
     );
   }
 

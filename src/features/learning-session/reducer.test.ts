@@ -97,4 +97,31 @@ describe("learningSessionPlayerReducer", () => {
     expect(afterTurn.nextAction).toEqual(nextAction);
     expect(afterReload.nextAction).toEqual(nextAction);
   });
+
+  it("handles p11-v1 decision with causal basis after session completion and reload", () => {
+    const nextAction = {
+      kind: "PRACTICE" as const,
+      scenarioKey: "lost-bag",
+      reasonCode: "RECURRING_ERROR" as const,
+      reasonVi: "Luyện sửa lỗi cụ thể trong ngữ cảnh ngắn.",
+      evidenceRefs: [{ source: "LEARNING" as const, id: "evidence-2" }],
+      estimatedMinutes: 10 as const,
+      decisionVersion: "p11-v1" as const,
+      basis: {
+        kind: "EVIDENCE" as const,
+        skillKey: "past_simple",
+        refs: [{ source: "LEARNING" as const, id: "evidence-2" }],
+      },
+    };
+    const completed = session("COMPLETED");
+    const afterTurn = learningSessionPlayerReducer(createInitialPlayerState(), {
+      type: "SUBMIT_SUCCESS", session: completed, nextAction, now: 30,
+    });
+    const afterReload = learningSessionPlayerReducer(createInitialPlayerState(), {
+      type: "LOAD_SUCCESS", session: completed, nextAction, now: 40,
+    });
+
+    expect(afterTurn.nextAction).toEqual(nextAction);
+    expect(afterReload.nextAction).toEqual(nextAction);
+  });
 });

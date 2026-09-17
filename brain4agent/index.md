@@ -1,14 +1,18 @@
 # Bản đồ ListenAI
 
-Đọc [kernel](memory-distill.txt) → [hot log](memory/hot/today.md)/[state](memory/hot/state.json) → docs module → source.
+Đọc [kernel](memory-distill.txt) → [hot log](memory/hot/today.md)/[state](memory/hot/state.json) → [Plan12 router](../planning/12_2026-09-17_project-completion-release/plan.md) → docs module → source. Luôn đối chiếu `git status`/diffstat với memory (đã có lần não lệch WIP).
 
 | Phạm vi | Source | Tài liệu |
 |---|---|---|
+| Review ứng viên hiện tại | working tree chưa commit | [Root code review 2026-09-17](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md) — **đọc trước khi tiếp tục P120–P126**: local đã xác minh thật (484 test/24 E2E), nhưng có 1 lỗi P1 mutex-trên-Turso, 2 ô nghiệm thu sai sự thật và version 1.0.0 bump sớm |
 | Product AI-native | dashboard/games/session | [Tổng quan](project-intro.md), [AI architecture](../docs/AI_FIRST_ARCHITECTURE.md) |
-| Kế hoạch hiện tại | planning/10_2026-09-16_release-readiness-hardening | [Plan 10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) — local/CI acceptance complete; Turso preview & staging schemas reconciled; Vercel preview deployed Ready with fenced writes |
+| Kế hoạch tổng hiện tại | planning/12_2026-09-17_project-completion-release | [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md) — LOCAL QUALIFIED 1.0.0: P120 qualify WIP ✅, P121 integrity ✅, P122 local gates ✅, P123 causal planner p11-v1 ✅, P124 eval:learning ✅, P125 pilot tooling ✅, P126 runbook/backup/handover ✅; ready for hosted cutover. |
+| Contract kỹ thuật | planning/11_2026-09-16_ai-native-evidence-gates | [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md) — IN PROGRESS: P110–P112 có WIP chưa commit/chưa nghiệm thu (type-check FAIL, 2 integration test FAIL); receipt/write-tx/causal/eval/pilot contracts là nguồn chi tiết |
+| Hardening đã triển khai | planning/10_2026-09-16_release-readiness-hardening | [Plan10](../planning/10_2026-09-16_release-readiness-hardening/plan.md) — acceptance qualified: P102/P103/P106 reopened, actual CI UNVERIFIED; hosted Ready/schema records remain historical |
 | Account security | planning/09_2026-09-15_account-email-security | [Plan 09](../planning/09_2026-09-15_account-email-security/plan.md) — local acceptance complete; Resend-configured disposable Preview evidence remains open under Plan07 gates |
 | Hạ tầng gốc | planning/07_2026-09-10_vercel-turso-migration | [Plan 07](../planning/07_2026-09-10_vercel-turso-migration/plan.md) — canonical Turso staging and bounded Vercel Preview evidence are recorded; full hosted ownership/retry, final export/cutover, Production and successful live Kira remain unchecked |
-| Rà soát hiện tại | source snapshot 0ce30e1 | [Review 2026-09-16](../docs/PROJECT_REVIEW_2026-09-16.md) — fresh 425 unit + 20 E2E baseline; Plan10 findings/spec, no implementation or deploy claim |
+| Rà soát hiện tại | source snapshot de28cab | [Worker review 2026-09-16](../docs/WORKER_REVIEW_2026-09-16.md) — report/process/source audit; fresh437unit/type-check/structural eval, in-memory SQL/schema/hash defect probes |
+| Review trước implementation | source snapshot 0ce30e1 | [Review 2026-09-16](../docs/PROJECT_REVIEW_2026-09-16.md) — historical425unit+20E2E baseline and Plan10 findings/spec |
 | Rà soát lịch sử | source snapshot aa2021d | [Review 2026-09-13](../docs/PROJECT_REVIEW_2026-09-13.md) — 8 findings later completed locally by Plan08; frozen snapshot |
 | Cải tiến AI-native (local accepted) | planning/08_2026-09-13_ai-native-self-learning | [Plan08](../planning/08_2026-09-13_ai-native-self-learning/plan.md) — P80–P85 implementation + local acceptance complete: 387/387 tests (78 files), type-check/build/Prisma PASS, E2E 20/20, offline quality 30/30 and 12/12; hosted/live/pilot remain open |
 | Rà soát lịch sử | toàn repository | [Audit 2026-09-07](../docs/PROJECT_AUDIT_2026-09-07.md) |

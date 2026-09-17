@@ -46,6 +46,13 @@ export type EvidenceRef = {
   id: string;
 };
 
+export type CausalBasis =
+  | { kind: "EVIDENCE"; skillKey: string; refs: EvidenceRef[] }
+  | { kind: "DUE_REVIEW"; vocabularyItemId: string; dueAt: string }
+  | { kind: "DECLARED_GOAL"; intentRevision: number }
+  | { kind: "ACTIVE_SESSION"; sessionId: string }
+  | { kind: "INSUFFICIENT_EVIDENCE" };
+
 export type LearningDecision = {
   kind: LearningDecisionKind;
   targetId?: string;
@@ -55,5 +62,6 @@ export type LearningDecision = {
   reasonVi: string;
   evidenceRefs: EvidenceRef[];
   estimatedMinutes: LearningTimeBudgetMinutes;
-  decisionVersion: "p08-v1";
+  decisionVersion: "p08-v1" | "p11-v1";
+  basis?: CausalBasis;
 };

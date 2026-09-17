@@ -375,9 +375,13 @@ model Attempt {
   replayCount      Int      @default(0)
   hintCount        Int      @default(0)
   playbackRate     Float    @default(1.0)
-  clientAttemptId  String?
-  requestHash      String?
-  createdAt        DateTime @default(now())
+  clientAttemptId          String?
+  requestHash              String?
+  resultJson               String?
+  enrichmentState          String   @default("NOT_REQUESTED")
+  enrichmentLeaseId        String?
+  enrichmentLeaseExpiresAt DateTime?
+  createdAt                DateTime @default(now())
 
   user       User           @relation(fields: [userId], references: [id])
   lesson     Lesson         @relation(fields: [lessonId], references: [id])
@@ -472,6 +476,7 @@ model ReviewLog {
   nextInterval     Float      @default(0.0)
   clientReviewId   String?
   requestHash      String?
+  resultJson       String?
   reviewedAt       DateTime   @default(now())
 
   flashcard Flashcard @relation(fields: [flashcardId], references: [id], onDelete: Cascade)

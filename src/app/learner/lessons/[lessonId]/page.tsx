@@ -42,6 +42,7 @@ export default async function LessonDetailPage({
 
   return (
     <LessonDetailClient
+      userId={userId ?? "anonymous"}
       lesson={JSON.parse(JSON.stringify(publicLesson))}
       lastAttemptMap={Object.fromEntries(lastAttempts.map((attempt) => [attempt.exerciseId, attempt]))}
       learningContext={learningContext}

@@ -1,27 +1,26 @@
-# Dữ liệu và luồng học
+# Data and learning flow
 
-Plan07 uses Prisma/libSQL with file-backed SQLite for local development and E2E; Turso is selected only by exact `APP_RUNTIME=vercel` plus complete server-only Turso configuration. Missing, partial or inherited hosted settings fail closed rather than open local SQLite. Canonical staging `listena-staging-20260911` is a verified one-way import of the approved D1 snapshot; bounded Preview writes used separate disposable clone `listena-preview-20260912`, never the canonical staging target. The former request-scoped Cloudflare D1 path is not part of the target Vercel graph; the deployed Cloudflare Worker+D1 remains a historical rollback asset. DDL is forward-only through `migrations/0001`–`0003`; the historical production curriculum recovery was a reviewed idempotent upsert import, never reset/seed. E2E creates a temporary `listena-e2e-*` database and never touches `dev.db`, historical production D1, or a Turso target.
+## Runtime/storage boundary
 
-## Model
-- User/roles, verified-email timestamp, hashed one-time AccountActionToken and owner-bound FeedbackMessage; LearnerProfile includes calibration state.
-- Course→Lesson→LessonSegment/Exercise; LessonVocabulary nối VocabularyItem.
-- LearningSession→LearningTurn/LearningEvidence/Intervention; AIInteraction trace provider/output/fallback.
-- Attempt/AttemptError, VocabularyMastery, Flashcard/ReviewLog, SkillMastery, Recommendation.
-- PersonalizedLesson/PersonalizedLessonVocabulary/PersonalizedLessonAttempt are owner-private artifacts. AdaptiveGameRun/AdaptiveGameRound hold server-only validators; AdaptiveEvidence feeds mastery/calibration.
+**Cảnh báo cấu hình (root review 2026-09-17):** loại database phải suy ra từ `resolveDatabaseConfig()`, KHÔNG đọc `process.env.DATABASE_URL` trực tiếp. Nhánh hosted Turso lấy `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` và không đọc `DATABASE_URL`, nên mọi phép kiểm dựa vào biến đó sẽ chạy nhánh local trên hosted. Đã xảy ra thật ở `isFileDatabase()` trong `libsql-batch.ts` (finding F1).
 
-## Hosting migration boundary
-Cloudflare D1 was not reset, seeded, hand-edited, or dual-written during Plan07 staging. One approved snapshot was imported one-way into canonical Turso staging and verified for semantic schema, indexes, foreign keys, integrity, counts, IDs and timestamp evidence; staging is never promoted to production. Preview's bounded write proof used a separate disposable clone and returned to `MIGRATION_WRITE_MODE=disabled`; the clone is not a final staging or production target. A separate final export/cutover approval is still required. Configuration/transport failures are opaque typed unavailable responses, never a database fallback.
+Prisma/libSQL uses file SQLite for local/E2E and exact APP_RUNTIME=vercel with complete private Turso config for hosted; no local fallback from hosted errors. libSQL local timestamps use Unix milliseconds, hosted uses canonical ISO representation. Target application graph excludes historical Worker/D1/WASM imports. Current additive Prisma migration inventory has 9 applied migrations per Plan10 plus 1 WIP pending (Plan11 receipts); migrations/0001-0003 are historical D1 deployment files.
+
+Canonical staging listena-staging-20260911 is an approved one-way D1 import, never a Preview/Production write target or staging promotion. Historical disposable preview listena-preview-20260912 has schema reconciliation records. No new remote read/write occurred in Plan11 review; final export/cutover/rollback remain Plan07 authority, no reset/seed/dual-write.
+
+## Models
+User/roles + emailVerifiedAt, hashed one-time AccountActionToken and FeedbackMessage; LearnerProfile/intent revision/calibration; Course/Lesson/Segment/Exercise/VocabularyItem/joins; LearningSession/Turn/Evidence/Intervention; learner memory and safe AIInteraction traces; owner-private PersonalizedLesson/attempt/vocabulary; AdaptiveGameRun/Round/AdaptiveEvidence; legacy Attempt/AttemptError, Flashcard/ReviewLog, VocabularyMastery, SkillMastery and Recommendation.
+
+Plan10 added Attempt.clientAttemptId/requestHash, ReviewLog.clientReviewId/requestHash, VocabularyMastery.revision and LessonCreationRequest. Uncommitted Plan11 WIP (found 2026-09-17) adds migration `20260916120000_plan11_integrity_receipts`: Attempt.resultJson/enrichmentState(default NOT_REQUESTED)/enrichmentLeaseId/enrichmentLeaseExpiresAt and ReviewLog.resultJson, matching the P110 freeze; it is NOT applied to prisma/dev.db and not accepted (Plan12 P120). Write paths move to `withLibSqlWriteTransaction` (read-in-tx, CAS rowsAffected guard). Attempt writes VocabularyMastery only for error words (revision +1 per write); correct answers leave revision unchanged. Old rows with null resultJson replay as 409 LEGACY_RESULT_UNAVAILABLE.
 
 ## AI-native loop
-Dashboard finds the owner's newest ACTIVE session or creates a Daily Quest. Repositories supply bounded profile/weak-skill/due-vocabulary context → orchestrator/retrieval/live provider or typed unavailable error → server validation → parameterized libSQL atomic batch with commit fences persists turns/outcome/evidence/mastery → public DTO → reducer/UI. Local raw SQL uses Unix-millisecond timestamps; Turso mode uses canonical ISO timestamps. Personalized generation follows the same privacy boundary and persists a source snapshot hash/provenance.
+Read-only shared planner combines owned LearningEvidence/AdaptiveEvidence, intent, bounded learner memory/history and due schedules -> primary owned resume/Mission/Coach/Quest -> live provider or typed unavailable -> server validates -> atomic turn/evidence/mastery/memory commit -> private DTO -> learner comeback and evidence-backed continuation. Plan11 makes causal citations match selected skill/error; legacy self-rating is not promoted into server-scored evidence.
 
-Intervention validator decides output before state/evidence. Completion auto/manual uses ACTIVE→COMPLETED and increases minutes once in a transaction. Unique clientTurnId/sequence prevents duplicate writes. Adaptive-game and personalized-lesson answer IDs are also idempotent and their correct answers never reach the browser.
+Start and turn idempotency already exist. Completion requires evidence, increments time once and distinguishes partial/success. Adaptive game/private lesson grading and hidden validators remain server-owned. GET/render do not create recommendations, call providers or mutate learning state.
 
-## Practice hỗ trợ
-Attempt chỉ nhận exercise đúng lesson PUBLISHED. Flashcard review kiểm ownership, dùng SM-2; counters là delta atomic. Queue lấy active cards đến hạn hoặc chưa có mastery của user. Client tiến queue sau lưu thành công; retry lỗi giữ card.
+## Legacy practice and current qualification
+Attempt validates published exercise membership. Flashcard owner checks/SM-2/due queue exist. Post-worker review found a losing ReviewLog remains after committed batch changes[1,0], replay fabricates schedule values, clients retain UUID but recompute hash inputs, and authoring writes course/catalog outside graph batch. These are repair scope, not certified integrity. P111/P112 require real DB fingerprints and full receipt equality.
 
-## Cache/memory
-English dùng voice hệ thống. Vietnamese có Next/Python disk caches, còn thiếu sidecar auth và speed semantics. Kokoro tồn tại legacy nhưng không đăng ký runtime.
-Brain lưu kiến thức dự án, không secrets/hội thoại riêng tư của học viên. state.json.current_version là app; brain_template_version là khung não.
-
-Plan10 review notes that legacy Attempt/ReviewLog and teacher authoring paths do not yet have complete request-level idempotency/atomic graph guarantees. The proposed additive request IDs and LessonCreationRequest ledger are specifications only until the Plan10 migration is implemented and accepted; they must not be described as existing schema before then.
+## Audio/privacy and study data
+English uses WebSpeech. Optional Vietnamese Next/Python boundary requires user/shared-key auth, private no-store caching, loopback sidecar and speed1.0 only. Kokoro removed. No speech ability inference from text evidence.
+Brain stores project contracts/checkpoints, never secrets or private learner conversations. Pilot raw transcripts/results stay outside git/brain under consent/retention policy; only pseudonymous aggregate receipts/artifact pointers may be tracked. current_version0.5.0 is distinct from brain_template_version1.4.0.

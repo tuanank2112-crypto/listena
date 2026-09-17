@@ -21,6 +21,7 @@ vi.mock("@/lib/prisma", () => ({
     course: { findUnique: mocks.course, findFirst: vi.fn() },
     lesson: {
       findUnique: mocks.findLesson,
+      findFirst: mocks.findLesson,
       create: mocks.createLesson,
       update: mocks.updateLesson,
     },
@@ -35,6 +36,13 @@ vi.mock("@/lib/prisma", () => ({
 }));
 vi.mock("@/lib/libsql-batch", () => ({
   executeAtomicLibSqlBatch: mocks.atomicBatch,
+  withLibSqlWriteTransaction: vi.fn(async (run) => {
+    mocks.atomicBatch();
+    const mockTx = {
+      execute: vi.fn(async () => ({ rows: [], rowsAffected: 1 })),
+    };
+    return await run(mockTx);
+  }),
   libSqlTimestamp: (d: Date) => d.toISOString(),
 }));
 vi.mock("@/lib/logger", () => ({ default: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }));
@@ -156,7 +164,7 @@ describe("teacher content ownership", () => {
       createdById: "teacher",
       segments: [{ id: "seg-1" }],
       exercises: [{ id: "ex-1" }],
-      vocabulary: [{ vocabularyItemId: "vocab-1" }],
+      vocabulary: [{ vocabularyItemId: "vocab-1", isTarget: true }],
     });
     mocks.updateLesson.mockResolvedValue({ id: "complete-lesson", status: "PUBLISHED" });
 
@@ -170,5 +178,26 @@ describe("teacher content ownership", () => {
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toMatchObject({ status: "PUBLISHED" });
+  });
+
+  it("PUT publish rejects graph with only non-target vocabulary with 409 LESSON_GRAPH_INCOMPLETE", async () => {
+    mocks.findLesson.mockResolvedValue({
+      id: "non-target-lesson",
+      createdById: "teacher",
+      segments: [{ id: "seg-1" }],
+      exercises: [{ id: "ex-1" }],
+      vocabulary: [{ vocabularyItemId: "vocab-1", isTarget: false }],
+    });
+
+    const response = await PUT(
+      new Request("http://localhost/api/teacher/lesson", {
+        method: "PUT",
+        body: JSON.stringify({ id: "non-target-lesson", action: "publish" }),
+        headers: { "Content-Type": "application/json" },
+      })
+    );
+
+    expect(response.status).toBe(409);
+    await expect(response.json()).resolves.toMatchObject({ code: "LESSON_GRAPH_INCOMPLETE" });
   });
 });

@@ -22,12 +22,18 @@ globalThis.fetch = async function e2eResponsesFetch(input, init) {
   }
 
   const payload = parseJson(init.body);
-  if (payload?.text?.format?.name !== "tutor_turn") {
-    throw new Error("Unexpected non-tutor Responses request in the E2E stub.");
+  const formatName = payload?.text?.format?.name;
+  let output;
+  if (formatName === "tutor_turn") {
+    const tutorInput = parseJson(payload.input);
+    output = makeTutorOutput(tutorInput);
+  } else if (formatName === "lesson_draft") {
+    const lessonInput = parseJson(payload.input);
+    output = makeLessonDraftOutput(lessonInput);
+  } else {
+    throw new Error(`Unexpected Responses format in E2E stub: ${formatName}`);
   }
 
-  const tutorInput = parseJson(payload.input);
-  const output = makeTutorOutput(tutorInput);
   responseSequence += 1;
   return new Response(
     JSON.stringify({
@@ -41,6 +47,45 @@ globalThis.fetch = async function e2eResponsesFetch(input, init) {
     },
   );
 };
+
+function makeLessonDraftOutput(input) {
+  const topic = input?.topic || "Travel";
+  const cefrLevel = input?.cefrLevel || "A2";
+  return {
+    title: `Lesson on ${topic}`,
+    transcript: "Welcome to our city. Please show your ticket.",
+    segments: [
+      { position: 1, text: "Welcome to our city.", difficulty: 1.0 },
+      { position: 2, text: "Please show your ticket.", difficulty: 1.0 },
+    ],
+    exercises: [
+      {
+        type: "FULL_DICTATION",
+        prompt: "Type what you hear",
+        correctAnswer: "Welcome to our city.",
+        position: 1,
+        difficulty: 1.0,
+      },
+      {
+        type: "FULL_DICTATION",
+        prompt: "Type what you hear",
+        correctAnswer: "Please show your ticket.",
+        position: 2,
+        difficulty: 1.0,
+      },
+    ],
+    vocabulary: [
+      {
+        lemma: "ticket",
+        displayText: "ticket",
+        meaningVi: "vé",
+        cefrLevel: cefrLevel,
+        isTarget: true,
+        importance: 1.0,
+      },
+    ],
+  };
+}
 
 function requestUrl(input) {
   if (typeof input === "string") return input;

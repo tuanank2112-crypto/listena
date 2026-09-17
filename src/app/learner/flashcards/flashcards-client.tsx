@@ -7,6 +7,12 @@ import { Check, RotateCw, Sparkles, Volume2, X } from "lucide-react";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
 import { speak } from "@/core/tts/speech";
 import { useSpeechState } from "@/core/tts/use-speech";
+import {
+  buildIntentKey,
+  getStoredIntent,
+  setStoredIntent,
+  clearStoredIntent,
+} from "@/lib/client-intent";
 
 interface Flashcard {
   id: string;
@@ -14,7 +20,23 @@ interface Flashcard {
   vocabularyItem: { id: string; displayText: string; meaningVi: string; ipa: string | null };
 }
 
-export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashcards: Flashcard[]; dueCount: number; totalCount: number }) {
+interface ReviewIntentPayload {
+  flashcardId: string;
+  rating: "AGAIN" | "HARD" | "GOOD" | "EASY";
+  responseTimeMs: number;
+}
+
+export function FlashcardsClient({
+  userId = "anonymous",
+  flashcards,
+  dueCount,
+  totalCount,
+}: {
+  userId?: string;
+  flashcards: Flashcard[];
+  dueCount: number;
+  totalCount: number;
+}) {
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -22,9 +44,27 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
   const startedAt = useRef(0);
   useEffect(() => { startedAt.current = Date.now(); }, []);
   const submitting = useRef(false);
-  const clientReviewIdRef = useRef<string | null>(null);
   const speechState = useSpeechState();
   const card = flashcards[index];
+
+  const pendingIntentRef = useRef<{
+    clientReviewId: string;
+    payload: ReviewIntentPayload;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!card) return;
+    const storageKey = buildIntentKey(userId, "flashcard", card.id);
+    const stored = getStoredIntent<ReviewIntentPayload>(storageKey);
+    if (stored) {
+      pendingIntentRef.current = {
+        clientReviewId: stored.key,
+        payload: stored.payload,
+      };
+    } else {
+      pendingIntentRef.current = null;
+    }
+  }, [card, userId]);
 
   function playSpeech() {
     if (!card) return;
@@ -36,29 +76,62 @@ export function FlashcardsClient({ flashcards, dueCount, totalCount }: { flashca
     submitting.current = true;
     setSaving(true);
     setError(null);
+    const storageKey = buildIntentKey(userId, "flashcard", card.id);
     try {
-      if (!clientReviewIdRef.current) {
-        clientReviewIdRef.current = crypto.randomUUID();
+      let intent = pendingIntentRef.current;
+      if (
+        intent &&
+        intent.payload.flashcardId === card.id &&
+        intent.payload.rating !== rating
+      ) {
+        setError("Lần gửi trước chưa có kết quả xác định. Vui lòng kiểm tra lại trước khi chọn đánh giá khác.");
+        submitting.current = false;
+        setSaving(false);
+        return;
       }
+
+      if (!intent || intent.payload.flashcardId !== card.id) {
+        const clientReviewId = crypto.randomUUID();
+        const payload: ReviewIntentPayload = {
+          flashcardId: card.id,
+          rating,
+          responseTimeMs: Math.max(1, Date.now() - startedAt.current),
+        };
+        intent = { clientReviewId, payload };
+        pendingIntentRef.current = intent;
+        setStoredIntent(storageKey, {
+          key: clientReviewId,
+          payload,
+          createdAt: Date.now(),
+        });
+      }
+
       const response = await fetch("/api/flashcard", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          flashcardId: card.id,
-          rating,
-          responseTimeMs: Math.max(1, Date.now() - startedAt.current),
-          clientReviewId: clientReviewIdRef.current,
+          ...intent.payload,
+          clientReviewId: intent.clientReviewId,
         }),
       });
-      if (!response.ok) throw new Error("review failed");
-      clientReviewIdRef.current = null;
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "review failed");
+      }
+
+      clearStoredIntent(storageKey);
+      pendingIntentRef.current = null;
       setFlipped(false);
       setIndex((value) => value + 1);
       startedAt.current = Date.now();
     } catch {
       setError("Chưa lưu được kết quả. Bạn hãy thử lại nhé.");
-    } finally { submitting.current = false; setSaving(false); }
-  }, [card]);
+    } finally {
+      submitting.current = false;
+      setSaving(false);
+    }
+  }, [card, userId]);
 
   if (!card) {
     return <div className="mx-auto flex min-h-[75vh] max-w-md items-center px-4"><div className="paper-card w-full rounded-[30px] p-8 text-center"><div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#dff2e8]"><Check className="h-8 w-8 text-[#176b55]" /></div><h1 className="mt-5 text-2xl font-black">Xong hôm nay!</h1><p className="mt-2 text-sm font-bold text-[#7b857f]">Bạn đã ôn hết các thẻ đến hạn trong lượt này.</p><Link href="/learner/dashboard" className="mt-6 inline-block font-bold text-[#176b55]">Tiếp tục học cùng AI</Link></div></div>;

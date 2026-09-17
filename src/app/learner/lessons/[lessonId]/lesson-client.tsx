@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
@@ -8,13 +8,18 @@ import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
 import { speak } from "@/core/tts/speech";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import {
+  buildIntentKey,
+  getStoredIntent,
+  setStoredIntent,
+  clearStoredIntent,
+} from "@/lib/client-intent";
+import {
   ArrowLeft,
   ArrowRight,
   Bot,
   Check,
   ChevronDown,
   Gamepad2,
-  Headphones,
   HelpCircle,
   LoaderCircle,
   Play,
@@ -76,9 +81,15 @@ function parseMetadata(value: string | null): ExerciseMetadata {
   try { return value ? JSON.parse(value) : {}; } catch { return {}; }
 }
 
-export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: {
+export function LessonDetailClient({
+  userId = "anonymous",
+  lesson,
+  lastAttemptMap: _lastAttemptMap,
+  learningContext,
+}: {
+  userId?: string;
   lesson: LessonData;
-  lastAttemptMap: Record<string, { score: number | null }>;
+  lastAttemptMap?: Record<string, { score: number | null }>;
   learningContext: LearningContext | null;
 }) {
   const router = useRouter();
@@ -122,7 +133,7 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
   }, [lesson.audioUrl, lesson.transcript, rate, segment, speakEnglish]);
 
   function move(next: number) {
-    clientAttemptIdRef.current = null;
+    pendingIntentRef.current = null;
     setIndex(next);
     setAnswer("");
     setError("");
@@ -132,37 +143,92 @@ export function LessonDetailClient({ lesson, lastAttemptMap, learningContext }: 
     setStartedAt(Date.now());
   }
 
-  const clientAttemptIdRef = useRef<string | null>(null);
+  interface AttemptIntentPayload {
+    exerciseId: string;
+    lessonId: string;
+    submittedAnswer: string;
+    completionTimeMs: number;
+    replayCount: number;
+    hintCount: number;
+    playbackRate: number;
+  }
+
+  const pendingIntentRef = useRef<{
+    clientAttemptId: string;
+    payload: AttemptIntentPayload;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!exercise?.id) return;
+    const storageKey = buildIntentKey(userId, "attempt", exercise.id);
+    const stored = getStoredIntent<AttemptIntentPayload>(storageKey);
+    if (stored) {
+      pendingIntentRef.current = {
+        clientAttemptId: stored.key,
+        payload: stored.payload,
+      };
+    } else {
+      pendingIntentRef.current = null;
+    }
+  }, [exercise?.id, userId]);
 
   async function submit() {
-    if (!answer.trim()) return setError("Nhập câu trả lời trước nhé.");
+    const trimmed = answer.trim();
+    if (!trimmed) return setError("Nhập câu trả lời trước nhé.");
     setLoading(true);
     setError("");
+    const storageKey = buildIntentKey(userId, "attempt", exercise.id);
     try {
-      if (!clientAttemptIdRef.current) {
-        clientAttemptIdRef.current = crypto.randomUUID();
+      let intent = pendingIntentRef.current;
+      if (
+        intent &&
+        intent.payload.exerciseId === exercise.id &&
+        intent.payload.submittedAnswer !== trimmed
+      ) {
+        setError("Lần gửi trước chưa có kết quả xác định. Vui lòng kiểm tra lại trước khi gửi đáp án mới.");
+        setLoading(false);
+        return;
       }
+
+      if (!intent || intent.payload.exerciseId !== exercise.id) {
+        const clientAttemptId = crypto.randomUUID();
+        const payload: AttemptIntentPayload = {
+          exerciseId: exercise.id,
+          lessonId: lesson.id,
+          submittedAnswer: trimmed,
+          completionTimeMs: Math.max(1, Date.now() - startedAt),
+          replayCount,
+          hintCount,
+          playbackRate: rate,
+        };
+        intent = { clientAttemptId, payload };
+        pendingIntentRef.current = intent;
+        setStoredIntent(storageKey, {
+          key: clientAttemptId,
+          payload,
+          createdAt: Date.now(),
+        });
+      }
+
       const response = await fetch("/api/attempt", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          exerciseId: exercise.id,
-          lessonId: lesson.id,
-          submittedAnswer: answer.trim(),
-          completionTimeMs: Date.now() - startedAt,
-          replayCount,
-          hintCount,
-          playbackRate: rate,
-          clientAttemptId: clientAttemptIdRef.current,
+          ...intent.payload,
+          clientAttemptId: intent.clientAttemptId,
         }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || "Không thể chấm bài");
-      clientAttemptIdRef.current = null;
+
+      clearStoredIntent(storageKey);
+      pendingIntentRef.current = null;
       router.push(`/learner/attempt/${payload.attemptId ?? payload.attempt.id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Thử lại nhé.");
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function askTutor() {

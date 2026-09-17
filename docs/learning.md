@@ -1,4 +1,4 @@
-# Learning runtime — 0.3.0
+# Learning runtime — 1.0.0
 
 ListenAI dùng Mission/Coach/Quest → learner reply → server grading → feedback/comeback → evidence/mastery/memory → bước học tiếp theo. Lessons, games và flashcards hỗ trợ vòng này.
 
@@ -16,13 +16,17 @@ Daily Quest đọc tối đa ba scenario key hợp lệ từ Quest thuộc chín
 
 Meter nghe/từ vựng/chính tả ở dashboard/progress dùng `SkillMastery` do AI sessions cập nhật; cột `LearnerProfile` chỉ là fallback tương thích nếu skill chưa có record. Điểm display được clamp 0..1, không đồng bộ ngược profile để tránh hai nguồn ghi cạnh tranh.
 
-## Next action
+## Causal Next Action (`p11-v1`)
 
-`computeNextAction(userId, sessionId?)` dùng evidence thuộc learner; không có evidence thì trả null. Thứ tự: lỗi lặp có evidence hợp lệ → PRACTICE; kỹ năng yếu và bài phù hợp chưa học → COACH; từ đến hạn → QUEST; còn lại → MISSION hợp lệ khác với phiên vừa học. Không chọn tùy tiện bài cũ nhất rồi tuyên bố phù hợp kỹ năng.
+`planNextLearningAction(userId, now)` trả về `LearningDecision` theo hợp đồng `p11-v1` (tương thích ngược với `p08-v1`).
+Trường `basis` (CausalBasis) phản ánh nguồn gốc chính xác của quyết định:
+- `EVIDENCE`: kỹ năng yếu hoặc lỗi lặp có bản ghi quan sát thực tế (100% cited refs thuộc đúng skill/error của learner).
+- `DUE_REVIEW`: ôn từ vựng đến hạn theo lịch SRS.
+- `DECLARED_GOAL`: nhiệm vụ hàng ngày Daily Quest theo mục tiêu và sở thích người học đã lưu.
+- `ACTIVE_SESSION`: tiếp tục phiên đang mở dở.
+- `INSUFFICIENT_EVIDENCE`: nhiệm vụ khởi động khi chưa có đủ dữ liệu quan sát.
 
-`GET /api/learning-sessions/:id`, `POST /:id/turns`, `POST /:id/complete` giữ payload hiện có và thêm `nextAction` ở envelope khi completed. Trường này có kind, reason, evidenceRefs, và targetId/scenarioKey/goal tùy hoạt động. Computation lỗi được log rồi trả null để kết quả học đã commit vẫn truy cập được.
-
-Reducer giữ nextAction qua submit, complete và reload. Debrief hiển thị lý do cùng CTA. COACH/QUEST truyền lessonId; MISSION truyền scenarioKey; PRACTICE mở Mission với mục tiêu sửa lỗi qua API tạo session hiện có. Không chuyển người cần sửa lỗi sang một queue flashcard trống không liên quan.
+`GET /api/learning-sessions/:id`, `POST /:id/turns`, `POST /:id/complete`, `/api/learner/next-action` dùng chung hợp đồng này. Toàn bộ thao tác lập kế hoạch hoàn toàn read-only (0 ghi DB, 0 gọi provider). Reducer và giao diện giữ nguyên quyết định qua reload trang.
 
 ## Timeline, curriculum và SRS
 

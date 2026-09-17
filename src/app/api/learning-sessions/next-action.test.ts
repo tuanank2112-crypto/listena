@@ -48,4 +48,27 @@ describe("withCompletedNextAction", () => {
     expect(mocks.plan).toHaveBeenCalledWith("learner-1");
     expect(result.nextAction).toEqual(decision);
   });
+
+  it("propagates p11-v1 decision with causal basis after session completion", async () => {
+    const decision = {
+      kind: "COACH" as const,
+      targetId: "lesson-1",
+      reasonCode: "SKILL_PRACTICE" as const,
+      reasonVi: "Luyện bài học cùng Coach.",
+      evidenceRefs: [{ source: "LEARNING" as const, id: "evidence-1" }],
+      estimatedMinutes: 10 as const,
+      decisionVersion: "p11-v1" as const,
+      basis: {
+        kind: "EVIDENCE" as const,
+        skillKey: "listening",
+        refs: [{ source: "LEARNING" as const, id: "evidence-1" }],
+      },
+    };
+    mocks.plan.mockResolvedValue(decision);
+
+    const result = await withCompletedNextAction("learner-1", { session: session("COMPLETED") });
+
+    expect(mocks.plan).toHaveBeenCalledWith("learner-1");
+    expect(result.nextAction).toEqual(decision);
+  });
 });

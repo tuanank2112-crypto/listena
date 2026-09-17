@@ -1,5 +1,9 @@
 # Testing and acceptance — Plan10
 
+## Post-worker qualification — 2026-09-16
+
+The gates/checkmarks below are historical worker reports, qualified by [root review](../../../docs/WORKER_REVIEW_2026-09-16.md). Current local integrity acceptance is reopened for P102/P103/P106: stale review SQL commits a losing log, replay/body retry and teacher UI/API contracts are incomplete. Fresh existing unit437/437, type-check and structural30/30+12/12 still pass; they do not cover these invariants. CI is **UNVERIFIED** (workflow configured, no authenticated run inspected). Preview Ready/schema reconciliation are recorded historical evidence; full disabled-read fingerprint and retry/ownership are still **OPEN**. [Plan11 acceptance](../../11_2026-09-16_ai-native-evidence-gates/specs/TESTING-ACCEPTANCE.md) owns repair evidence; do not erase or promote the historical record.
+
 ## Fresh baseline (review only)
 
 | Check | 2026-09-16 result |

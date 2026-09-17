@@ -3,11 +3,30 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import { motion } from "framer-motion";
 import { ChevronLeft, Sparkles, FileText, Send, Loader2 } from "lucide-react";
+import {
+  buildIntentKey,
+  getStoredIntent,
+  setStoredIntent,
+  clearStoredIntent,
+} from "@/lib/client-intent";
+
+function simpleHash(str: string): string {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) - hash) + str.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash).toString(36);
+}
 
 export default function NewLessonPage() {
   const router = useRouter();
+  const { data: session } = useSession();
+  const userId = session?.user?.id ?? "anonymous";
+
   const [mode, setMode] = useState<"manual" | "ai">("manual");
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -27,20 +46,40 @@ export default function NewLessonPage() {
   const handleAIGenerate = async () => {
     setGenerating(true);
     setError("");
+    const objectives = aiObjectives.split("\n").filter(Boolean);
+    const signature = JSON.stringify({ aiTopic, aiLevel, objectives });
+    const resourceId = simpleHash(signature);
+    const storageKey = buildIntentKey(userId, "lesson-ai", resourceId);
+
+    const stored = getStoredIntent<{ clientRequestId: string; signature: string }>(storageKey);
+    let clientRequestId: string;
+    if (stored && stored.payload.signature === signature) {
+      clientRequestId = stored.key;
+    } else {
+      clientRequestId = crypto.randomUUID();
+      setStoredIntent(storageKey, {
+        key: clientRequestId,
+        payload: { clientRequestId, signature },
+        createdAt: Date.now(),
+      });
+    }
+
     try {
       const res = await fetch("/api/teacher/generate-lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          clientRequestId,
           topic: aiTopic,
           cefrLevel: aiLevel,
-          learningObjectives: aiObjectives.split("\n").filter(Boolean),
+          learningObjectives: objectives,
         }),
       });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || "Tạo bài học thất bại");
       }
+      clearStoredIntent(storageKey);
       const data = await res.json();
       router.push(`/teacher/lessons/${data.lesson.id}`);
     } catch (error: unknown) {
@@ -53,14 +92,37 @@ export default function NewLessonPage() {
   const handleManualCreate = async () => {
     setPublishing(true);
     setError("");
+    const signature = JSON.stringify({ courseId, title, topic, level, transcript });
+    const resourceId = simpleHash(signature);
+    const storageKey = buildIntentKey(userId, "lesson-manual", resourceId);
+
+    const stored = getStoredIntent<{ clientRequestId: string; signature: string }>(storageKey);
+    let clientRequestId: string;
+    if (stored && stored.payload.signature === signature) {
+      clientRequestId = stored.key;
+    } else {
+      clientRequestId = crypto.randomUUID();
+      setStoredIntent(storageKey, {
+        key: clientRequestId,
+        payload: { clientRequestId, signature },
+        createdAt: Date.now(),
+      });
+    }
+
     try {
       const res = await fetch("/api/teacher/lesson", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          courseId, title, topic, cefrLevel: level, learningObjectives: [], transcript,
+          clientRequestId,
+          courseId: courseId || undefined,
+          title,
+          topic,
+          cefrLevel: level,
+          learningObjectives: [],
+          transcript,
           segments: [{ position: 1, text: transcript, difficulty: 1.0 }],
-          vocabulary: [{ lemma: "example", displayText: "example", meaningVi: "ví dụ", cefrLevel: "A2" }],
+          vocabulary: [{ lemma: "example", displayText: "example", meaningVi: "ví dụ", cefrLevel: "A2", isTarget: true }],
           exercises: [{ type: "FULL_DICTATION", prompt: "Hãy chép lại đoạn văn bạn nghe được", correctAnswer: transcript, position: 1 }],
         }),
       });
@@ -68,6 +130,7 @@ export default function NewLessonPage() {
         const data = await res.json();
         throw new Error(data.error || "Tạo bài học thất bại");
       }
+      clearStoredIntent(storageKey);
       const data = await res.json();
       setSuccess("Bài học đã được tạo thành công!");
       setTimeout(() => router.push(`/teacher/lessons/${data.lesson.id}`), 1500);

@@ -53,6 +53,7 @@ export default async function FlashcardsPage() {
 
   return (
     <FlashcardsClient
+      userId={userId}
       flashcards={flashcards}
       dueCount={flashcards.length}
       totalCount={totalCount}

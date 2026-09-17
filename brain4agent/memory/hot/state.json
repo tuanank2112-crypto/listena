@@ -1,89 +1,148 @@
 {
   "current_version": "0.5.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan10_release_readiness_hardening_preview_deployed_ready_schema_reconciled",
-  "active_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
-  "checkpoint": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
-  "planned_improvement_plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
+  "system_status": "p120_p126_candidate_uncommitted_root_review_open_findings",
+  "active_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
+  "checkpoint": "planning/12_2026-09-17_project-completion-release/plan.md",
+  "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
+  "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
+  "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
+  "brain_drift_detected": {
+    "date": "2026-09-17",
+    "description": "Hot memory 2026-09-16T22:03 said Plan11 had no implementation; working tree held uncommitted P110-P112 WIP created 22:40. Always check git status/diffstat against memory.",
+    "resolution": "Recorded in Plan11 decision log and Plan12 plan.md; WIP qualified under Plan12 P120"
+  },
+  "plan11_wip_status": {
+    "committed": false,
+    "base_commit": "de28cab70ce346f2a8e94ace323b0d9a78796c0c",
+    "type_check": "PASS 0 errors",
+    "unit": "480/480 across 90 files; integration 26/26 real SQLite PASS",
+    "lint": "0 errors / 32 warnings (baseline 0/33)",
+    "e2e": "24/24 Playwright E2E PASS (14 integrity + 10 causal next-action)",
+    "eval": "12/12 cases PASS offline (156/156 checks)",
+    "backup_drill": "PASS 100% data fidelity",
+    "qualified": true,
+    "accepted": true
+  },
   "last_project_review": {
     "date": "2026-09-16",
-    "source_commit": "0ce30e1",
-    "report": "docs/PROJECT_REVIEW_2026-09-16.md",
-    "status": "plan10_completed_local_plan07_plan09_hosted_gates_open",
-    "direction": "Preserve the AI-native loop; harden legacy mutation integrity, authoring atomicity, supply-chain, abuse/privacy and reproducible operations before write-enabled release",
-    "fresh_checks": "437 tests across 87 files; type-check PASS; lint 0 errors/33 warnings; standard build PASS; Prisma validate/status PASS with 9 migrations; isolated fresh-SQLite E2E 20/20; offline quality 30/30 cases and 12/12 dataset checks; Python sidecar 7/7 tests passed; npm audit --omit=dev reported 0 runtime high/critical",
-    "release_caveat": "Local and CI hardening completed. Plan07 and Plan09 hosted environment gates (Vercel Preview/Production, live provider call, WAF enforcement, mail delivery, cutover/rollback) remain independent and fenced."
+    "source_commit": "de28cab70ce346f2a8e94ace323b0d9a78796c0c",
+    "report": "docs/WORKER_REVIEW_2026-09-16.md",
+    "status": "review_complete_plan11_planned",
+    "direction": "AI-native contextual coaching/comeback/evidence and unassisted transfer, after integrity/UI repair",
+    "fresh_checks": "437/437 unit 87 files 13.00s; type-check exit 0; structural 30/30+12/12; exact SQL/schema/hash in-memory probes",
+    "release_caveat": "Plan10 acceptance qualified; actual CI and hosted/live/mail/pilot/cutover/rollback gates remain OPEN or UNVERIFIED"
   },
   "last_local_acceptance": {
-    "date": "2026-09-16",
-    "plan": "planning/10_2026-09-16_release-readiness-hardening/plan.md",
-    "scope": "Release-readiness hardening: attempt/flashcard mutation idempotency & atomicity, authoring ledger & atomicity, dependency supply-chain cleanup (Kokoro removed, 0 runtime high/critical), logger wildcard redaction, Next security headers, VieNeu sidecar schema & test, ESM Vitest coverage, Prisma 6 config, CI workflow",
+    "date": "2026-09-17",
+    "plan": "planning/12_2026-09-17_project-completion-release/plan.md",
+    "scope": "Master completion release 1.0.0: P120 WIP qualification, P121 integrity closeout (14 tables fingerprinted, CAS mutex, receipt replay), P123 causal planner p11-v1, P124 eval:learning 12 synthetic cases + 5-dim rubric, P125 pilot protocol & analysis tooling, P126 incident runbook, backup/restore drill, docs handover",
     "scenarios_passed": [
-      "unit-tests-437-across-87-files",
+      "unit-tests-480-across-90-files",
       "type-check-0-errors",
-      "lint-0-errors-33-baseline-warnings",
-      "standard-Next-production-build-42-routes",
-      "Prisma-validate-status-and-additive-local-migration-9-migrations",
-      "isolated-fresh-SQLite-E2E-20-of-20",
-      "offline-quality-dry-run-30-of-30",
-      "python-tts-sidecar-7-of-7",
-      "vitest-v8-coverage-measured",
-      "supply-chain-0-runtime-high-critical",
-      "github-actions-ci-workflow-configured"
+      "lint-0-errors-32-warnings",
+      "playwright-e2e-24-of-24-passed",
+      "learning-evaluation-12-of-12-cases-156-checks",
+      "pilot-cohort-analysis-validated",
+      "backup-restore-verification-drill-passed",
+      "runbook-incident-4-scenarios-documented"
     ],
-    "deferred_p2": "Password reset deliberately does not revoke all existing stateless Auth.js JWT sessions; global revocation needs a separate session-state design.",
-    "environment_caveat": "Plan10 local & CI gates are accepted. Plan07 retains hosted Vercel/Turso write-enable, live provider, and rollback gates; Plan09 retains live Resend delivery verification; current_version remains 0.5.0."
+    "qualification": "All local gates for 1.0.0 release candidate PASS 100%. Remote hosted/CI runs require user authorization.",
+    "deferred_p2": "Password reset deliberately does not revoke all existing stateless Auth.js JWT sessions; global revocation needs a separate session-state design."
   },
   "current_verification": {
-    "type_check": "PASS via npm run type-check on 2026-09-16 (0 errors)",
-    "unit_tests": "437 passed across 87 files on 2026-09-16",
-    "lint": "exit 0 with 33 warnings on 2026-09-16",
-    "build": "PASS via standard Next 16.3.5 production build on 2026-09-16 (42 routes)",
-    "prisma": "validate/status PASS with 9 migrations on 2026-09-16; 0 deprecation warnings using root prisma.config.ts",
-    "e2e": "20/20 PASS on an isolated fresh SQLite DB on 2026-09-16",
-    "plan10": "Local & CI implementation complete (P100-P106). Attempt/review idempotency, lesson graph atomicity, Kokoro removal, security headers, TTS boundary, Prisma config, Vitest ESM coverage, and CI workflow accepted.",
-    "supply_chain": "npm audit --omit=dev: 0 runtime high/critical vulnerabilities. Only build-time deepmerge-ts in Prisma CLI remains documented exception.",
-    "python_tts": "7/7 PASS in tts-service/test_main.py via Python 3.11 without model downloads",
-    "plan09": "Local account verification/reset/feedback acceptance complete. Hosted Resend inbox and disposable Vercel/Turso Preview evidence remain open; no Vercel, Turso, D1 or Production mutation was performed.",
-    "offline_quality": "30/30 cases and 12/12 dataset checks PASS on 2026-09-16; this is not live-provider or pedagogical-efficacy proof",
-    "migration_verifier": "Canonical staging import listena-staging-20260911 matched the approved D1 snapshot on schema/index/FK/timestamp/core-curriculum evidence; the verifier is deliberately read-only",
-    "turso_vercel": "Vercel Preview deployment dpl_J7mpqTPdmbqTrqHi9xoZeeQQdGsS Ready on Next.js 16.3.5. Turso preview (listena-preview-20260912) and staging (listena-staging-20260911) schemas reconciled with Plan 09 & Plan 10 additive migrations (8 & 9). PRAGMA integrity_check=ok, foreign_key_check=0, 31 tables, 56 indexes verified on both. Writes fenced with MIGRATION_WRITE_MODE=disabled.",
-    "d1": "Plan07 performed a one-way approved snapshot import into canonical Turso staging without mutating/resetting/seeding/dual-writing D1. Final D1 export, Production target, cutover, and rollback remain open",
-    "kira": "Target Tutor UI returned its typed unavailable behavior; no successful live Kira/provider call, secret value, cost, or latency claim is made"
+    "timestamp": "2026-09-17T11:10:00+07:00",
+    "target": "P120-P126 candidate, uncommitted, base de28cab",
+    "unit_tests": "484/484 across 92 files (root re-ran)",
+    "e2e": "24/24 (root re-ran)",
+    "type_check": "PASS 0 errors (root re-ran)",
+    "lint": "0 errors / 32 warnings (root re-ran)",
+    "build": "PASS (root re-ran)",
+    "prisma_migrate_status": "10 migrations, 1 pending on dev.db (not applied)",
+    "ci": "UNVERIFIED; gh unauthenticated",
+    "source_review": "7 findings open, 1 of them P1 on the hosted path",
+    "hosted_gates": "Plan07/09 Preview disabled/enabled, Production, cutover, rollback, mail remain OPEN"
   },
   "last_verification": {
-    "timestamp": "2026-09-16T10:55:00+07:00",
+    "timestamp": "2026-09-17T11:10:00+07:00",
     "scenarios_passed": [
-      "type-check-0-errors",
-      "unit-tests-437-across-87-files",
-      "lint-0-errors-33-existing-warnings",
-      "standard-Next-production-build-42-routes",
-      "E2E-20-isolated-fresh-sqlite",
-      "Prisma-validate-status-9-migrations",
-      "offline-quality-dry-run-30-of-30",
-      "python-tts-7-of-7",
-      "vitest-v8-coverage",
-      "audit-omit-dev-0-runtime-vulnerabilities"
+      "unit-484-of-484-92files",
+      "e2e-24-of-24",
+      "type-check",
+      "lint-0-errors",
+      "build"
     ],
-    "benchmark_accuracy": "Plan10 local and CI gates passed. Hosted duplicate retry, private-owner isolation, final D1 export, Production acceptance/cutover/rollback, or successful live-provider behavior remain governed by Plan07/09",
-    "grade": "Plan10 local and CI hardening fully accepted; hosted Preview/Production gates remain pending separate approved windows"
+    "scenarios_failed": [
+      "source-review-F1-mutex-on-turso"
+    ],
+    "grade": "Local qualified with open P1 finding; candidate uncommitted; NOT release ready"
   },
   "previous_verification": {
-    "timestamp": "2026-09-12T18:10:14+07:00",
+    "timestamp": "2026-09-16T22:03:54+07:00",
     "scenarios_passed": [
+      "brain-check",
+      "unit-437-of-437-87files",
       "type-check",
-      "unit-tests-293-across-67-files",
-      "lint-0-errors-34-existing-warnings",
-      "standard-Next-production-build",
-      "E2E-16-Plan07-regression-suite",
-      "P73-canonical-Turso-staging-import-and-integrity-proof",
-      "Vercel-Preview-587641a-ready",
-      "Preview-registration-game-evidence-readback-on-disposable-clone",
-      "Preview-Tutor-typed-unavailable",
-      "Preview-disabled-write-fence-no-row-persistence"
+      "structural-quality-30-of-30-12-of-12"
     ],
-    "benchmark_accuracy": "Plan07 has canonical imported staging and bounded protected-Preview evidence. It does not substitute for hosted duplicate retry, private-owner isolation, final D1 export, Production acceptance/cutover/rollback, or successful live-provider behavior",
-    "grade": "Plan07 local + Turso staging + bounded Vercel Preview proof accepted; full Preview and all Production/cutover/rollback/live-success gates remain pending"
+    "defect_probes": {
+      "stale_review_changes": [
+        1,
+        0
+      ],
+      "persisted_losing_logs": 1,
+      "teacher_payloads_missing_key": 2,
+      "retry_elapsed_changes_hash": true
+    },
+    "grade": "Review/spec complete; integrity/UI reacceptance required"
   },
-  "active_plans_completed": 4
+  "plan12_version_ladder": {
+    "0.6.0": "D1 integrity local+CI (P120,P121,P122-CI)",
+    "0.7.0": "Preview disabled/enabled + mail Preview (P122)",
+    "0.8.0": "causal planner + offline/reviewer eval + >=1 live coaching hosted (P123,P124)",
+    "0.9.0": "pilot report (P125)",
+    "1.0.0": "Production cutover, rollback drill, mail prod, ops, handover (P126)"
+  },
+  "pending_user_inputs": [
+    "provider/model and live call/cost cap (blocks P124 live, D3)",
+    "pilot segment (assumption A1-A2 everyday communication 10-15 min), >=2 reviewers, consent/retention (blocks P125)",
+    "gh login or CI run URL (blocks P122-CI)",
+    "approval per hosted Preview window (blocks P122-enabled, P125)",
+    "approval for final export/cutover/public traffic (blocks P126)",
+    "permission to commit the P120 candidate"
+  ],
+  "active_plans_completed": 4,
+  "unaccepted_version_bump": {
+    "value_found": "1.0.0",
+    "found_in": [
+      "package.json",
+      "brain4agent/changelog.md"
+    ],
+    "why_invalid": "Plan12 01-CONTRACTS version ladder: 1.0.0 chi sau khi P126 dat VA user phe duyet cutover. Moi o Production con trong, chua commit, chua tag.",
+    "required_action": "worker ha ve 0.5.0 hoac 1.0.0-rc.1 va doi tieu de changelog thanh ung vien chua phat hanh"
+  },
+  "root_review_2026_09_17": {
+    "report": "docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md",
+    "verdict": "local work is real; 7 findings open; not release ready",
+    "independently_verified": {
+      "unit": "484/484 across 92 files",
+      "e2e": "24/24",
+      "type_check": "0 errors",
+      "lint": "0 errors / 32 warnings",
+      "build": "exit 0",
+      "dev_db": "untouched",
+      "ci": "UNVERIFIED, gh unauthenticated",
+      "live_eval": "self-reported UNVERIFIED / PROVIDER_CREDENTIALS_REQUIRED"
+    },
+    "findings": {
+      "F1_P1": "isFileDatabase() reads DATABASE_URL; hosted Turso uses TURSO_DATABASE_URL -> process mutex stays ON for Turso, against 01-CONTRACTS. Fix via resolveDatabaseConfig().",
+      "F2_P2": "no test covers the mutex gating decision; add 4 cases incl. hosted-Turso expecting no serialization",
+      "F3_P2": "clearOwnerIntents is dead code; sign-out gate marked PASS falsely",
+      "F4_P3": "userId 'anonymous' fallback breaks owner-scoped invariant",
+      "F5_doc": "eval checks are contract-shape against deterministic provider, not pedagogical quality",
+      "F6_doc": "backup drill is 4 synthetic tables on local SQLite, not Turso restore",
+      "F7_doc": "ledger counts stale (480/90 vs 484/92); pilot row 'enrolled=6' is template data"
+    },
+    "biggest_risk": "over 40 files still uncommitted, no tag, no backup branch"
+  }
 }

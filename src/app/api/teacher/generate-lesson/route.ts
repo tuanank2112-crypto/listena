@@ -83,13 +83,12 @@ export async function POST(req: Request) {
     const databaseResponse = databaseErrorResponse(error);
     if (databaseResponse) return databaseResponse;
 
-    const message = error instanceof Error ? error.message : "Tạo bài học thất bại";
     logger.error(
       { errorName: error instanceof Error ? error.name : "unknown", code: "INTERNAL_ERROR" },
       "Lesson generation failed"
     );
     return NextResponse.json(
-      { code: "INTERNAL_ERROR", error: message },
+      { code: "INTERNAL_ERROR", error: "Tạo bài học thất bại" },
       { status: 500, headers: { "Cache-Control": "private, no-store" } }
     );
   }

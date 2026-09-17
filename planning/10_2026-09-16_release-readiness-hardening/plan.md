@@ -2,7 +2,7 @@
 
 - STT: 10
 - Created: 2026-09-16 (Asia/Saigon)
-- Status: COMPLETED (Local & CI gates; hosted environment gates governed by Plan 07/09)
+- Status: IMPLEMENTED, ACCEPTANCE QUALIFIED — post-worker review reopens P102/P103/P106 integrity/UI evidence; CI configured but actual run UNVERIFIED; hosted gates remain Plan07/09
 - Target: proposed 0.8.0 MINOR after Plan07/Plan09 hosted gates; package remains 0.5.0
 - Owner: root orchestrator
 - Environments: isolated local SQLite; CI SQLite; disposable Vercel/Turso Preview; Production only through Plan07
@@ -25,6 +25,9 @@
 - 2026-09-16 10:55+07: P106 completed. All local gates passed: type-check (0 errors), lint (0 errors, 33 baseline warnings), Vitest coverage (437/437 tests in 87 files), Python pytest (7/7 passed), Next.js production build (42 routes static/dynamic), offline quality dry-run (30/30 cases, 12/12 checks), Playwright E2E (20/20 passed on fresh isolated DB).
 
 ## Superseded decisions
+
+- 2026-09-16 post-worker review at `de28cab`: the earlier “all local & CI accepted” statement is qualified by [worker review](../../docs/WORKER_REVIEW_2026-09-16.md). Current SQL preserves a stale ReviewLog on CAS failure, replay/client timing and authoring/UI contracts are incomplete, and workflow presence does not prove CI execution. P102/P103/P106 need reacceptance through [Plan11](../11_2026-09-16_ai-native-evidence-gates/plan.md). Prior completion entries/checkmarks remain historical implementation reports, not current acceptance.
+- P107 checkbox is a historical hosted synchronization report. This package did not define its WP/spec or record its authorization decision; audit cannot infer that authorization from the checkbox. No schema/Ready record substitutes for all-table disabled-read fingerprints or enabled retry/ownership proof.
 
 - Historical classification of legacy attempt/review multi-writes and Kokoro cleanup as non-blocking backlog is superseded for the next public write-enabled release. They remain historical facts, but Plan10 promotes them to pre-release work because retry/data integrity and current dependency advisories are now evidenced.
 - README statements that runtime mock fallback exists, Next is 16.3.1, and no production deployment exists are superseded by current code/memory. Documentation history is preserved; worker must publish current truth.

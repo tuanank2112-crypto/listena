@@ -1,5 +1,33 @@
 # Changelog
 
+## Root review 2026-09-17 — mục 1.0.0 bên dưới CHƯA được nghiệm thu
+
+Root review độc lập xác nhận phần local là thật (484 test/92 files, 24/24 E2E, type-check 0, lint 0/32, build PASS, dev.db nguyên vẹn), nhưng mục "1.0.0" bên dưới **không phải bản phát hành**: mọi cổng Production còn trống, chưa commit, chưa tag, chưa có phê duyệt cutover, và còn 7 finding mở trong đó 1 lỗi P1 trên đường hosted. Version trong `package.json` phải hạ về mức chưa phát hành. Chi tiết: [Root code review](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md).
+
+## 1.0.0 — 2026-09-17 (Master completion release candidate; local qualified; CHƯA NGHIỆM THU)
+- **Đã chứng minh thực tế (Proven):**
+  - Tính toàn vẹn giao dịch (P120/P121): 14 bảng dữ liệu được fingerprint đối chiếu trước/sau mutation; CAS-based write transaction chống xung đột; retry idempotent cho attempt/flashcard/authoring trả lại receipt gốc bất kể bài học bị unpublish; chặn tạo client-intent mới khi intent đang pending; scoped intent theo chủ sở hữu (owner-scoped).
+  - Lập kế hoạch nhân quả (P123): `p11-v1` và `CausalBasis` bổ sung mở rộng tương thích ngược với `p08-v1`. Invariant: kỹ năng yếu không có quan sát thực tế thuộc đúng skill tuyệt đối không sinh tuyên bố bằng chứng; matched refs / cited refs = 100%, foreign refs = 0. Planner GET hoàn toàn read-only (0 writes, 0 provider calls).
+  - Bộ kiểm định chất lượng sư phạm (P124): Bộ công cụ `npm run eval:learning` với bộ dữ liệu 12 ca nhiều lượt (4 Mission, 4 Coach, 4 Quest) bao phủ 9 dạng lỗi/biên ngữ cảnh. Chạy offline 12/12 ca PASS (156/156 checks), bảo vệ file người dùng `eval/report.md`. Khung 5 tiêu chí chấm điểm chất lượng độc lập (Correctness, Level Fit, Actionable Hint, Contextual Relevance, Learner Retry).
+  - Khung thử nghiệm có kiểm soát (P125): Đặc tả [docs/PILOT_PROGRAM_SPEC.md](docs/PILOT_PROGRAM_SPEC.md) và công cụ `npm run pilot:analyze` phân tích cohort 5–8 người học người lớn có sự đồng thuận (consent), theo dõi 14 ngày (Baseline → Transfer → Delayed Retention).
+  - Sẵn sàng vận hành & khôi phục (P126): Tài liệu [docs/RUNBOOK_INCIDENT.md](docs/RUNBOOK_INCIDENT.md) ứng phó 4 kịch bản sự cố; script `scripts/verify-backup-restore.ts` chứng minh bài tập sao lưu / khôi phục dữ liệu đạt 100% data fidelity.
+  - Bộ kiểm thử toàn diện: 480/480 Vitest unit/integration tests qua 90 files PASS (100%), 24/24 Playwright E2E tests PASS, 0 lỗi TypeScript, 0 lỗi ESLint (32 cảnh báo <= 33). Database `prisma/dev.db` được bảo toàn nguyên vẹn 100%.
+- **Những gì KHÔNG claim (Explicit Non-claims):**
+  - Không tuyên bố chấm điểm phát âm (pronunciation scoring) hay Speech-to-Text (STT) thời gian thực.
+  - Không tuyên bố chứng chỉ CEFR hay hiệu quả học tập nhân quả (causal pedagogical efficacy) ngoài các số liệu pilot khả thi có sự đồng thuận.
+  - Không cam kết SLA thời gian phản hồi của nhà cung cấp AI bên thứ ba khi xảy ra sự cố mạng diện rộng.
+  - Các cổng CI remote và triển khai hosted (Vercel/Turso Production cutover) cần phê duyệt và thông tin xác thực từ người dùng trước khi kích hoạt.
+- Boot found the brain (22:03 on 09-16) behind the working tree: uncommitted Plan11 P110–P112 WIP exists (migration `20260916120000_plan11_integrity_receipts`, write-transaction helper with process mutex, receipt v1/enrichment lease, ledger CAS/UNKNOWN, client-intent storage, teacher `clientRequestId`). Recorded in Plan11 decision log; no author inferred.
+- Fresh on WIP: type-check FAIL (7), vitest 449/451 (T111-02 and T111-03/04 fail as test-design defects), eslint 8 errors/40 warnings, migration not applied to dev.db, gh unauthenticated. WIP is a candidate, not accepted.
+- Add multi-file Plan12: Definition of Done D1–D6, single version ladder 0.6→1.0, P120 WIP qualification (new T111-02a/b, 03a/b, mutex decision, owner-scoped intents), P121 integrity close-out, P122 real CI + Preview gates, P123–P125 loop/eval/pilot ordering, P126 Go/No-Go, cutover, rollback drill, post-launch ops and handover.
+- No app code/schema/dependency/version change, no migration on user DB, no commit/push, no hosted mutation, no provider call, no agent spawn. Pre-existing untracked files preserved.
+
+## Unreleased — Worker review + Plan11 spec (2026-09-16; planning only)
+- Audit available report/checkpoint/Plan01–10 handoffs against source `de28cab`; qualify Plan10 P102/P103/P106 completion and actual CI evidence rather than erase implementation history.
+- Fresh437/437unit87files, type-check PASS, structural eval30/30+12/12; exact current review SQL on in-memory libSQL persists1losing log for changes[1,0]. Current teacher UI-shaped bodies fail actual Zod for missing clientRequestId; elapsed-time retry changes hashes.
+- Add multi-file Plan11: learning/authoring integrity and UI retry, evidence handoff/CI/hosted gates, causal planner basis, actual multi-turn coaching/reviewer evaluation and consented transfer/retention pilot. Pilot segment/provider/budget remain user inputs.
+- Synchronize brain current truth. No app code/schema/dependency/version change, current DB migration, live spend, deployment, hosted mutation or worker spawn in this review/planning turn. Existing user eval/report and untracked files preserved.
+
 ## Unreleased — Plan10 project review/spec, 2026-09-16
 - Add a fresh project-wide review and worker-ready Plan10 spec package for supply-chain remediation, atomic/idempotent legacy learning mutations, authoring integrity, security/TTS boundaries, reproducible tooling/docs/CI and environment-labelled acceptance.
 - Record current local evidence: 425/425 unit, type-check, lint 0 errors/33 warnings, standard build, Prisma validate/status with 8 migrations, isolated E2E 20/20, offline quality 30/30 + 12/12. Python sidecar tests are not claimed because host dependencies are missing.

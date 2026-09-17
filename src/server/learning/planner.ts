@@ -34,7 +34,7 @@ export async function planNextLearningAction(
       select: { id: true, goal: true },
     }),
   ]);
-  const base = { estimatedMinutes: intent.dailyMinutes, decisionVersion: "p08-v1" as const };
+  const base = { estimatedMinutes: intent.dailyMinutes, decisionVersion: "p11-v1" as const };
 
   if (activeSession) {
     return {
@@ -46,6 +46,7 @@ export async function planNextLearningAction(
         ? `Bạn đang có một phiên chưa hoàn tất: ${activeSession.goal}`
         : "Bạn đang có một phiên AI chưa hoàn tất.",
       evidenceRefs: [],
+      basis: { kind: "ACTIVE_SESSION", sessionId: activeSession.id },
     };
   }
 
@@ -73,12 +74,11 @@ export async function planNextLearningAction(
   ]);
 
   const observations = normalizeObservations(learningEvidence, adaptiveEvidence);
-  const evidenceRefs = observations.slice(0, MAX_EVIDENCE_REFS).map(toEvidenceRef);
   const preferredTopics = intent.preferredTopics;
   const scenarioSelection = selectDailyQuestScenarioDetail({
     preferredTopics,
     recentScenarioKeys,
-    seed: `${userId}:${dateKey(now)}:p08-v1`,
+    seed: `${userId}:${dateKey(now)}:p11-v1`,
   });
   const scenarioKey = scenarioSelection.scenarioKey;
 
@@ -91,6 +91,7 @@ export async function planNextLearningAction(
       reasonCode: "NO_EVIDENCE",
       reasonVi: "Hãy bắt đầu một nhiệm vụ ngắn để AI hiểu điểm xuất phát của bạn. Đây chưa phải đánh giá trình độ chính thức.",
       evidenceRefs: [],
+      basis: { kind: "INSUFFICIENT_EVIDENCE" },
     };
   }
 
@@ -103,6 +104,7 @@ export async function planNextLearningAction(
       select: { id: true },
     });
     if (ownedReference) {
+      const refs: EvidenceRef[] = [{ source: "LEARNING", id: ownedReference.id }];
       return {
         ...base,
         kind: "PRACTICE",
@@ -110,48 +112,65 @@ export async function planNextLearningAction(
         goal: `Practice correcting ${recurringError.errorType} in short English answers.`,
         reasonCode: "RECURRING_ERROR",
         reasonVi: `Bạn đã lặp lại lỗi ${formatErrorType(recurringError.errorType)} ${recurringError.count} lần gần đây. Hãy sửa lỗi trong một tình huống ngắn rồi thử lại.`,
-        evidenceRefs: [{ source: "LEARNING", id: ownedReference.id }],
+        evidenceRefs: refs,
+        basis: { kind: "EVIDENCE", skillKey: recurringError.errorType, refs },
       };
     }
   }
 
   if (dueVocabulary) {
+    const dueAt = dueVocabulary.nextReviewAt ? dueVocabulary.nextReviewAt.toISOString() : now.toISOString();
     return {
       ...base,
       kind: "REVIEW",
       reasonCode: "DUE_REVIEW",
       reasonVi: `Từ “${dueVocabulary.vocabularyItem.displayText}” đã đến hạn ôn. Ôn ngắn trước để giữ nhịp nhớ.`,
-      evidenceRefs,
+      evidenceRefs: [],
+      basis: {
+        kind: "DUE_REVIEW",
+        vocabularyItemId: dueVocabulary.vocabularyItemId,
+        dueAt,
+      },
     };
   }
 
   if (weakSkill) {
-    const lesson = await findCoachLesson(userId, weakSkill.skillKey);
-    if (lesson) {
+    // Causally filter evidence refs to only those that observed this exact skillKey
+    const supportingSkillObservations = observations.filter(
+      (obs) => obs.skillKey === weakSkill.skillKey
+    );
+    if (supportingSkillObservations.length > 0) {
+      const refs = supportingSkillObservations.slice(0, MAX_EVIDENCE_REFS).map(toEvidenceRef);
+      const lesson = await findCoachLesson(userId, weakSkill.skillKey);
+      if (lesson) {
+        return {
+          ...base,
+          kind: "COACH",
+          targetId: lesson.id,
+          reasonCode: "SKILL_PRACTICE",
+          reasonVi: `AI có bằng chứng rằng bạn cần củng cố ${formatSkill(weakSkill.skillKey)}. Coach sẽ dùng bài “${lesson.title}” để luyện đúng điểm này.`,
+          evidenceRefs: refs,
+          basis: { kind: "EVIDENCE", skillKey: weakSkill.skillKey, refs },
+        };
+      }
       return {
         ...base,
-        kind: "COACH",
-        targetId: lesson.id,
+        kind: "PRACTICE",
+        scenarioKey,
+        goal: `Practice ${formatSkill(weakSkill.skillKey)} in a short English situation.`,
         reasonCode: "SKILL_PRACTICE",
-        reasonVi: `AI có bằng chứng rằng bạn cần củng cố ${formatSkill(weakSkill.skillKey)}. Coach sẽ dùng bài “${lesson.title}” để luyện đúng điểm này.`,
-        evidenceRefs,
+        reasonVi: `Bạn có một số bằng chứng cần củng cố ${formatSkill(weakSkill.skillKey)}. Hãy luyện lại trong tình huống ngắn trước khi đi tiếp.`,
+        evidenceRefs: refs,
+        basis: { kind: "EVIDENCE", skillKey: weakSkill.skillKey, refs },
       };
     }
-    return {
-      ...base,
-      kind: "PRACTICE",
-      scenarioKey,
-      goal: `Practice ${formatSkill(weakSkill.skillKey)} in a short English situation.`,
-      reasonCode: "SKILL_PRACTICE",
-      reasonVi: `Bạn có một số bằng chứng cần củng cố ${formatSkill(weakSkill.skillKey)}. Hãy luyện lại trong tình huống ngắn trước khi đi tiếp.`,
-      evidenceRefs,
-    };
   }
 
   if (isMissionScenarioKey(scenarioKey)) {
     const topicReason = scenarioSelection.preferenceInfluenced
       ? "Tình huống hôm nay ưu tiên một chủ đề bạn đã chọn."
       : "Tình huống hôm nay được chọn để bạn tiếp tục dùng tiếng Anh chủ động.";
+    const intentRevision = Number(intent.revision) || 1;
     return {
       ...base,
       kind: "QUEST",
@@ -161,7 +180,8 @@ export async function planNextLearningAction(
       reasonVi: intent.goal
         ? `${topicReason} Mục tiêu bạn đã lưu: ${intent.goal}`
         : topicReason,
-      evidenceRefs,
+      evidenceRefs: [],
+      basis: { kind: "DECLARED_GOAL", intentRevision },
     };
   }
 
@@ -170,7 +190,8 @@ export async function planNextLearningAction(
     kind: "EMPTY",
     reasonCode: "NO_CONTENT",
     reasonVi: "Hiện chưa có nội dung phù hợp để bắt đầu nhiệm vụ tiếp theo.",
-    evidenceRefs,
+    evidenceRefs: [],
+    basis: { kind: "INSUFFICIENT_EVIDENCE" },
   };
 }
 
@@ -182,7 +203,11 @@ async function findDueVocabulary(userId: string, now: Date) {
       vocabularyItem: { lessons: { some: { lesson: { status: "PUBLISHED" } } } },
     },
     orderBy: [{ nextReviewAt: "asc" }, { vocabularyItemId: "asc" }],
-    select: { vocabularyItem: { select: { displayText: true } } },
+    select: {
+      vocabularyItemId: true,
+      nextReviewAt: true,
+      vocabularyItem: { select: { displayText: true } },
+    },
   });
 }
 

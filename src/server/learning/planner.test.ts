@@ -93,13 +93,63 @@ describe("planNextLearningAction", () => {
 
   it("uses adaptive evidence as owned planner context without converting it to a learning evidence ID", async () => {
     mocks.learningEvidence.mockResolvedValue([]);
-    mocks.adaptiveEvidence.mockResolvedValue([{ id: "adaptive-1", skillKey: "vocabulary", score: 0.8, confidence: 1, createdAt: now }]);
-    mocks.intent.mockResolvedValue({ goal: "Travel confidently", dailyMinutes: 15, preferredTopics: ["travel"], revision: "r1" });
+    mocks.adaptiveEvidence.mockResolvedValue([{ id: "adaptive-1", skillKey: "vocabulary", score: 0.3, confidence: 1, createdAt: now }]);
+    mocks.weakSkill.mockResolvedValue({ skillKey: "vocabulary", masteryScore: 0.3, evidenceCount: 1 });
     await expect(planNextLearningAction(userId, now)).resolves.toMatchObject({
-      kind: "QUEST",
-      reasonCode: "GOAL_PRACTICE",
+      kind: "PRACTICE",
+      reasonCode: "SKILL_PRACTICE",
       evidenceRefs: [{ source: "ADAPTIVE", id: "adaptive-1" }],
-      estimatedMinutes: 15,
+      basis: {
+        kind: "EVIDENCE",
+        skillKey: "vocabulary",
+        refs: [{ source: "ADAPTIVE", id: "adaptive-1" }],
+      },
+      decisionVersion: "p11-v1",
+    });
+  });
+
+  it("does not claim listening evidence when learner has weak listening skill but only vocabulary observations", async () => {
+    mocks.weakSkill.mockResolvedValue({ skillKey: "listening", masteryScore: 0.2, evidenceCount: 1 });
+    mocks.learningEvidence.mockResolvedValue([
+      { id: "vocab-1", skillKey: "vocabulary", score: 0.5, confidence: 1, createdAt: now },
+    ]);
+    mocks.intent.mockResolvedValue({ goal: "Build vocabulary", dailyMinutes: 10, preferredTopics: [], revision: "r1" });
+
+    const decision = await planNextLearningAction(userId, now);
+
+    // Causal invariant: no matching listening observations -> does NOT claim listening
+    expect(decision.kind).toBe("QUEST");
+    expect(decision.reasonCode).toBe("GOAL_PRACTICE");
+    expect(decision.evidenceRefs).toEqual([]);
+    expect(decision.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: 1 });
+    expect(decision.reasonVi).not.toContain("nghe");
+  });
+
+  it("enforces causal basis match: 100% cited refs match the weak skill with 0 foreign skill refs", async () => {
+    mocks.weakSkill.mockResolvedValue({ skillKey: "listening", masteryScore: 0.3, evidenceCount: 2 });
+    const t1 = new Date("2026-09-13T07:00:00.000Z");
+    const t2 = new Date("2026-09-13T07:01:00.000Z");
+    mocks.learningEvidence.mockResolvedValue([
+      { id: "listen-1", skillKey: "listening", score: 0.3, confidence: 0.9, createdAt: t1 },
+      { id: "vocab-1", skillKey: "vocabulary", score: 0.8, confidence: 0.9, createdAt: t2 },
+      { id: "listen-2", skillKey: "listening", score: 0.4, confidence: 0.8, createdAt: t2 },
+    ]);
+
+    const decision = await planNextLearningAction(userId, now);
+
+    expect(decision.kind).toBe("PRACTICE");
+    expect(decision.evidenceRefs).toHaveLength(2);
+    expect(decision.evidenceRefs).toEqual([
+      { source: "LEARNING", id: "listen-2" },
+      { source: "LEARNING", id: "listen-1" },
+    ]);
+    expect(decision.basis).toEqual({
+      kind: "EVIDENCE",
+      skillKey: "listening",
+      refs: [
+        { source: "LEARNING", id: "listen-2" },
+        { source: "LEARNING", id: "listen-1" },
+      ],
     });
   });
 
@@ -124,6 +174,12 @@ describe("planNextLearningAction", () => {
       kind: "COACH",
       targetId: "lesson-1",
       reasonCode: "SKILL_PRACTICE",
+      decisionVersion: "p11-v1",
+      basis: {
+        kind: "EVIDENCE",
+        skillKey: "listening",
+        refs: [{ source: "LEARNING", id: "learning-1" }],
+      },
     });
     expect(mocks.weakSkill).toHaveBeenCalledWith(expect.objectContaining({
       where: expect.objectContaining({ evidenceCount: { gt: 0 } }),

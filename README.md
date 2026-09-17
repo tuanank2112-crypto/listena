@@ -80,21 +80,23 @@ Hoặc `docker compose up tts`. Compose truyền `TTS_API_KEY` và chỉ publish
 ## Kiểm tra và CI
 
 ```bash
-npm test                      # Chạy toàn bộ Vitest unit tests
+npm test                      # Chạy toàn bộ Vitest unit & integration tests
 npm run test:coverage         # Đo độ phủ kiểm thử với v8
 npm run type-check            # Kiểm tra kiểu TypeScript
-npm run lint                  # Kiểm tra ESLint
+npm run lint                  # Kiểm tra ESLint (0 errors, warnings <= 32)
 npx prisma validate           # Xác thực schema Prisma
-python -m pytest tts-service -q # Kiểm thử boundary TTS (không tải model)
-npm run build                 # Build Next.js production
-npm run eval:quality -- --dry-run # Đánh giá chất lượng offline (không ghi đè file báo cáo)
+npm run eval:learning         # Đánh giá chất lượng Socratic & sư phạm (offline / live)
+npm run pilot:analyze         # Công cụ phân tích cohort thử nghiệm có consent
 npm run test:e2e              # Chạy Playwright E2E trên database SQLite tạm
 ```
 
 E2E dùng database SQLite mới trong thư mục temp, tự chạy migrations/seed/import; không dùng database người học. Không chạy build và E2E đồng thời vì cùng dùng `.next`.
 
-Hạ tầng và triển khai:
-- Mục tiêu triển khai hosted: Vercel + Turso (libSQL) theo lộ trình kiểm soát của Plan 07 và Plan 09.
-- Cloudflare Worker + D1 là phương án rollback lịch sử.
-- `render.yaml` và dịch vụ PostgreSQL trong `docker-compose.yml` là cấu hình tham khảo lịch sử không được hỗ trợ (unsupported) với schema SQLite hiện tại.
+## Hạ tầng, vận hành và phát hành (1.0.0)
+
+- **Mục tiêu triển khai hosted:** Vercel + Turso (libSQL) theo lộ trình Plan 07, 09, 10, 11, 12.
+- **Dự phòng & Rollback:** Cloudflare Worker + D1 là phương án rollback lịch sử. Kịch bản khôi phục và kiểm tra tính toàn vẹn chạy qua `npx tsx scripts/verify-backup-restore.ts`.
+- **Ứng phó sự cố:** Tham khảo [docs/RUNBOOK_INCIDENT.md](docs/RUNBOOK_INCIDENT.md) cho 4 kịch bản (Database unavailable, AI provider outage, Email delivery outage, Secret leak).
+- **Đánh giá sư phạm & Pilot:** Tham khảo [eval/LEARNING_EVALUATION.md](eval/LEARNING_EVALUATION.md) và [docs/PILOT_PROGRAM_SPEC.md](docs/PILOT_PROGRAM_SPEC.md).
+
 

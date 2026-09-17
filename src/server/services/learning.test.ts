@@ -1,5 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency";
+import { OutcomePendingError } from "@/lib/idempotency";
+import type { Transaction } from "@libsql/client";
+
+type MockTx = { execute: ReturnType<typeof vi.fn> };
 
 const {
   findExercise,
@@ -12,18 +15,25 @@ const {
   getProfile,
   getVocabularyMastery,
   atomicBatch,
-} = vi.hoisted(() => ({
-  findExercise: vi.fn(),
-  findAttempt: vi.fn(),
-  upsertVocabItem: vi.fn(),
-  findFlashcard: vi.fn(),
-  findReviewLog: vi.fn(),
-  assess: vi.fn(),
-  createProvider: vi.fn(),
-  getProfile: vi.fn(),
-  getVocabularyMastery: vi.fn(),
-  atomicBatch: vi.fn(),
-}));
+  writeTx,
+  mockTx,
+} = vi.hoisted(() => {
+  const mockTx: MockTx = { execute: vi.fn() };
+  return {
+    findExercise: vi.fn(),
+    findAttempt: vi.fn(),
+    upsertVocabItem: vi.fn(),
+    findFlashcard: vi.fn(),
+    findReviewLog: vi.fn(),
+    assess: vi.fn(),
+    createProvider: vi.fn(),
+    getProfile: vi.fn(),
+    getVocabularyMastery: vi.fn(),
+    atomicBatch: vi.fn(),
+    writeTx: vi.fn(async <T>(cb: (tx: Transaction) => Promise<T>): Promise<T> => cb(mockTx as unknown as Transaction)),
+    mockTx,
+  };
+});
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/prisma", () => ({
@@ -47,6 +57,8 @@ vi.mock("@/server/repos/learner", () => ({
 }));
 vi.mock("@/lib/libsql-batch", () => ({
   executeAtomicLibSqlBatch: atomicBatch,
+  withLibSqlWriteTransaction: <T>(cb: (tx: Transaction) => Promise<T>) => writeTx(cb),
+  rowAs: <T>(r: unknown): T => r as T,
   libSqlTimestamp: (d: Date) => d.toISOString(),
   libSqlBoolean: (b: boolean) => (b ? 1 : 0),
 }));
@@ -58,6 +70,8 @@ import { submitAttempt, reviewFlashcard } from "./learning";
 describe("submitAttempt", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTx.execute.mockResolvedValue({ rows: [], rowsAffected: 1 });
+    writeTx.mockImplementation(async <T>(cb: (tx: Transaction) => Promise<T>) => cb(mockTx as unknown as Transaction));
     atomicBatch.mockResolvedValue([{ changes: 1 }]);
     findAttempt.mockResolvedValue(null);
   });
@@ -77,7 +91,7 @@ describe("submitAttempt", () => {
       })
     ).rejects.toThrow("Exercise not found");
     expect(assess).not.toHaveBeenCalled();
-    expect(atomicBatch).not.toHaveBeenCalled();
+    expect(writeTx).not.toHaveBeenCalled();
     expect(createProvider).not.toHaveBeenCalled();
   });
 
@@ -112,7 +126,7 @@ describe("submitAttempt", () => {
     });
 
     expect(createProvider).not.toHaveBeenCalled();
-    expect(atomicBatch).toHaveBeenCalledTimes(1);
+    expect(writeTx).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({
       replayed: false,
       value: {
@@ -130,7 +144,6 @@ describe("submitAttempt", () => {
       metadata: "{}",
       lesson: { status: "PUBLISHED", transcript: "Hello", cefrLevel: "A2" },
     });
-    // First call to generate requestHash
     assess.mockReturnValue({
       normalizedActual: "hello",
       overallScore: 100,
@@ -141,19 +154,50 @@ describe("submitAttempt", () => {
       functionWordAccuracy: 1,
     });
 
-    // Mock existing attempt with same requestHash
+    const expectedResult = {
+      attemptId: "attempt-123",
+      attempt: {
+        id: "attempt-123",
+        userId: "learner",
+        lessonId: "lesson",
+        exerciseId: "exercise",
+        submittedAnswer: "hello",
+        normalizedAnswer: "hello",
+        score: 100,
+        completionTimeMs: null,
+        replayCount: 0,
+        hintCount: 0,
+        playbackRate: 1,
+        clientAttemptId: "00000000-0000-4000-8000-000000000001",
+        requestHash: "f15aff217ee03b608ef8e138af00534ef3444f7663c88932b1884a711a53ee47",
+        createdAt: new Date(),
+      },
+      assessment: {
+        overallScore: 100,
+        normalizedActual: "hello",
+        wordDiffs: [],
+        errors: [],
+        spellingAccuracy: 1,
+        contentWordAccuracy: 1,
+        functionWordAccuracy: 1,
+      },
+      aiFeedback: null,
+      aiFeedbackStatus: "not_requested" as const,
+      flashcardIds: [],
+    };
+
+    // Mock existing attempt with same requestHash and stored receipt
     findAttempt.mockResolvedValue({
       id: "attempt-123",
       score: 100,
       normalizedAnswer: "hello",
-      requestHash: "09dbbb0b3d686f0ecfa91b5c4ad8259db879cfca3e4e9a3bba920556ce68b449",
+      requestHash: "f15aff217ee03b608ef8e138af00534ef3444f7663c88932b1884a711a53ee47",
+      resultJson: JSON.stringify({ version: "attempt-result-v1", result: expectedResult }),
       errors: [],
       flashcards: [],
       createdAt: new Date(),
     });
 
-    // We can run once with a non-matching hash to see the hash or compute directly:
-    // Let's test with matching hash
     const res = await submitAttempt({
       userId: "learner",
       exerciseId: "exercise",
@@ -163,22 +207,21 @@ describe("submitAttempt", () => {
       hintCount: 0,
       playbackRate: 1,
       clientAttemptId: "00000000-0000-4000-8000-000000000001",
-    }).catch((err) => {
-      if (err instanceof IdempotencyConflictError) {
-        // Means hash differed; let's verify conflict error works!
-        return { kind: "conflict" };
-      }
-      throw err;
     });
 
-    expect(res).toBeDefined();
-    expect(atomicBatch).not.toHaveBeenCalled();
+    expect(res).toEqual({
+      replayed: true,
+      value: expectedResult,
+    });
+    expect(writeTx).not.toHaveBeenCalled();
   });
 });
 
 describe("reviewFlashcard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockTx.execute.mockResolvedValue({ rows: [], rowsAffected: 1 });
+    writeTx.mockImplementation(async <T>(cb: (tx: Transaction) => Promise<T>) => cb(mockTx as unknown as Transaction));
     atomicBatch.mockResolvedValue([{ changes: 1 }, { changes: 1 }]);
     findReviewLog.mockResolvedValue(null);
   });
@@ -201,11 +244,16 @@ describe("reviewFlashcard", () => {
       userId: "learner",
       vocabularyItemId: "vocab-1",
     });
-    getVocabularyMastery.mockResolvedValue({
-      revision: 0,
-      repetitionCount: 1,
-      intervalDays: 1,
-      easeFactor: 2.5,
+    mockTx.execute.mockImplementation(async ({ sql }: { sql: string }) => {
+      if (sql.includes("SELECT \"id\", \"revision\"")) {
+        return {
+          rows: [
+            { id: "m-1", revision: 0, repetitionCount: 1, intervalDays: 1, easeFactor: 2.5 },
+          ],
+          rowsAffected: 0,
+        };
+      }
+      return { rows: [], rowsAffected: 1 };
     });
 
     const result = await reviewFlashcard({
@@ -215,7 +263,7 @@ describe("reviewFlashcard", () => {
       clientReviewId: "00000000-0000-4000-8000-000000000002",
     });
 
-    expect(atomicBatch).toHaveBeenCalledTimes(1);
+    expect(writeTx).toHaveBeenCalledTimes(1);
     expect(result.replayed).toBe(false);
     expect(result.value.flashcardId).toBe("card-1");
   });
@@ -226,14 +274,20 @@ describe("reviewFlashcard", () => {
       userId: "learner",
       vocabularyItemId: "vocab-1",
     });
-    getVocabularyMastery.mockResolvedValue({
-      revision: 0,
-      repetitionCount: 1,
-      intervalDays: 1,
-      easeFactor: 2.5,
+    mockTx.execute.mockImplementation(async ({ sql }: { sql: string }) => {
+      if (sql.includes("SELECT \"id\", \"revision\"")) {
+        return {
+          rows: [
+            { id: "m-1", revision: 0, repetitionCount: 1, intervalDays: 1, easeFactor: 2.5 },
+          ],
+          rowsAffected: 0,
+        };
+      }
+      if (sql.includes("UPDATE \"VocabularyMastery\"")) {
+        return { rows: [], rowsAffected: 0 };
+      }
+      return { rows: [], rowsAffected: 1 };
     });
-    // Statement 1 (insert log) changes 1, Statement 2 (update mastery) changes 0
-    atomicBatch.mockResolvedValue([{ changes: 1 }, { changes: 0 }]);
 
     await expect(
       reviewFlashcard({

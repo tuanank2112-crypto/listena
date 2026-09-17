@@ -105,4 +105,34 @@ describe("LearnerDashboardPage mastery display", () => {
     }), undefined);
     expect(mocks.warn).toHaveBeenCalledOnce();
   });
+
+  it("passes p11-v1 decision with causal basis to the dashboard client", async () => {
+    mocks.planner.mockResolvedValue({
+      kind: "PRACTICE",
+      scenarioKey: "lost-bag",
+      goal: "Practice listening",
+      reasonCode: "SKILL_PRACTICE",
+      reasonVi: "Luyện nghe thêm.",
+      evidenceRefs: [{ source: "LEARNING", id: "ev-1" }],
+      estimatedMinutes: 10,
+      decisionVersion: "p11-v1",
+      basis: {
+        kind: "EVIDENCE",
+        skillKey: "listening",
+        refs: [{ source: "LEARNING", id: "ev-1" }],
+      },
+    });
+
+    renderToStaticMarkup(await LearnerDashboardPage());
+
+    expect(mocks.dashboard).toHaveBeenCalledWith(expect.objectContaining({
+      data: expect.objectContaining({
+        nextDecision: expect.objectContaining({
+          kind: "PRACTICE",
+          decisionVersion: "p11-v1",
+          basis: expect.objectContaining({ kind: "EVIDENCE", skillKey: "listening" }),
+        }),
+      }),
+    }), undefined);
+  });
 });

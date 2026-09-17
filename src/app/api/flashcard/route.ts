@@ -3,7 +3,11 @@ import { auth } from "@/server/auth/config";
 import { databaseErrorResponse } from "@/lib/database-error-response";
 import { reviewFlashcard } from "@/server/services/learning";
 import { ReviewFlashcardSchema } from "@/server/validation/schemas";
-import { IdempotencyConflictError, OutcomePendingError } from "@/lib/idempotency";
+import {
+  IdempotencyConflictError,
+  LegacyResultUnavailableError,
+  OutcomePendingError,
+} from "@/lib/idempotency";
 import logger from "@/lib/logger";
 
 export async function POST(req: Request) {
@@ -44,6 +48,14 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof IdempotencyConflictError) {
       logger.warn({ code: error.code }, "Flashcard review idempotency conflict");
+      return NextResponse.json(
+        { code: error.code, error: error.message },
+        { status: 409, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
+    if (error instanceof LegacyResultUnavailableError) {
+      logger.warn({ code: error.code }, "Flashcard review legacy result unavailable");
       return NextResponse.json(
         { code: error.code, error: error.message },
         { status: 409, headers: { "Cache-Control": "private, no-store" } }

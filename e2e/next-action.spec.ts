@@ -254,3 +254,80 @@ test("a recurring owned error starts a corrective Practice Mission with its cust
   expect(practice.goal).toBe(completed.nextAction?.goal);
   expect(state.learnerGoal).toBe(completed.nextAction?.goal);
 });
+
+test("a weak listening aggregate without listening observations does not claim listening evidence", async ({ page }) => {
+  const user = await createAndLoginLearner(page);
+  const sessionId = await createMission(page);
+
+  await db.skillMastery.create({
+    data: { userId: user.id, skillKey: "listening", masteryScore: 0.3, evidenceCount: 1 },
+  });
+  await db.learningEvidence.create({
+    data: { sessionId, skillKey: "vocabulary", evidenceType: "E2E", score: 0.7, confidence: 1 },
+  });
+
+  const complete = await page.request.post(`/api/learning-sessions/${sessionId}/complete`);
+  const completed = await complete.json() as { nextAction: { kind: string; reasonVi?: string; basis?: unknown } | null };
+
+  // Causal invariant: does NOT claim listening without listening observations
+  expect(completed.nextAction?.kind).toBe("QUEST");
+  expect(completed.nextAction?.reasonVi).not.toContain("nghe");
+  expect(completed.nextAction?.basis).toEqual({ kind: "DECLARED_GOAL", intentRevision: 1 });
+
+  await page.goto(`/learner/session/${sessionId}`);
+  await expect(page.getByText("Bước tiếp theo")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Học cùng Coach" })).toHaveCount(0);
+});
+
+test("recurring error remediation leads to practice and next action persists through reload", async ({ page }, testInfo) => {
+  const user = await createAndLoginLearner(page);
+  const earlierSessionId = await createMission(page);
+  const earlierEvidence = await db.learningEvidence.create({
+    data: { sessionId: earlierSessionId, skillKey: "grammar", evidenceType: "E2E", score: 0.3, confidence: 1 },
+  });
+  await db.learningSession.update({
+    where: { id: earlierSessionId },
+    data: { status: "COMPLETED", completedAt: new Date() },
+  });
+  await db.learnerMemory.create({
+    data: {
+      userId: user.id,
+      goalsJson: "[]",
+      skillsJson: "[]",
+      preferencesJson: "{}",
+      errorsJson: JSON.stringify([{ errorType: "missing_verb", count: 3, lastEvidenceId: earlierEvidence.id }]),
+    },
+  });
+  const sessionId = await createMission(page);
+  await db.learningEvidence.create({
+    data: { sessionId, skillKey: "grammar", evidenceType: "E2E", score: 0.4, confidence: 1 },
+  });
+
+  const complete = await page.request.post(`/api/learning-sessions/${sessionId}/complete`);
+  const completed = await complete.json() as { nextAction: { kind: string; goal: string } | null };
+  expect(completed.nextAction).toMatchObject({ kind: "PRACTICE" });
+
+  await page.goto(`/learner/session/${sessionId}`);
+  await page.getByRole("button", { name: "Luyện lại phần này" }).click();
+  const practiceId = await waitForNewSession(page, sessionId);
+
+  const session = await db.learningSession.findUniqueOrThrow({ where: { id: practiceId } });
+  const stateJson = JSON.parse(session.stateJson) as { targetVocabulary?: string[] };
+  const targetWord = stateJson.targetVocabulary?.[0] || "trophy";
+  await db.learningSession.update({
+    where: { id: practiceId },
+    data: { stateJson: JSON.stringify({ ...stateJson, phase: "BOSS" }) },
+  });
+  const turnResp = await page.request.post(`/api/learning-sessions/${practiceId}/turns`, {
+    data: { clientTurnId: randomUUID(), content: `I found the ${targetWord} right now.` },
+  });
+  expect(turnResp.ok()).toBe(true);
+  const payload = await turnResp.json() as { session: { status: string } };
+  expect(payload.session.status).toBe("COMPLETED");
+
+  await page.goto(`/learner/session/${practiceId}`);
+  await expect(page.getByText("Bước tiếp theo")).toBeVisible();
+  await page.reload();
+  await expect(page.getByText("Bước tiếp theo")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("practice-comeback-reload.png"), fullPage: true });
+});

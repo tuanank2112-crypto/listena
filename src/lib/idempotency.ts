@@ -22,6 +22,16 @@ export class OutcomePendingError extends Error {
   }
 }
 
+export class LegacyResultUnavailableError extends Error {
+  readonly code = "LEGACY_RESULT_UNAVAILABLE" as const;
+  constructor(
+    message = "Kết quả lịch sử không có bản lưu snapshot; vui lòng xem lại trong lịch sử học tập."
+  ) {
+    super(message);
+    this.name = "LegacyResultUnavailableError";
+  }
+}
+
 function normalizeForCanonicalJson(value: unknown): unknown {
   if (value === null || typeof value !== "object") {
     return value;

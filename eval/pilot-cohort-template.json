@@ -1,0 +1,55 @@
+{
+  "cohortId": "cohort-2026-09-17",
+  "createdAt": "2026-09-17T03:46:44.086Z",
+  "protocolVersion": "pilot-v1",
+  "participants": [
+    {
+      "participantId": "learner-p01",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    },
+    {
+      "participantId": "learner-p02",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    },
+    {
+      "participantId": "learner-p03",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    },
+    {
+      "participantId": "learner-p04",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    },
+    {
+      "participantId": "learner-p05",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    },
+    {
+      "participantId": "learner-p06",
+      "enrolledAt": "2026-09-17",
+      "status": "ENROLLED",
+      "cefrInitial": "A2",
+      "formativeSessionsCompleted": 0,
+      "notes": "Consented adult learner"
+    }
+  ]
+}

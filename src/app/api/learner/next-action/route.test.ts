@@ -36,4 +36,28 @@ describe("GET /api/learner/next-action", () => {
     await expect(response.json()).resolves.toMatchObject({ decision: { kind: "CALIBRATE" } });
     expect(mocks.plan).toHaveBeenCalledWith("learner-1");
   });
+
+  it("returns p11-v1 decision with causal basis for authenticated learner", async () => {
+    mocks.plan.mockResolvedValue({
+      kind: "QUEST",
+      scenarioKey: "lost-bag",
+      reasonCode: "GOAL_PRACTICE",
+      reasonVi: "Nhiệm vụ hôm nay.",
+      evidenceRefs: [],
+      estimatedMinutes: 10,
+      decisionVersion: "p11-v1",
+      basis: { kind: "DECLARED_GOAL", intentRevision: 2 },
+    });
+
+    const response = await GET();
+
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toMatchObject({
+      decision: {
+        kind: "QUEST",
+        decisionVersion: "p11-v1",
+        basis: { kind: "DECLARED_GOAL", intentRevision: 2 },
+      },
+    });
+  });
 });
