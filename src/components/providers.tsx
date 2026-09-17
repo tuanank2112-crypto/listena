@@ -11,13 +11,17 @@ import {
 } from "@/core/tts/speech";
 import { VieNeuSpeechEngine } from "@/core/tts/vie-engine";
 import { WebSpeechEngine } from "@/core/tts/web-speech-engine";
+import { getVoicePreferences } from "@/features/voice/voice-preferences";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const english = new WebSpeechEngine();
-    const englishFallback = new WebSpeechEngine();
+    // The accent is read on every utterance so the settings panel applies
+    // immediately; the curated voice policy decides the actual voice (Plan14).
+    const getAccent = () => getVoicePreferences().accent;
+    const english = new WebSpeechEngine({ getAccent });
+    const englishFallback = new WebSpeechEngine({ getAccent });
     const vietnamese = new VieNeuSpeechEngine();
     const vietnameseFallback = new WebSpeechEngine();
 

@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useReducer, useRef } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   ArrowLeft,
   ArrowRight,
+  AudioLines,
   Bot,
   Check,
   CircleHelp,
@@ -13,6 +14,7 @@ import {
   Gauge,
   LoaderCircle,
   MessageCircleMore,
+  Mic,
   RefreshCw,
   Send,
   ShieldCheck,
@@ -22,7 +24,12 @@ import {
   Volume2,
   XCircle,
 } from "lucide-react";
-import { speak } from "@/core/tts/speech";
+import { speakCurated, speakVoiceScript, stopSpeech } from "@/core/tts/speech";
+import { repeatableLines } from "@/core/voice/voice-script";
+import { RepeatAfterMe } from "@/features/voice/repeat-after-me";
+import { VoiceInputButton } from "@/features/voice/voice-input-button";
+import { VoiceSettings } from "@/features/voice/voice-settings";
+import { useVoicePreferences } from "@/features/voice/voice-preferences";
 import { InterventionRenderer } from "@/features/learning-session/intervention-renderer";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import { makeClientId } from "@/features/learning-session/client-id";
@@ -123,6 +130,14 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   const [player, dispatch] = useReducer(learningSessionPlayerReducer, undefined, () => createInitialPlayerState());
   const conversationEndRef = useRef<HTMLDivElement | null>(null);
   const requestControllerRef = useRef<AbortController | null>(null);
+  const voicePreferences = useVoicePreferences();
+  const [voiceSettingsOpen, setVoiceSettingsOpen] = useState(false);
+  /**
+   * The id of the last AI turn read aloud. Set on the first load so resuming a
+   * session does not replay old history; only turns that arrive afterwards
+   * are auto-read (Plan14 SPEC-P142 §5).
+   */
+  const lastSpokenTurnRef = useRef<string | null | undefined>(undefined);
   const session = player.session;
   const pendingIntervention = getPendingIntervention(session);
   const busy = player.phase === "submitting" || player.phase === "completing";
@@ -151,6 +166,22 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   useEffect(() => {
     conversationEndRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [session?.turns.length, pendingIntervention?.id]);
+
+  const latestAiTurn = useMemo(() => [...(session?.turns ?? [])].reverse().find((turn) => turn.actor === "AI") ?? null, [session?.turns]);
+
+  useEffect(() => {
+    if (!session) return;
+    if (lastSpokenTurnRef.current === undefined) {
+      lastSpokenTurnRef.current = latestAiTurn?.id ?? null;
+      return;
+    }
+    if (!latestAiTurn || latestAiTurn.id === lastSpokenTurnRef.current) return;
+    lastSpokenTurnRef.current = latestAiTurn.id;
+    if (!voicePreferences.autoSpeak || !latestAiTurn.voiceScript || isTerminalSession(session)) return;
+    void speakVoiceScript(latestAiTurn.voiceScript, { includeCoach: voicePreferences.coachVoice, rateScale: voicePreferences.rate });
+  }, [latestAiTurn, session, voicePreferences.autoSpeak, voicePreferences.coachVoice, voicePreferences.rate]);
+
+  useEffect(() => () => void stopSpeech(), []);
 
   const recordEvent = useCallback(async (type: "HINT" | "REPLAY" | "PAUSE" | "RESUME") => {
     try {
@@ -235,7 +266,26 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   function replay(text: string) {
     dispatch({ type: "COUNT_REPLAY" });
     void recordEvent("REPLAY");
-    void speak({ text, lang: "en", quality: "high", speed: 0.92 });
+    void speakCurated({ text, lang: "en", rate: voicePreferences.rate });
+  }
+
+  /** Replay an AI turn through its server-curated script (NPC and recast only). */
+  function replayTurn(turn: SessionTurn) {
+    dispatch({ type: "COUNT_REPLAY" });
+    void recordEvent("REPLAY");
+    if (turn.voiceScript) {
+      void speakVoiceScript(turn.voiceScript, { includeCoach: false, rateScale: voicePreferences.rate });
+      return;
+    }
+    const { npcReply } = extractAiMessages(turn.content);
+    void speakCurated({ text: npcReply || extractTurnText(turn.content), lang: "en", rate: voicePreferences.rate });
+  }
+
+  function appendTranscript(transcript: string) {
+    const text = transcript.trim();
+    if (!text) return;
+    const draft = player.draft.trim();
+    dispatch({ type: "SET_DRAFT", value: draft ? `${draft} ${text}` : text });
   }
 
   function requestHint() {
@@ -277,6 +327,15 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
           <p className="truncate text-[11px] font-black uppercase tracking-[.15em] text-[#ef765d]">AI Mission · {phaseLabels[mission.phase]}</p>
           <h1 className="truncate text-xl font-black tracking-[-.04em] sm:text-2xl">{mission.scenarioTitle}</h1>
         </div>
+        <button
+          type="button"
+          onClick={() => setVoiceSettingsOpen((open) => !open)}
+          aria-pressed={voiceSettingsOpen}
+          aria-label="Cài đặt giọng nói"
+          className={`inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 ${voiceSettingsOpen ? "border-[#176b55] bg-[#dff2e8] text-[#176b55]" : "border-[#ded8cc] bg-[#fffdf8] text-[#748079]"}`}
+        >
+          <AudioLines className="h-5 w-5" />
+        </button>
         {shouldOfferCompletion(session) ? (
           <button onClick={() => void completeSession()} disabled={busy} className="hidden min-h-11 items-center gap-2 rounded-2xl bg-[#18332d] px-4 text-xs font-black text-white disabled:opacity-50 sm:flex">
             <Flag className="h-4 w-4 text-[#f7d779]" /> Kết thúc
@@ -293,6 +352,8 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
         <span className="text-xs font-black text-[#77817b]">{mission.turnCount}/{mission.maxTurns}</span>
       </div>
 
+      {voiceSettingsOpen && <VoiceSettings className="mb-5" />}
+
       <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
         <main className="paper-card overflow-hidden rounded-[30px]">
           <div className="border-b border-[#ded8cc] bg-[#18332d] px-5 py-4 text-white sm:px-6">
@@ -308,7 +369,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
 
           <div className="min-h-[430px] space-y-4 bg-[radial-gradient(rgba(23,107,85,.07)_1px,transparent_1px)] bg-[length:22px_22px] px-4 py-5 sm:max-h-[62vh] sm:overflow-y-auto sm:px-6">
             {session.turns.length === 0 && <MissionBrief mission={mission} />}
-            {session.turns.map((turn) => <TurnBubble key={turn.id} turn={turn} npcName={mission.npcName} onReplay={replay} />)}
+            {session.turns.map((turn) => <TurnBubble key={turn.id} turn={turn} npcName={mission.npcName} sessionId={session.id} onReplay={replayTurn} />)}
 
             <AnimatePresence>
               {busy && player.phase === "submitting" && (
@@ -356,10 +417,13 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
                   className="w-full resize-none rounded-2xl border-2 border-[#ded8cc] bg-white px-4 py-3 text-base font-bold outline-none focus:border-[#176b55] disabled:opacity-60"
                   placeholder={`Trả lời ${mission.npcName} bằng tiếng Anh...`}
                 />
-                <div className="mt-3 flex items-center justify-between gap-3">
-                  <button type="button" onClick={requestHint} disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-black text-[#b27a20] disabled:opacity-50">
-                    <CircleHelp className="h-4 w-4" /> Gợi ý Socratic
-                  </button>
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <VoiceInputButton disabled={busy} onTranscript={(result) => appendTranscript(result.transcript)} />
+                    <button type="button" onClick={requestHint} disabled={busy} className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-xs font-black text-[#b27a20] disabled:opacity-50">
+                      <CircleHelp className="h-4 w-4" /> Gợi ý Socratic
+                    </button>
+                  </div>
                   <button type="submit" disabled={busy || !player.draft.trim()} className="inline-flex min-h-12 items-center gap-2 rounded-2xl bg-[#176b55] px-5 text-sm font-black text-white shadow-[0_10px_24px_rgba(23,107,85,.2)] disabled:opacity-40">
                     {busy ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Gửi câu trả lời
                   </button>
@@ -382,7 +446,9 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
   );
 }
 
-function TurnBubble({ turn, npcName, onReplay }: { turn: SessionTurn; npcName: string; onReplay: (text: string) => void }) {
+function TurnBubble({ turn, npcName, sessionId, onReplay }: { turn: SessionTurn; npcName: string; sessionId: string; onReplay: (turn: SessionTurn) => void }) {
+  const [practiceOpen, setPracticeOpen] = useState(false);
+  const practiceLines = repeatableLines(turn.voiceScript).slice(0, 3);
   if (turn.actor === "LEARNER") {
     return (
       <motion.div initial={{ opacity: 0, y: 7 }} animate={{ opacity: 1, y: 0 }} className="ml-auto max-w-[86%] rounded-2xl rounded-br-md bg-[#176b55] px-4 py-3 text-sm font-bold leading-6 text-white sm:max-w-[76%]">
@@ -401,9 +467,19 @@ function TurnBubble({ turn, npcName, onReplay }: { turn: SessionTurn; npcName: s
         <div className="mr-auto max-w-[90%] rounded-2xl rounded-bl-md bg-[#18332d] px-4 py-3 text-sm font-bold leading-6 text-white sm:max-w-[80%]">
           <div className="mb-1.5 flex items-center justify-between gap-3 text-[10px] font-black uppercase tracking-[.12em] text-[#f7d779]">
             <span>{npcName}</span>
-            <button type="button" onClick={() => onReplay(message)} className="rounded-lg p-1 text-white/70 hover:bg-white/10" aria-label={`Nghe ${npcName} nói`}><Volume2 className="h-4 w-4" /></button>
+            <span className="flex items-center gap-1">
+              <button type="button" onClick={() => onReplay(turn)} className="rounded-lg p-1 text-white/70 hover:bg-white/10" aria-label={`Nghe ${npcName} nói`}><Volume2 className="h-4 w-4" /></button>
+              {practiceLines.length > 0 && (
+                <button type="button" onClick={() => setPracticeOpen((open) => !open)} aria-pressed={practiceOpen} className={`rounded-lg p-1 hover:bg-white/10 ${practiceOpen ? "text-[#f7d779]" : "text-white/70"}`} aria-label="Luyện nói theo câu này"><Mic className="h-4 w-4" /></button>
+              )}
+            </span>
           </div>
           <p className="whitespace-pre-wrap">{message}</p>
+        </div>
+      )}
+      {practiceOpen && practiceLines.length > 0 && (
+        <div className="mr-auto max-w-[92%] space-y-2 sm:max-w-[82%]" aria-label="Luyện nói">
+          {practiceLines.map((line) => <RepeatAfterMe key={`${turn.id}-${line.role}-${line.text}`} line={line.text} sessionId={sessionId} />)}
         </div>
       )}
       {coachMessage && (

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
-import { speak } from "@/core/tts/speech";
+import { speakCurated } from "@/core/tts/speech";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import { AnswerCanvas } from "@/features/answer-canvas/answer-canvas";
 import {
@@ -123,8 +123,10 @@ export function LessonDetailClient({
   const progress = ((index + 1) / Math.max(lesson.exercises.length, 1)) * 100;
   const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || exercise?.type === "FULL_DICTATION");
 
+  // Plan14: every voiced string goes through the curated pipeline so markdown,
+  // emoji and Vietnamese fragments never reach the English voice.
   const speakEnglish = useCallback(async (text: string) => {
-    await speak({ text, lang: "en", quality: "high", speed: rate });
+    await speakCurated({ text, lang: "en", rate });
   }, [rate]);
 
   const play = useCallback(async (target = segment) => {
@@ -392,7 +394,7 @@ export function LessonDetailClient({
             <div className={`${tutorOpen ? "block" : "hidden xl:block"} border-t border-[#ded8cc]`}>
               <div className="max-h-[360px] space-y-3 overflow-y-auto p-4">
                 {!messages.length && <div className="rounded-2xl bg-[#f4efe5] p-4 text-sm font-bold leading-6 text-[#65746c]">Hỏi một từ hoặc điểm ngữ pháp bạn chưa rõ.</div>}
-                {messages.map((message, messageIndex) => { const content = message.content.length > 700 ? `${message.content.slice(0,700)}…` : message.content; return (<div key={messageIndex} className={`rounded-2xl px-3.5 py-3 text-sm font-bold leading-6 ${message.role === "user" ? "ml-8 bg-[#176b55] text-white" : "mr-3 bg-[#f4efe5] text-[#45584f]"}`}><div className="flex items-start gap-2"><span className="min-w-0 flex-1 whitespace-pre-wrap">{content}</span>{message.role === "assistant" && (<button type="button" onClick={() => void speak({ text: content, lang: "vi" })} className="shrink-0 rounded-lg p-1 text-[#176b55] transition hover:bg-[#dff2e8]" aria-label="Đọc to phản hồi"><Volume2 className="h-4 w-4" /></button>)}</div></div>); })}
+                {messages.map((message, messageIndex) => { const content = message.content.length > 700 ? `${message.content.slice(0,700)}…` : message.content; return (<div key={messageIndex} className={`rounded-2xl px-3.5 py-3 text-sm font-bold leading-6 ${message.role === "user" ? "ml-8 bg-[#176b55] text-white" : "mr-3 bg-[#f4efe5] text-[#45584f]"}`}><div className="flex items-start gap-2"><span className="min-w-0 flex-1 whitespace-pre-wrap">{content}</span>{message.role === "assistant" && (<button type="button" onClick={() => void speakCurated({ text: content, lang: "vi" })} className="shrink-0 rounded-lg p-1 text-[#176b55] transition hover:bg-[#dff2e8]" aria-label="Đọc to phản hồi"><Volume2 className="h-4 w-4" /></button>)}</div></div>); })}
                 {asking && <LoaderCircle className="h-5 w-5 animate-spin text-[#176b55]" />}
               </div>
               <div className="flex gap-2 border-t border-[#ded8cc] p-3">

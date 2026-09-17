@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-09-18 (Plan14 Voice AI, local accepted, committed)
+- **Voice AI trên Vercel, không env mới:** mọi chuỗi vào giọng đi qua `prepareSpokenText` (sạch markdown/emoji/IPA/URL, tách câu, viết hoa + dấu kết câu, mở rộng viết tắt, tách dòng vi/en); `speakCurated`/`speakLines`/`speakVoiceScript` trong `src/core/tts/speech.ts`.
+- **Kịch bản giọng do server dựng:** AI turn trong DTO phiên có `voiceScript` v1 (NPC en 0.95, RECAST = câu đã sửa 0.82, COACH vi 1.0); câu sai của học viên (`detectedError.actual`) không bao giờ được đọc.
+- **Chính sách giọng:** NEURAL > PREMIUM > SYSTEM > REMOTE (Google chỉ dự phòng, không còn bị loại); giọng novelty Apple bị loại tuyệt đối; accent học viên (`en-US` mặc định, `en-GB`) luôn thắng tier; `quality` không còn đổi xếp hạng.
+- **Nói để trả lời + luyện nói:** recogniser trình duyệt (Chrome/Edge/Safari), `Permissions-Policy microphone=(self)` (trước đây chặn micro toàn app); nút mic điền ô trả lời; "Nghe mẫu / Nói lại" trên từng câu NPC; `POST /api/voice/pronunciation` chấm mức từ trên server (đồng âm tính đúng), verdict GOOD/ALMOST/RETRY; có `sessionId` thì câu phải thuộc phiên và ghi `VOICE_PRACTICE` (%) vào sổ sự kiện; route `/events` từ chối `VOICE_PRACTICE`; không ghi mastery.
+- **Cài đặt giọng** (accent, tốc độ, tự đọc lượt mới, đọc coach) lưu `localStorage` `listena.voice.v1`; panel hiển thị giọng đang dùng + tier + cảnh báo Firefox.
+- **Gates local:** type-check 0; eslint 0 lỗi / 28 cảnh báo; vitest 119 file / 743 test; `next build` PASS (build log liệt kê 58 route entries, có /api/voice/pronunciation); Playwright 35/35. ADR 0002 thay thế một phần ADR 0001. Version giữ 0.7.0.
+
 ## 0.7.0 — 2026-09-17 (Plan13 Logic Remediation, AI Reliability, Answer Canvas)
 - **Đạt bậc 0.7.0 theo bậc thang phiên bản Plan13 (MINOR):**
   - **Khắc phục toàn bộ phát hiện Root Logic Review 2026-09-17:**

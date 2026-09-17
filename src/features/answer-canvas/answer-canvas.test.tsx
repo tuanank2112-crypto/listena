@@ -2,7 +2,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { AnswerCanvas } from "./answer-canvas";
 
-vi.mock("@/core/tts/speech", () => ({ speak: vi.fn() }));
+vi.mock("@/core/tts/speech", () => ({ speak: vi.fn(), speakCurated: vi.fn() }));
 
 const noop = async () => ({ mode: "SKELETON" as const, hintCost: 1 });
 

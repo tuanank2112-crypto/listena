@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan13_completed__ci_success__production_deployed",
-  "active_plan": "planning/13_2026-09-17_logic-review-remediation/plan.md",
-  "checkpoint": "planning/13_2026-09-17_logic-review-remediation/plan.md",
+  "system_status": "plan14_voice_ai_committed",
+  "active_plan": "planning/14_2026-09-18_voice-ai/plan.md",
+  "checkpoint": "planning/14_2026-09-18_voice-ai/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -370,5 +370,33 @@
     "production_migration_precheck": "PersonalizedLessonAttempt partial unique index fails if duplicate graded attempts exist; run the GROUP BY precheck from Worker C report before migrate deploy",
     "open_cosmetic": "personalized feedbackVi concatenates 'Chua dung.' with model text starting 'Dung!'",
     "commit": "not committed; user decides"
+  },
+  "plan14": {
+    "created": "2026-09-18 00:05+07",
+    "request": "user 2026-09-18: voice AI forgotten; curated standard pronunciation/grammar; fit repo; production on Vercel",
+    "probe": "Vyce GET /models has no audio model; VieNeu sidecar cannot run on Vercel; Permissions-Policy microphone=() blocked mic",
+    "design": [
+      "prepareSpokenText: every voiced string cleaned, sentence-split, vi/en-tagged (speakCurated/speakLines/speakVoiceScript)",
+      "server-built voiceScript on AI turns in DTO: NPC en 0.95, RECAST expected 0.82 (>=2 words, != actual), COACH vi; detectedError.actual never voiced",
+      "voice-policy: NEURAL>PREMIUM>SYSTEM>REMOTE(Google last, not excluded); novelty voices excluded; learner accent (en-US default) beats tier",
+      "browser STT only (Chrome/Edge/Safari); Permissions-Policy microphone=(self); no server audio",
+      "POST /api/voice/pronunciation: word-level deterministic grade; with sessionId the line must be in the session voiceScript; VOICE_PRACTICE event (%) on ledger; no LearningEvidence/mastery"
+    ],
+    "files": "src/core/voice/**, src/core/tts/{speech,voice-selection,web-speech-engine}.ts, src/server/voice/**, src/app/api/voice/**, src/features/voice/**, session-player.tsx, lesson-client.tsx, personalized-lesson-player.tsx, answer-canvas.tsx, providers.tsx, dto.ts, types.ts, validation/learning-session.ts, events/route.ts, next.config.ts, docs/adr/0002-voice-ai.md, README.md, docs/learning.md, e2e/voice-ai.spec.ts",
+    "gates_local": {
+      "type_check": "0",
+      "eslint": "0 errors / 28 warnings",
+      "vitest": "119 files / 743 tests",
+      "build": "PASS (build log liệt kê 58 route entries, có /api/voice/pronunciation)",
+      "playwright": "35/35 (3 new voice-ai cases)"
+    },
+    "version": "kept 0.7.0; propose 0.8.0 after CI + user approval",
+    "commit": "committed; pushed to origin/codex/vercel-turso-migration",
+    "open": [
+      "commit/push",
+      "CI",
+      "deploy",
+      "manual browser smoke (OPERATIONS §3)"
+    ]
   }
 }

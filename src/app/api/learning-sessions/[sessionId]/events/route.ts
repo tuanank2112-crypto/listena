@@ -26,6 +26,11 @@ export async function POST(
     if (!parsed.success) {
       return invalidRequest("Invalid learning event", parsed.error.flatten());
     }
+    // A voice practice score is server-graded evidence; it may only be recorded
+    // by the pronunciation route after the repeated line is verified (Plan14).
+    if (parsed.data.type === "VOICE_PRACTICE") {
+      return invalidRequest("Voice practice is recorded through /api/voice/pronunciation");
+    }
 
     return NextResponse.json(
       await recordLearningEvent(authSession.user.id, parsedId.data, parsed.data),

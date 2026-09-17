@@ -1,5 +1,9 @@
 # ListenAI roadmap
 
+## 2026-09-18 — Plan14 Voice AI (LOCAL ACCEPTED, chưa commit)
+
+Voice AI được thêm theo yêu cầu user: văn bản nói chuẩn hoá (`prepareSpokenText`), chính sách giọng chọn lọc (neural trước, novelty loại, accent học viên), `voiceScript` do server dựng cho từng lượt AI (không bao giờ đọc câu sai của học viên), nói để trả lời bằng recogniser trình duyệt, `POST /api/voice/pronunciation` chấm mức từ và ghi `VOICE_PRACTICE` vào sổ phiên. Không env mới, không sidecar, chạy nguyên trên Vercel. Việc tiếp theo: user commit/push → CI → deploy → smoke thủ công theo trình duyệt (Plan14 OPERATIONS §3) → quyết định bump 0.8.0. Sau pilot mới cân nhắc dùng điểm phát âm làm bằng chứng kỹ năng.
+
 ## Trạng thái ngay lúc này (2026-09-17, sau khi giải quyết findings Root Review)
 
 Ứng viên P120–P126 đã được commit tại `9325ca2`. Toàn bộ 7 findings từ [Root code review](../docs/ROOT_CODE_REVIEW_2026-09-17_P120-P126.md) đã được giải quyết:

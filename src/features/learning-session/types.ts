@@ -1,4 +1,5 @@
 import type { LearningDecision } from "@/server/learning/decision";
+import type { VoiceScript } from "@/core/voice/voice-script";
 
 export type LearningSessionMode = "LESSON_COACH" | "MISSION" | "DAILY_QUEST";
 export type LearningSessionStatus = "ACTIVE" | "COMPLETED" | "ABANDONED";
@@ -51,6 +52,8 @@ export interface SessionTurn {
   content: unknown;
   skillTags: string[];
   createdAt: string;
+  /** Server-curated lines a voice may say for an AI turn (Plan14); absent on learner turns. */
+  voiceScript?: VoiceScript | null;
 }
 
 export interface SessionEvidence {

@@ -169,3 +169,94 @@ describe("speak", () => {
     expect(getSpeechState().phase).toBe("downloading-model");
   });
 });
+
+describe("speakLines / speakCurated / speakVoiceScript (Plan14)", () => {
+  afterEach(async () => {
+    await stopSpeech();
+    registerEnglishSpeechEngine(null);
+    registerVietnameseSpeechEngine(null);
+  });
+
+  it("routes each curated line by its own language with its own rate", async () => {
+    const engine = createEngine();
+    const viEngine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    registerVietnameseSpeechEngine(viEngine);
+    const { speakLines } = await import("./speech");
+    const result = await speakLines([
+      { lang: "en", text: "Hello there.", rate: 0.9 },
+      { lang: "vi", text: "Xin chào.", rate: 1 },
+    ]);
+    expect(result).toEqual({ ok: true, status: "completed", cached: false });
+    expect(engine.speak).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Hello there.", lang: "en", speed: 0.9 }),
+      expect.anything(),
+    );
+    expect(viEngine.speak).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "Xin chào.", lang: "vi", speed: 1 }),
+      expect.anything(),
+    );
+  });
+
+  it("skips a language with no engine instead of aborting the sequence", async () => {
+    const engine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    setSpeechWarningHandler(() => {});
+    const { speakLines } = await import("./speech");
+    const result = await speakLines([
+      { lang: "vi", text: "Xin chào." },
+      { lang: "en", text: "Hello." },
+    ]);
+    expect(result.ok).toBe(true);
+    expect(engine.speak).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops the remaining lines when something else speaks in between", async () => {
+    const engine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    const { speakLines } = await import("./speech");
+    const sequence = speakLines([
+      { lang: "en", text: "One." },
+      { lang: "en", text: "Two." },
+      { lang: "en", text: "Three." },
+    ]);
+    await speak({ text: "Interrupt.", lang: "en" });
+    const result = await sequence;
+    expect(result).toEqual({ ok: false, status: "cancelled" });
+    const spoken = (engine.speak as ReturnType<typeof vi.fn>).mock.calls.map((call) => (call[0] as { text: string }).text);
+    expect(spoken).not.toContain("Three.");
+    expect(spoken).toContain("Interrupt.");
+  });
+
+  it("speakCurated cleans the text and splits mixed-language sentences", async () => {
+    const engine = createEngine();
+    const viEngine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    registerVietnameseSpeechEngine(viEngine);
+    const { speakCurated } = await import("./speech");
+    await speakCurated({ text: "**Great!** 🎉 Bạn làm tốt lắm.", lang: "en", rate: 0.92 });
+    expect(engine.speak).toHaveBeenCalledWith(expect.objectContaining({ text: "Great!", speed: 0.92 }), expect.anything());
+    expect(viEngine.speak).toHaveBeenCalledWith(expect.objectContaining({ text: "Bạn làm tốt lắm." }), expect.anything());
+    await expect(speakCurated({ text: "🎉🎉", lang: "en" })).resolves.toEqual({ ok: false, status: "unavailable" });
+  });
+
+  it("speakVoiceScript can leave out coach lines and scales rates", async () => {
+    const engine = createEngine();
+    const viEngine = createEngine();
+    registerEnglishSpeechEngine(engine);
+    registerVietnameseSpeechEngine(viEngine);
+    const { speakVoiceScript } = await import("./speech");
+    await speakVoiceScript(
+      {
+        version: "v1",
+        lines: [
+          { role: "NPC", lang: "en", text: "Hello.", rate: 1 },
+          { role: "COACH", lang: "vi", text: "Chào bạn.", rate: 1 },
+        ],
+      },
+      { includeCoach: false, rateScale: 0.8 },
+    );
+    expect(engine.speak).toHaveBeenCalledWith(expect.objectContaining({ text: "Hello.", speed: 0.8 }), expect.anything());
+    expect(viEngine.speak).not.toHaveBeenCalled();
+  });
+});

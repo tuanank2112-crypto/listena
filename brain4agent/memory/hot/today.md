@@ -261,3 +261,20 @@ User yeu cau commit va thuc thi toan bo plan.
 6. **Live Probe:** `GET /api/health` tra 200 OK, databaseRuntime="turso", CSP va HSTS active. `POST /api/account/password-reset/request` tra 202 Accepted opaque envelope.
 7. **Version Bump:** CI xanh + deploy thanh cong -> nang version len 0.7.0 tren package.json, package-lock.json, state.json, memory-distill.txt, changelog.md, plan.md, TESTING-ACCEPTANCE.md.
 
+## 2026-09-18 00:00–01:00+07 — Plan14 Voice AI (root, một agent)
+
+**Yêu cầu user:** "voice A.I bị lãng quên; cần chọn lọc phát âm chuẩn ngữ pháp, phù hợp repo, chạy production trên Vercel."
+
+**Khảo sát:** giọng Anh ghim en-GB, xếp hạng theo tên, không loại giọng novelty; văn bản thô vào giọng; không STT; `Permissions-Policy microphone=()` chặn micro toàn app; VieNeu không chạy Vercel; Vyce `GET /models` không có model audio.
+
+**Đã làm (chưa commit):** `src/core/voice/*` (spoken-text, voice-policy, voice-script, pronunciation, speech-recognition) + test; `speech.ts` thêm speakLines/speakCurated/speakVoiceScript; `voice-selection`/`web-speech-engine` theo chính sách + accent; DTO gắn `voiceScript` cho AI turn; `LearningEventSchema` + `VOICE_PRACTICE` (route /events từ chối); `src/server/voice/pronunciation-service.ts` + `POST /api/voice/pronunciation`; `src/features/voice/*` (preferences, mic button, settings, repeat-after-me); Session Player tích hợp (auto-đọc lượt mới, replay theo script, luyện nói per câu NPC, mic điền draft); lesson/personalized/canvas dùng speakCurated; `Permissions-Policy microphone=(self)`; ADR 0002; README; learning.md; Plan14 spec package; não.
+
+**Gates local:** type-check 0; eslint 0 lỗi / 28 cảnh báo; vitest 119 file / 743 test; `next build` PASS (build log liệt kê 58 route entries, có /api/voice/pronunciation); Playwright 35/35 (voice-ai.spec 3 ca mới; lần đầu fail vì learner seed còn phiên ACTIVE từ smoke → spec abandon qua Prisma).
+
+**Bài học:** (1) lint Next 16 cấm setState trong effect và đọc ref khi render → dùng `useSyncExternalStore` cho "supported"/"voice description"; (2) thứ tự pipeline văn bản nói quan trọng: bold `**` phải xử lý trước stage direction `*…*`, viết tắt có dấu chấm phải mở rộng trước khi tách câu, `___` trước khi xoá ký tự markdown; (3) câu không dấu trong coach message tiếng Việt là tiếng Anh (ví dụ "Try: I lost my bag.") — detect theo dấu, không theo fallback; (4) heredoc bash trong phiên này hỏng khi nội dung có backtick → viết script ra file scratchpad rồi chạy.
+
+**Thực hiện theo yêu cầu user (2026-09-18 00:39+07):** commit toàn bộ Plan 14 và push lên `origin/codex/vercel-turso-migration`.
+
+**Mở:** CI, deploy, smoke thủ công theo trình duyệt (OPERATIONS §3), quyết định bump 0.8.0.
+
+

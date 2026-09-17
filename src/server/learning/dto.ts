@@ -15,6 +15,7 @@ import type {
   SessionOutcome,
 } from "@/features/learning-session/types";
 import { parseMissionState } from "@/server/learning/state";
+import { buildTurnVoiceScript } from "@/core/voice/voice-script";
 
 type SessionRecord = {
   id: string;
@@ -92,15 +93,21 @@ export function toLearningSessionDto(record: SessionRecord) {
     lesson: record.lesson,
     turns: record.turns
       .filter((turn) => turn.actor !== "SYSTEM")
-      .map((turn) => ({
-        id: turn.id,
-        sequence: turn.sequence,
-        actor: turn.actor,
-        turnType: turn.turnType,
-        content: parseJsonValue(turn.contentJson),
-        skillTags: splitTags(turn.skillTags),
-        createdAt: turn.createdAt.toISOString(),
-      })),
+      .map((turn) => {
+        const content = parseJsonValue(turn.contentJson);
+        return {
+          id: turn.id,
+          sequence: turn.sequence,
+          actor: turn.actor,
+          turnType: turn.turnType,
+          content,
+          skillTags: splitTags(turn.skillTags),
+          createdAt: turn.createdAt.toISOString(),
+          // Plan14 SPEC-P140 §3: the server decides what a voice may say about
+          // an AI turn; the client never derives spoken text from `content`.
+          ...(turn.actor === "AI" ? { voiceScript: buildTurnVoiceScript(content) } : {}),
+        };
+      }),
     evidence: record.evidence.map((item) => ({
       ...item,
       createdAt: item.createdAt.toISOString(),

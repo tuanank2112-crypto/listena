@@ -72,7 +72,7 @@ import type {
 import { GeneratedInterventionSchema } from "@/server/validation/learning-session";
 
 type LearningEventInput = {
-  type: "HINT" | "REPLAY" | "PAUSE" | "RESUME" | "ABANDON";
+  type: "HINT" | "REPLAY" | "PAUSE" | "RESUME" | "ABANDON" | "VOICE_PRACTICE";
   value?: number;
   clientEventId: string;
 };

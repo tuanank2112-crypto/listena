@@ -1,3 +1,6 @@
+import { prepareSpokenText } from "@/core/voice/spoken-text";
+import type { VoiceScript } from "@/core/voice/voice-script";
+
 export type SpeechLanguage = "en" | "vi";
 export type SpeechPhase = "idle" | "downloading-model" | "synthesizing" | "playing" | "error";
 
@@ -47,6 +50,8 @@ let vietnameseEngine: SpeechEngine | null = null;
 let vietnameseFallbackEngine: SpeechEngine | null = null;
 let activeController: AbortController | null = null;
 let latestRequestId = 0;
+/** Bumped by every public entry point so a running line sequence stops when anything else speaks. */
+let sequenceToken = 0;
 let speechState = initialState;
 const listeners = new Set<SpeechStateListener>();
 let warningHandler: SpeechWarningHandler = (message, context) => {
@@ -104,6 +109,7 @@ export function setSpeechWarningHandler(handler: SpeechWarningHandler) {
 
 export async function stopSpeech() {
   latestRequestId += 1;
+  sequenceToken += 1;
   activeController?.abort();
   activeController = null;
   await englishEngine?.stop();
@@ -162,6 +168,11 @@ async function tryEngine(engine: SpeechEngine | null, options: SpeakOptions, req
 }
 
 export async function speak(options: SpeakOptions): Promise<SpeakResult> {
+  sequenceToken += 1;
+  return speakSingle(options);
+}
+
+async function speakSingle(options: SpeakOptions): Promise<SpeakResult> {
   if (!options.text.trim()) return { ok: false, status: "unavailable" };
 
   const requestId = latestRequestId + 1;
@@ -207,4 +218,82 @@ export async function speak(options: SpeakOptions): Promise<SpeakResult> {
     return await tryEngine(secondary, options, requestId);
   }
   return result;
+}
+
+export interface SpeakLineInput {
+  lang: SpeechLanguage;
+  text: string;
+  /** Playback rate; defaults to 1. */
+  rate?: number;
+}
+
+export interface SpeakLinesOptions {
+  voice?: string;
+  quality?: SpeakOptions["quality"];
+}
+
+/**
+ * Speak curated lines one after another (Plan14 SPEC-P140 §4). Each line is
+ * routed by its own language, so an English NPC line and a Vietnamese coach
+ * line can share one playback. Any other `speak`/`stopSpeech` call, or a newer
+ * `speakLines`, cancels the remaining lines. A language whose engines are all
+ * missing is skipped rather than aborting the whole sequence.
+ */
+export async function speakLines(lines: SpeakLineInput[], options: SpeakLinesOptions = {}): Promise<SpeakResult> {
+  const token = ++sequenceToken;
+  let last: SpeakResult = { ok: false, status: "unavailable" };
+  for (const line of lines) {
+    if (token !== sequenceToken) return { ok: false, status: "cancelled" };
+    if (!line.text.trim()) continue;
+    const result = await speakSingle({
+      text: line.text,
+      lang: line.lang,
+      speed: line.rate ?? 1,
+      voice: options.voice,
+      quality: options.quality ?? "high",
+    });
+    if (!result.ok && result.status === "cancelled") return result;
+    if (!result.ok && result.status === "unavailable") continue;
+    last = result;
+  }
+  return last;
+}
+
+export interface SpeakCuratedOptions {
+  text: string;
+  /** Fallback language for letterless fragments; sentences are detected per line. */
+  lang: SpeechLanguage;
+  rate?: number;
+  voice?: string;
+}
+
+/**
+ * The only way ad-hoc text (vocabulary, transcripts, tutor replies) reaches a
+ * voice: it is cleaned and split by `prepareSpokenText` first, so markdown,
+ * emoji and mixed-language fragments never get pronounced.
+ */
+export async function speakCurated(options: SpeakCuratedOptions): Promise<SpeakResult> {
+  const script = prepareSpokenText(options.text, options.lang);
+  if (!script.lines.length) return { ok: false, status: "unavailable" };
+  return speakLines(
+    script.lines.map((line) => ({ lang: line.lang, text: line.text, rate: options.rate })),
+    { voice: options.voice },
+  );
+}
+
+export interface SpeakVoiceScriptOptions {
+  /** Whether Vietnamese coach lines are voiced too (learner preference). */
+  includeCoach?: boolean;
+  /** Multiplies each line's own rate (learner speed preference). */
+  rateScale?: number;
+}
+
+/** Play a server-curated AI turn script. */
+export async function speakVoiceScript(script: VoiceScript, options: SpeakVoiceScriptOptions = {}): Promise<SpeakResult> {
+  const includeCoach = options.includeCoach ?? true;
+  const scale = options.rateScale ?? 1;
+  const lines = script.lines
+    .filter((line) => includeCoach || line.role !== "COACH")
+    .map((line) => ({ lang: line.lang, text: line.text, rate: Math.max(0.5, Math.min(1.5, line.rate * scale)) }));
+  return speakLines(lines);
 }

@@ -40,7 +40,7 @@ Danh sách curriculum lọc lesson PUBLISHED, không ràng buộc tên course. F
 
 API tự kiểm auth; session chỉ đọc/ghi của owner. Teacher lesson/course yêu cầu owner hoặc ADMIN. DTO không chứa validator, acceptedAnswers/correctIndex hoặc raw learner memory. Proxy xử lý HTTP/HTTPS cookie theo cấu hình auth.
 
-English runtime dùng Web Speech. Vietnamese gọi route TTS yêu cầu đăng nhập; app/sidecar cùng TTS_API_KEY. Cache proxy mới ngoài public, response private/no-store; thiếu sidecar hoặc key có thể dùng Web Speech fallback tùy giọng trên thiết bị. Xem README/ADR và test TTS cho contract chi tiết.
+English runtime dùng Web Speech qua chính sách giọng chọn lọc và văn bản đã chuẩn hoá (`speakCurated`); AI turn mang `voiceScript` do server dựng; `POST /api/voice/pronunciation` chấm transcript STT trình duyệt và ghi `VOICE_PRACTICE` vào sổ sự kiện phiên (Plan14, ADR 0002). Vietnamese gọi route TTS yêu cầu đăng nhập; app/sidecar cùng TTS_API_KEY. Cache proxy mới ngoài public, response private/no-store; thiếu sidecar hoặc key có thể dùng Web Speech fallback tùy giọng trên thiết bị. Xem README/ADR và test TTS cho contract chi tiết.
 
 ## Bằng chứng
 

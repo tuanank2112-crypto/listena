@@ -65,7 +65,12 @@ export const SubmitLearningTurnSchema = z.object({
 });
 
 export const LearningEventSchema = z.object({
-  type: z.enum(["HINT", "REPLAY", "PAUSE", "RESUME", "ABANDON"]),
+  /**
+   * VOICE_PRACTICE (Plan14 SPEC-P141 §4) is only accepted through
+   * `POST /api/voice/pronunciation`, which verifies the repeated line belongs
+   * to the session before recording; the public events route rejects it.
+   */
+  type: z.enum(["HINT", "REPLAY", "PAUSE", "RESUME", "ABANDON", "VOICE_PRACTICE"]),
   value: z.number().int().min(0).max(100).optional(),
   clientEventId: z.string().trim().min(8).max(120).regex(
     RESERVED_CLIENT_ID_PREFIX,

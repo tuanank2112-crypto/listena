@@ -13,7 +13,7 @@ import {
   Volume2,
   X,
 } from "lucide-react";
-import { speak } from "@/core/tts/speech";
+import { speakCurated } from "@/core/tts/speech";
 import {
   canvasReducer,
   composeAnswer,
@@ -318,7 +318,7 @@ export function AnswerCanvas({
               )}
             </div>
             <div className="mt-3 flex flex-wrap gap-2">
-              <button type="button" disabled={!answer} onClick={() => void speak({ text: answer, lang: "en", quality: "high" })} className={`${PILL} bg-[#18332d] text-white disabled:opacity-40`}><Volume2 className="h-4 w-4" /> Nghe lại câu đang xếp</button>
+              <button type="button" disabled={!answer} onClick={() => void speakCurated({ text: answer, lang: "en" })} className={`${PILL} bg-[#18332d] text-white disabled:opacity-40`}><Volume2 className="h-4 w-4" /> Nghe lại câu đang xếp</button>
               <button type="button" disabled={!state.arranged.length} onClick={() => dispatch({ type: "CLEAR_TILES" })} className={`${PILL} bg-[#f4efe5] text-[#45584f] disabled:opacity-40`}>Xếp lại</button>
             </div>
           </div>

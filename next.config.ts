@@ -31,7 +31,9 @@ const nextConfig: NextConfig = {
           { key: "X-Content-Type-Options", value: "nosniff" },
           { key: "X-Frame-Options", value: "DENY" },
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-          { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+          // Plan14: the voice input uses the browser recogniser on this origin
+          // only; the camera and geolocation stay off.
+          { key: "Permissions-Policy", value: "camera=(), microphone=(self), geolocation=()" },
           { key: "Content-Security-Policy-Report-Only", value: contentSecurityPolicy },
           // HSTS only where TLS is guaranteed; a local HTTP dev server must
           // never teach the browser to refuse plain http://localhost.

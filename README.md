@@ -85,9 +85,17 @@ Theo SPEC-P130, bảng `AuthAttempt` (migration `20260917230100_plan13_auth_thro
 
 Các route quên mật khẩu / gửi lại xác minh / đăng ký luôn trả **202** cùng thân phản hồi, pad thời gian tới ≥ 400 ms và gửi mail sau phản hồi, để không lộ tài khoản qua status, thân hay thời gian. JWT re-read `role`/`emailVerifiedAt` từ DB tối đa mỗi 5 phút; TEACHER bị 403 `ROLE_FORBIDDEN` trên API học viên.
 
-## Giọng đọc
+## Giọng đọc và Voice AI
 
-Tiếng Anh dùng Web Speech API phía trình duyệt và giọng hệ thống. Thư viện Kokoro đã được loại bỏ hoàn toàn khỏi dự án.
+Tiếng Anh dùng Web Speech API phía trình duyệt và giọng hệ thống, chọn theo **chính sách giọng** (Plan14, [ADR 0002](docs/adr/0002-voice-ai.md)): giọng neural > premium > hệ thống > Google (dự phòng); giọng novelty bị loại; accent do học viên chọn (`en-US` mặc định, `en-GB`). Thư viện Kokoro đã được loại bỏ hoàn toàn khỏi dự án.
+
+Voice AI (chạy nguyên trên Vercel, không biến môi trường mới):
+
+- **Văn bản nói chuẩn:** mọi chuỗi vào giọng đi qua `prepareSpokenText` (`speakCurated`): sạch markdown/emoji/IPA/URL, tách câu, viết hoa + dấu kết câu, mở rộng viết tắt, tách dòng tiếng Việt/tiếng Anh.
+- **Kịch bản lượt AI do server dựng:** mỗi AI turn trong `/api/learning-sessions/*` có `voiceScript` (NPC tiếng Anh, RECAST = câu đã sửa đọc chậm, COACH tiếng Việt). Câu sai của học viên không bao giờ được đọc.
+- **Nói để trả lời:** nút mic trong Session Player dùng recogniser của trình duyệt (Chrome/Edge/Safari); audio không rời trình duyệt qua mã của ứng dụng. Firefox giữ đường gõ.
+- **Luyện nói:** "Nghe mẫu / Nói lại" trên từng câu NPC; `POST /api/voice/pronunciation` chấm mức từ trên server (đồng âm tính đúng), verdict GOOD/ALMOST/RETRY; có `sessionId` thì câu phải thuộc phiên và điểm ghi vào sổ sự kiện phiên (`VOICE_PRACTICE`), không ghi mastery.
+- Cài đặt giọng (accent, tốc độ, tự đọc, đọc coach) lưu trong trình duyệt (`listena.voice.v1`).
 
 Tiếng Việt dùng private VieNeu TTS sidecar (`vieneu==3.3.0`, speed cố định 1.0); khi không khả dụng, speech controller thử Web Speech nếu thiết bị có giọng phù hợp.
 
