@@ -77,3 +77,10 @@
 - Preview bat Deployment Protection (SSO) nen curl chi nhan redirect toi `vercel.com/sso-api`; khong smoke-test duoc bang dong lenh. Cong voi `MIGRATION_WRITE_MODE` disabled thi thao tac ghi (khoi tao phien AI) cung bi chan.
 - `vercel env add` KHONG ghi de bien da ton tai; phai `vercel env rm` truoc roi moi add, va nho ca ban branch-scoped lan ban chung, neu khong Preview van giu gia tri cu.
 - `vercel link` ghi `.env.local` (chi `VERCEL_OIDC_TOKEN`). File nay uu tien cao hon `.env` trong Next, nen kiem lai sau khi link keo theo bien la.
+
+## Vercel env 2026-09-17 — khong the doc nguoc gia tri
+
+- Bien Vercel loai `sensitive` KHONG BAO GIO tra ve gia tri, ke ca qua `GET /v9/projects/{id}/env?decrypt=true` (tra `len=0`) lan `vercel env pull` (ghi `""`). `len=0` KHONG co nghia la rong: `TURSO_DATABASE_URL` cua Preview cung hien `len=0` du dang chay tot. Chi bien loai `encrypted` moi tra ve blob.
+- He qua: khong the xac minh gia tri bien sensitive bang cach doc. Chi xac minh duoc bang hanh vi, tuc deploy roi goi thu.
+- `vercel env add` doc gia tri tu stdin nhung trong moi truong nay (Git Bash va PowerShell deu vay) khong nhan duoc gia tri qua ong dan hay chuyen huong file, van bao "Added". Dung `PATCH /v9/projects/{id}/env/{envId}` voi token trong `%APPDATA%/com.vercel.cli/Data/auth.json` neu can chac chan.
+- `vercel env add` khong ghi de bien da ton tai; phai `rm` truoc, va nho ca ban branch-scoped lan ban chung.
