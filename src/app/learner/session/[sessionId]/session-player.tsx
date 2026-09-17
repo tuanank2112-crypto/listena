@@ -173,6 +173,12 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
     if (!session) return;
     if (lastSpokenTurnRef.current === undefined) {
       lastSpokenTurnRef.current = latestAiTurn?.id ?? null;
+      // A fresh session (no learner turn yet) opens with the NPC speaking
+      // (Plan15): the learner hears the situation before typing or talking.
+      const fresh = !session.turns.some((turn) => turn.actor === "LEARNER");
+      if (fresh && latestAiTurn?.voiceScript && voicePreferences.autoSpeak && !isTerminalSession(session)) {
+        void speakVoiceScript(latestAiTurn.voiceScript, { includeCoach: voicePreferences.coachVoice, rateScale: voicePreferences.rate });
+      }
       return;
     }
     if (!latestAiTurn || latestAiTurn.id === lastSpokenTurnRef.current) return;

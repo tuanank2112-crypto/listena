@@ -97,6 +97,13 @@ Voice AI (chạy nguyên trên Vercel, không biến môi trường mới):
 - **Luyện nói:** "Nghe mẫu / Nói lại" trên từng câu NPC; `POST /api/voice/pronunciation` chấm mức từ trên server (đồng âm tính đúng), verdict GOOD/ALMOST/RETRY; có `sessionId` thì câu phải thuộc phiên và điểm ghi vào sổ sự kiện phiên (`VOICE_PRACTICE`), không ghi mastery.
 - Cài đặt giọng (accent, tốc độ, tự đọc, đọc coach) lưu trong trình duyệt (`listena.voice.v1`).
 
+Giọng AI ElevenLabs (Plan15, [ADR 0003](docs/adr/0003-elevenlabs-voice.md), tuỳ chọn):
+
+- Đặt `ELEVENLABS_API_KEY` (và tuỳ chọn `ELEVENLABS_MODEL_EN/VI`, `ELEVENLABS_VOICE_EN_US/EN_GB/VI`) → server tổng hợp giọng qua `POST /api/voice/tts`; không key thì mọi thứ chạy bằng giọng trình duyệt như cũ.
+- Không hard-code voice ID: server xếp hạng giọng premade của chính tài khoản theo chính sách chọn lọc (Talia, Elara, Alicia, Finley, Eldrin… và các giọng Default cũ nếu tài khoản còn); `npm run voice:doctor -- --probe` in bảng xếp hạng và nghe thử.
+- Đáp án ẩn (game Nghe & viết, bài riêng Viết chính tả) được đọc bằng route audio server-side, không bao giờ trả text.
+- Voice có ở mọi màn hình: game (tự đọc từ, loa trên thẻ, tự phát từ cần viết), bài AI riêng, phiên Mission (tự đọc lượt mở đầu), bài học, flashcards.
+
 Tiếng Việt dùng private VieNeu TTS sidecar (`vieneu==3.3.0`, speed cố định 1.0); khi không khả dụng, speech controller thử Web Speech nếu thiết bị có giọng phù hợp.
 
 - `GET/POST /api/tts/vie` yêu cầu đăng nhập.

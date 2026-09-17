@@ -121,7 +121,9 @@ export function LessonDetailClient({
   const metadata = parseMetadata(exercise?.metadata ?? null);
   const segment = lesson.segments.find((item) => item.id === exercise?.segmentId);
   const progress = ((index + 1) / Math.max(lesson.exercises.length, 1)) * 100;
-  const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || exercise?.type === "FULL_DICTATION");
+  // Plan15: every exercise can be listened to; without a recorded file the
+  // segment text (or the transcript opening) is spoken by the curated voice.
+  const audioAvailable = Boolean(segment?.audioUrl || lesson.audioUrl || segment?.text || lesson.transcript);
 
   // Plan14: every voiced string goes through the curated pipeline so markdown,
   // emoji and Vietnamese fragments never reach the English voice.

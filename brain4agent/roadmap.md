@@ -1,5 +1,13 @@
 # ListenAI roadmap
 
+## 2026-09-18 — Plan16 rollout Voice AI (PLANNED, worker thực thi)
+
+Bước kế tiếp là [Plan16](../planning/16_2026-09-18_voice-rollout/plan.md): commit Plan15 + CI → xác minh giọng thật bằng `voice:doctor` với key ElevenLabs → env Vercel + deploy + smoke → theo dõi chi phí → bump 0.8.0 → đồng bộ não. Cần user: key, duyệt commit, Vercel, duyệt bump.
+
+## 2026-09-18 — Plan15 Voice ở mọi màn hình + ElevenLabs (LOCAL ACCEPTED, chưa commit)
+
+Giọng AI ElevenLabs server-side (không key = giọng trình duyệt), chính sách xếp hạng giọng của tài khoản (giọng Default hết hạn 31/12/2026 nên không hard-code ID), route audio cho đáp án ẩn, voice ở game/bài riêng/session mở đầu/bài học/flashcards. Việc tiếp theo: user tạo key → `npm run voice:doctor -- --probe` → env Vercel → deploy → smoke; commit/CI; bump version. Sau pilot: cân nhắc ngân sách TTS theo user.
+
 ## 2026-09-18 — Plan14 Voice AI (LOCAL ACCEPTED, chưa commit)
 
 Voice AI được thêm theo yêu cầu user: văn bản nói chuẩn hoá (`prepareSpokenText`), chính sách giọng chọn lọc (neural trước, novelty loại, accent học viên), `voiceScript` do server dựng cho từng lượt AI (không bao giờ đọc câu sai của học viên), nói để trả lời bằng recogniser trình duyệt, `POST /api/voice/pronunciation` chấm mức từ và ghi `VOICE_PRACTICE` vào sổ phiên. Không env mới, không sidecar, chạy nguyên trên Vercel. Việc tiếp theo: user commit/push → CI → deploy → smoke thủ công theo trình duyệt (Plan14 OPERATIONS §3) → quyết định bump 0.8.0. Sau pilot mới cân nhắc dùng điểm phát âm làm bằng chứng kỹ năng.

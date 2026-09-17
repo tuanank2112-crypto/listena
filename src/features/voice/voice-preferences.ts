@@ -3,7 +3,9 @@
 import { useSyncExternalStore } from "react";
 import { DEFAULT_ENGLISH_ACCENT, isEnglishAccent, type EnglishAccent } from "@/core/voice/voice-policy";
 
-/** Learner-side voice preferences (Plan14 SPEC-P142 §2). Stored per browser only. */
+export type VoiceKey = "en-US" | "en-GB" | "vi";
+
+/** Learner-side voice preferences (Plan14 SPEC-P142 §2, Plan15 §1). Stored per browser only. */
 export interface VoicePreferences {
   accent: EnglishAccent;
   /** Playback multiplier applied on top of each line's own rate. */
@@ -12,6 +14,10 @@ export interface VoicePreferences {
   autoSpeak: boolean;
   /** Include the Vietnamese coach lines when reading a turn. */
   coachVoice: boolean;
+  /** "auto" uses the AI voice (ElevenLabs) when the server offers it; "browser" forces system voices. */
+  engine: "auto" | "browser";
+  /** Learner-chosen curated AI voice per language key; empty means the server's best pick. */
+  aiVoices: Partial<Record<VoiceKey, string>>;
 }
 
 export const VOICE_PREFERENCES_STORAGE_KEY = "listena.voice.v1";
@@ -21,6 +27,8 @@ export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   rate: 0.92,
   autoSpeak: true,
   coachVoice: true,
+  engine: "auto",
+  aiVoices: {},
 };
 
 export const VOICE_RATE_OPTIONS: Array<{ value: VoicePreferences["rate"]; label: string }> = [
@@ -32,6 +40,19 @@ export const VOICE_RATE_OPTIONS: Array<{ value: VoicePreferences["rate"]; label:
 let current: VoicePreferences | null = null;
 const listeners = new Set<() => void>();
 
+const VOICE_ID = /^[A-Za-z0-9]{8,64}$/;
+
+function sanitizeVoices(value: unknown): VoicePreferences["aiVoices"] {
+  if (!value || typeof value !== "object") return {};
+  const raw = value as Record<string, unknown>;
+  const output: VoicePreferences["aiVoices"] = {};
+  for (const key of ["en-US", "en-GB", "vi"] as const) {
+    const id = raw[key];
+    if (typeof id === "string" && VOICE_ID.test(id)) output[key] = id;
+  }
+  return output;
+}
+
 function sanitize(value: unknown): VoicePreferences {
   if (!value || typeof value !== "object") return DEFAULT_VOICE_PREFERENCES;
   const raw = value as Record<string, unknown>;
@@ -41,6 +62,8 @@ function sanitize(value: unknown): VoicePreferences {
     rate,
     autoSpeak: typeof raw.autoSpeak === "boolean" ? raw.autoSpeak : DEFAULT_VOICE_PREFERENCES.autoSpeak,
     coachVoice: typeof raw.coachVoice === "boolean" ? raw.coachVoice : DEFAULT_VOICE_PREFERENCES.coachVoice,
+    engine: raw.engine === "browser" ? "browser" : "auto",
+    aiVoices: sanitizeVoices(raw.aiVoices),
   };
 }
 
@@ -60,11 +83,27 @@ export function getVoicePreferences(): VoicePreferences {
 }
 
 export function setVoicePreferences(patch: Partial<VoicePreferences>) {
-  current = sanitize({ ...getVoicePreferences(), ...patch });
+  const previous = getVoicePreferences();
+  current = sanitize({ ...previous, ...patch, aiVoices: { ...previous.aiVoices, ...(patch.aiVoices ?? {}) } });
   try {
     window.localStorage.setItem(VOICE_PREFERENCES_STORAGE_KEY, JSON.stringify(current));
   } catch {
     // Private mode or blocked storage: the in-memory value still applies for this page.
+  }
+  listeners.forEach((listener) => listener());
+}
+
+/** Set (or clear with undefined) the chosen AI voice for one language key. */
+export function setPreferredAiVoice(key: VoiceKey, voiceId: string | undefined) {
+  const previous = getVoicePreferences();
+  const aiVoices = { ...previous.aiVoices };
+  if (voiceId) aiVoices[key] = voiceId;
+  else delete aiVoices[key];
+  current = sanitize({ ...previous, aiVoices });
+  try {
+    window.localStorage.setItem(VOICE_PREFERENCES_STORAGE_KEY, JSON.stringify(current));
+  } catch {
+    // ignore
   }
   listeners.forEach((listener) => listener());
 }

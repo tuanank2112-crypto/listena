@@ -19,10 +19,13 @@ import {
   Search,
   Sparkles,
   Trophy,
-  Volume2,
   X,
 } from "lucide-react";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
+import { speakCurated } from "@/core/tts/speech";
+import { HiddenAudioButton } from "@/features/voice/hidden-audio-button";
+import { SpeakButton } from "@/features/voice/speak-button";
+import { useVoicePreferences } from "@/features/voice/voice-preferences";
 import {
   createGameAnswerRequest,
   createGameRunRequest,
@@ -108,6 +111,7 @@ export function GamesClient() {
   const pendingAnswerRef = useRef<PendingAnswer | null>(null);
   const advanceTimerRef = useRef<number | null>(null);
 
+  const voicePreferences = useVoicePreferences();
   const currentRound = run?.rounds[roundIndex];
   const totalRounds = run?.rounds.length ?? 0;
   const finished = Boolean(run && (roundIndex >= totalRounds || lives <= 0 || timeLeft <= 0));
@@ -126,6 +130,15 @@ export function GamesClient() {
   useEffect(() => {
     if (currentRound?.id) promptStartedAtRef.current = performance.now();
   }, [currentRound?.id]);
+
+  // Plan15: a quiz round reads its word aloud when it appears so the learner
+  // hears the pronunciation before choosing; spelling rounds play through the
+  // hidden-audio button and match boards have a speaker on every word card.
+  const quizWord = currentRound?.content.kind === "quiz" ? currentRound.content.word : null;
+  useEffect(() => {
+    if (!quizWord || !voicePreferences.autoSpeak) return;
+    void speakCurated({ text: quizWord, lang: "en", rate: voicePreferences.rate });
+  }, [currentRound?.id, quizWord, voicePreferences.autoSpeak, voicePreferences.rate]);
 
   function resetLocalState() {
     if (advanceTimerRef.current !== null) {
@@ -279,12 +292,6 @@ export function GamesClient() {
     submitAnswer([first.token, card.token], answeredAt);
   }
 
-  function playSpellAudio(audioUrl: string) {
-    setAudioError("");
-    const audio = new Audio(audioUrl);
-    void audio.play().catch(() => setAudioError("Thiết bị không phát được âm thanh của lượt này."));
-  }
-
   return (
     <div className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
       {!mode ? (
@@ -394,6 +401,7 @@ export function GamesClient() {
           <AnimatePresence mode="wait">
             <motion.section key={`${run.id}-${currentRound.id}`} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} className="paper-card min-h-[430px] rounded-[30px] p-5 sm:p-8">
               <RoundView
+                runId={run.id}
                 round={currentRound}
                 answer={answer}
                 selectedCards={selectedCards}
@@ -402,7 +410,7 @@ export function GamesClient() {
                 onQuizAnswer={submitAnswer}
                 onMatchCard={chooseCard}
                 onSpellAnswer={(answeredAt) => submitAnswer(answer.trim(), answeredAt)}
-                onPlayAudio={playSpellAudio}
+                onAudioError={setAudioError}
                 audioError={audioError}
               />
               {requestError && (
@@ -421,6 +429,7 @@ export function GamesClient() {
 }
 
 function RoundView({
+  runId,
   round,
   answer,
   selectedCards,
@@ -429,9 +438,10 @@ function RoundView({
   onQuizAnswer,
   onMatchCard,
   onSpellAnswer,
-  onPlayAudio,
+  onAudioError,
   audioError,
 }: {
+  runId: string;
   round: PublicGameRound;
   answer: string;
   selectedCards: MatchCard[];
@@ -440,7 +450,7 @@ function RoundView({
   onQuizAnswer: (answer: string, answeredAt: number) => void;
   onMatchCard: (card: MatchCard, answeredAt: number) => void;
   onSpellAnswer: (answeredAt: number) => void;
-  onPlayAudio: (audioUrl: string) => void;
+  onAudioError: (message: string) => void;
   audioError: string;
 }) {
   const content = round.content;
@@ -450,6 +460,7 @@ function RoundView({
         <p className="text-center text-xs font-black uppercase tracking-[.18em] text-[#ef765d]">{content.prompt}</p>
         <h2 className="mt-6 text-center text-4xl font-black tracking-[-.05em] sm:text-5xl">{content.word}</h2>
         <p className="mt-2 text-center text-sm font-bold text-[#869089]">{content.ipa}</p>
+        <div className="mt-3 flex justify-center"><SpeakButton text={content.word} label="Nghe từ" /></div>
         {content.context && <p className="mx-auto mt-4 max-w-xl text-center text-sm font-bold leading-6 text-[#758078]">{content.context}</p>}
         <div className="mt-9 grid gap-3 sm:grid-cols-2">
           {content.options.map((option, index) => (
@@ -469,7 +480,10 @@ function RoundView({
           {content.cards.map((card) => {
             const selected = selectedCards.some((item) => item.token === card.token);
             return (
-              <button key={card.token} type="button" onClick={(event) => onMatchCard(card, event.timeStamp)} disabled={disabled} className={`min-h-24 rounded-2xl border-2 p-3 text-sm font-black transition disabled:cursor-wait disabled:opacity-60 ${selected ? "border-[#ef765d] bg-[#ffe5dc]" : "border-[#ded8cc] bg-white hover:border-[#176b55]"}`}>{card.label}</button>
+              <div key={card.token} className="relative">
+                <button type="button" onClick={(event) => onMatchCard(card, event.timeStamp)} disabled={disabled} className={`min-h-24 w-full rounded-2xl border-2 p-3 text-sm font-black transition disabled:cursor-wait disabled:opacity-60 ${card.kind === "word" ? "pb-10" : ""} ${selected ? "border-[#ef765d] bg-[#ffe5dc]" : "border-[#ded8cc] bg-white hover:border-[#176b55]"}`}>{card.label}</button>
+                {card.kind === "word" && <SpeakButton text={card.label} label={`Nghe ${card.label}`} compact className="absolute bottom-2 right-2" />}
+              </div>
             );
           })}
         </div>
@@ -480,9 +494,9 @@ function RoundView({
   return (
     <div className="mx-auto max-w-lg text-center">
       <p className="text-xs font-black uppercase tracking-[.18em] text-[#d89a2b]">{content.prompt}</p>
-      <button type="button" onClick={() => content.audioUrl && onPlayAudio(content.audioUrl)} disabled={!content.audioUrl} className="mx-auto mt-8 flex h-24 w-24 items-center justify-center rounded-full bg-[#f7d779] shadow-[0_12px_30px_rgba(216,154,43,.25)] disabled:cursor-not-allowed disabled:opacity-50"><Volume2 className="h-9 w-9" /></button>
-      {content.audioUrl ? <p className="mt-3 text-xs font-bold text-[#758078]">Nghe lại bao nhiêu lần tùy bạn.</p> : <p className="mt-3 text-xs font-bold text-[#a06a18]">Tệp nghe chưa sẵn sàng cho lượt này. Bạn vẫn có thể luyện chính tả theo gợi ý nghĩa mà không lộ đáp án.</p>}
-      {audioError && <p className="mt-3 text-xs font-bold text-[#d6534d]">{audioError}</p>}
+      <div className="mt-8"><HiddenAudioButton key={round.id} src={`/api/game-runs/${runId}/rounds/${round.id}/audio`} fallbackUrl={content.audioUrl} autoPlay label="Nghe từ cần viết" onError={onAudioError} /></div>
+      <p className="mt-3 text-xs font-bold text-[#758078]">Nghe lại bao nhiêu lần tùy bạn; đáp án chỉ nằm ở máy chủ.</p>
+      {audioError && <p className="mt-3 text-xs font-bold text-[#a06a18]">{audioError}</p>}
       <p className="mt-5 text-sm font-bold text-[#758078]">{content.meaning}</p>
       <input value={answer} onChange={(event) => onAnswerChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && answer.trim()) onSpellAnswer(event.timeStamp); }} disabled={disabled} autoFocus className="mt-8 min-h-16 w-full rounded-2xl border-2 border-[#ded8cc] bg-white px-5 text-center text-xl font-black outline-none focus:border-[#176b55] disabled:cursor-wait disabled:opacity-60" placeholder="Gõ từ tiếng Anh" />
       <button type="button" onClick={(event) => onSpellAnswer(event.timeStamp)} disabled={!answer.trim() || disabled} className="mt-3 min-h-12 w-full rounded-2xl bg-[#176b55] font-black text-white disabled:opacity-40">Kiểm tra với máy chủ</button>

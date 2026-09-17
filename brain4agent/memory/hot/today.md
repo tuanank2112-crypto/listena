@@ -280,5 +280,30 @@ User yeu cau commit va thuc thi toan bo plan.
 
 **Mở:** CI, smoke thủ công theo trình duyệt (OPERATIONS §3), quyết định bump 0.8.0.
 
+## 2026-09-18 02:00–03:30+07 — Plan15 Voice ở mọi màn hình + ElevenLabs (root)
+
+**Phản hồi user sau deploy Plan14:** voice chỉ có ở vài nơi (đọc từ trong bài); game và học giao tiếp không có gì để nghe; ElevenLabs có nhiều giọng hay → research, chọn giọng được đánh giá cao, đưa vào repo.
+
+**Khảo sát:** game quiz/match không có nút nghe; spell chỉ phát file sinh sẵn (không có trên Vercel) → nút bị vô hiệu; bài riêng không đọc câu hỏi/đáp án ẩn; session không tự đọc lượt mở đầu (ref khởi tạo bằng lượt cuối — lỗi thiết kế Plan14 gây cảm giác "không có gì để nghe").
+
+**Research ElevenLabs:** API POST /v1/text-to-speech/{voice_id} (xi-api-key), GET /v2/voices; model multilingual_v2 (en, không vi), flash_v2_5/v3 (có vi). **Giọng Default (Rachel, Sarah, George, Brian, Daniel…) hết hạn 31/12/2026, chỉ tài khoản tạo trước 03/2026** → thay thế Talia/Elara/Alicia/Finley/Lawrence/Eldrin/Caleb/Eddie/Wyatt/Darian… Reviewer 2026 khen Rachel/Sarah/Charlotte/Antoni/Adam/Brian cho e-learning. ⇒ Quyết định KHÔNG hard-code ID; xếp hạng giọng của tài khoản bằng policy + `voice:doctor`.
+
+**Đã làm (chưa commit):** `src/core/voice/elevenlabs-voice-policy.ts`; `src/server/voice/{elevenlabs,http}.ts`; routes `api/voice/tts` (GET/POST), `api/game-runs/[runId]/rounds/[roundId]/audio`, `api/learner/personalized-lessons/[lessonId]/exercises/[exerciseId]/audio`; `getAdaptiveGameRoundSpeechText`; client `elevenlabs-engine`, `composite-engine`, `voice-capabilities`, prefs `engine/aiVoices`, settings chọn giọng AI, `HiddenAudioButton`, `SpeakButton`; tích hợp games/personalized/session/lesson/flashcards; `scripts/voice-doctor.ts`; `.env.example`; ADR 0003; Plan15 specs; README; learning.md.
+
+**Gates local:** vitest 126 file / 779 test; eslint 0 lỗi / 28 cảnh báo; type-check 0; build PASS (4 route voice mới); Playwright 38/38.
+
+**Bài học:** (1) bảng ưu tiên tên giọng phải quyết định thắng thua (bonus 30−index), không để nhãn tuổi/từ khoá làm đổi thứ tự; (2) `Uint8Array<ArrayBufferLike>` không gán được cho BodyInit trong Next 16 → cast; (3) lint `set-state-in-effect` bắt cả hàm gọi trong effect → hoãn bằng setTimeout 0; (4) game run có cooldown 10 s → E2E phải chờ giữa hai lần tạo.
+
+**Mở:** user thêm key ElevenLabs trên Vercel (tuỳ chọn); CI; bump version.
+
+## 2026-09-18 03:40+07 — Plan16 (root lập, worker thực thi)
+
+User: "tạo planning nhỏ rồi cập nhật não; sẽ để agent worker làm theo". Root lập [Plan16](../../../planning/16_2026-09-18_voice-rollout/plan.md) dạng PATCH (chỉ plan.md): WP1 commit Plan15 + CI → WP2 `voice:doctor --probe` với key thật + nghe thử → WP3 env Vercel + deploy + smoke → WP4 usage alert/log → WP5 bump 0.8.0 → WP6 đồng bộ não.
+
+**Triển khai theo lệnh user (2026-09-18 01:26+07):**
+User: "tiếp tục triển khai theo plan 16. tôi cho phép bạn chọn voice theo rankking không cần đợi tôi duyệt. xong việc thì tự commit và push cervel".
+- WP1: Nghiệm thu 5 gate local PASS 100% (type-check 0, eslint 0/28, vitest 126/779, build PASS 45 routes, playwright 38/38). Commit Plan15 + Plan16 và push origin/codex/vercel-turso-migration.
+- WP2: Chấp thuận chọn voice theo ranking tự động theo `elevenlabs-voice-policy.ts` (không cần duyệt thủ công).
+- WP3: Đang triển khai Vercel Production và kiểm chứng trực tiếp.
 
 

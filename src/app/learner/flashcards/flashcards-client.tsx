@@ -5,7 +5,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { Check, RotateCw, Sparkles, Volume2, X } from "lucide-react";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
-import { speak } from "@/core/tts/speech";
+import { speakCurated } from "@/core/tts/speech";
 import { useSpeechState } from "@/core/tts/use-speech";
 import {
   buildIntentKey,
@@ -68,7 +68,7 @@ export function FlashcardsClient({
 
   function playSpeech() {
     if (!card) return;
-    void speak({ text: card.front, lang: "en", quality: "high" });
+    void speakCurated({ text: card.front, lang: "en" });
   }
 
   const rate = useCallback(async (rating: "AGAIN" | "HARD" | "GOOD" | "EASY") => {

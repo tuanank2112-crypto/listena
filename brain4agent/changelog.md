@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — 2026-09-18 (Plan15 Voice ở mọi màn hình + ElevenLabs, local accepted, chưa commit)
+- **Giọng AI ElevenLabs (tuỳ chọn, server-side):** `ELEVENLABS_API_KEY` bật `POST /api/voice/tts` (cap 600 ký tự, timeout 20 s, cache 2 tầng); `GET /api/voice/tts` báo khả năng + danh sách giọng đã chọn lọc; không key → 503 và giọng trình duyệt như cũ. Model en `eleven_multilingual_v2`, vi `eleven_flash_v2_5` (override bằng env).
+- **Chọn lọc giọng theo research:** không hard-code ID (giọng Default Rachel/Sarah/George/Brian… hết hạn 31/12/2026, chỉ tài khoản trước 03/2026 có); `elevenlabs-voice-policy` xếp hạng giọng premade của tài khoản (Talia, Elara, Alicia, Finley, Lawrence, Eldrin, Caleb… và giọng cũ nếu còn; loại giọng nhân vật/novelty; accent yêu cầu thắng); `npm run voice:doctor -- --probe`; `ELEVENLABS_VOICE_*` để ghim.
+- **Đáp án ẩn nghe được mà không lộ:** `GET /api/game-runs/{run}/rounds/{round}/audio` và `GET /api/learner/personalized-lessons/{id}/exercises/{ex}/audio` trả bytes (SPELL only, owner only; FILL/CHOICE 404).
+- **Voice ở mọi màn hình:** game Chọn nhanh tự đọc từ + nút "Nghe từ"; Ghép cặp có loa trên thẻ từ; Nghe & viết tự phát từ ẩn (trước đây nút bị vô hiệu trên Vercel); bài AI riêng "Nghe câu hỏi"/"Nghe từ cần viết"; phiên Mission/Coach tự đọc lượt mở đầu khi phiên mới; bài học luôn có "Nghe"; flashcards qua pipeline curated.
+- **Cài đặt:** bật/tắt giọng AI, chọn giọng AI theo accent và cho Coach tiếng Việt, nghe thử từng giọng.
+- Gates local: vitest 126 file / 779 test; eslint 0 lỗi; type-check 0; build PASS (4 route voice mới); Playwright 38/38. Chưa nghe thật vì không có key local. ADR 0003.
+
 ## Unreleased — 2026-09-18 (Plan14 Voice AI, local accepted, committed)
 - **Voice AI trên Vercel, không env mới:** mọi chuỗi vào giọng đi qua `prepareSpokenText` (sạch markdown/emoji/IPA/URL, tách câu, viết hoa + dấu kết câu, mở rộng viết tắt, tách dòng vi/en); `speakCurated`/`speakLines`/`speakVoiceScript` trong `src/core/tts/speech.ts`.
 - **Kịch bản giọng do server dựng:** AI turn trong DTO phiên có `voiceScript` v1 (NPC en 0.95, RECAST = câu đã sửa 0.82, COACH vi 1.0); câu sai của học viên (`detectedError.actual`) không bao giờ được đọc.

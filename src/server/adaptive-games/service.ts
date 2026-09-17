@@ -1009,6 +1009,29 @@ async function loadAdaptiveCandidateSnapshot(
   };
 }
 
+/**
+ * The word a "Nghe & viết" round asks for, for server-side speech only
+ * (Plan15 SPEC-P151 §2). Owner-scoped; the text is returned to the audio
+ * route and never to a JSON response. Non-SPELL rounds and foreign runs are
+ * indistinguishable from absent ones.
+ */
+export async function getAdaptiveGameRoundSpeechText(userId: string, runId: string, roundId: string) {
+  const round = await prisma.adaptiveGameRound.findFirst({
+    where: { id: roundId, runId, run: { userId } },
+    select: { publicJson: true, vocabularyItem: { select: { displayText: true } } },
+  });
+  if (!round) throw new AdaptiveGamePrivateNotFoundError();
+  let kind: string;
+  try {
+    kind = parsePublicAdaptiveGameRound(round.publicJson).kind;
+  } catch {
+    throw new AdaptiveGamePrivateNotFoundError();
+  }
+  const text = round.vocabularyItem.displayText.trim();
+  if (kind !== "spell" || !text) throw new AdaptiveGamePrivateNotFoundError();
+  return text;
+}
+
 function snapshotHash(value: unknown) {
   return createHash("sha256").update(JSON.stringify(value)).digest("hex");
 }

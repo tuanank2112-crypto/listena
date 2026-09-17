@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan14_voice_ai_committed",
-  "active_plan": "planning/14_2026-09-18_voice-ai/plan.md",
-  "checkpoint": "planning/14_2026-09-18_voice-ai/plan.md",
+  "system_status": "plan16_voice_rollout_in_progress",
+  "active_plan": "planning/16_2026-09-18_voice-rollout/plan.md",
+  "checkpoint": "planning/16_2026-09-18_voice-rollout/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -403,5 +403,63 @@
       "CI",
       "manual browser smoke (OPERATIONS §3)"
     ]
+  },
+  "plan15": {
+    "created": "2026-09-18 02:10+07",
+    "request": "user after Plan14 deploy: voice only in a few places; games and conversation learning have nothing to hear; research ElevenLabs and add the top-rated voices",
+    "research": {
+      "api": "POST /v1/text-to-speech/{voice_id} (xi-api-key), GET /v2/voices?category=premade",
+      "models": "en eleven_multilingual_v2 (no vi); vi eleven_flash_v2_5 (cheap) or eleven_v3",
+      "default_voices": "Rachel/Sarah/George/Brian/Daniel/... expire 2026-12-31 and exist only on accounts created before 2026-03; replacements Talia, Elara, Alicia, Finley, Lawrence, Eldrin, Caleb, Eddie, Wyatt, Darian, ...",
+      "reviewers_2026": "Rachel, Sarah, Charlotte, Antoni, Adam, Brian rated for e-learning/narration; Natasha/Valley Girl and character voices unsuitable"
+    },
+    "design": [
+      "server-side ElevenLabs boundary, key never leaves server, fixed base URL, 600-char cap, 20s timeout, 2-tier cache",
+      "no hard-coded voice ids: rank the account's premade voices with elevenlabs-voice-policy (preference order, accent, labels, novelty exclusion); env ELEVENLABS_VOICE_* to pin; npm run voice:doctor",
+      "GET /api/voice/tts capability probe once per page; POST synthesises visible text; hidden answers via game-round / personalized-exercise audio routes (bytes only, SPELL only)",
+      "engine chain en: ElevenLabs -> WebSpeech; vi: Composite[ElevenLabs -> VieNeu] -> WebSpeech; prefs engine auto|browser + aiVoices",
+      "voice everywhere: quiz auto-speak + listen, match card speakers, spell autoplay hidden audio, personalized prompt/hidden answer, session opening line on fresh session, lesson always listenable, flashcards curated"
+    ],
+    "gates_local": {
+      "vitest": "126 files / 779 tests",
+      "eslint": "0 errors / 28 warnings",
+      "type_check": "0",
+      "build": "PASS (4 new voice routes)",
+      "playwright": "38/38 (3 new voice-everywhere cases)"
+    },
+    "not_verified": "no ELEVENLABS_API_KEY locally: real AI voice not heard; unit tests mock fetch per researched contract; E2E covers the no-key degrade path",
+    "commit": "committed; pushed to origin/codex/vercel-turso-migration",
+    "open": [
+      "user adds ELEVENLABS_API_KEY env on Vercel (optional for AI voice; browser fallback active)",
+      "CI",
+      "version bump"
+    ]
+  },
+  "plan16": {
+    "created": "2026-09-18 03:40+07",
+    "kind": "PATCH rollout plan (plan.md only) for a worker agent",
+    "order": [
+      "WP1 commit Plan15 + CI",
+      "WP2 voice:doctor --probe with real key + listen",
+      "WP3 Vercel env + deploy + smoke (Plan15 OPERATIONS §2)",
+      "WP4 usage alert + log review",
+      "WP5 bump 0.8.0",
+      "WP6 brain sync"
+    ],
+    "blocking_user_inputs": [
+      "U1 ElevenLabs API key",
+      "U2 commit approval (GRANTED)",
+      "U3 Vercel env/redeploy (AUTHORIZED)",
+      "U4 version bump approval"
+    ],
+    "invariants": [
+      "no hard-coded voice ids",
+      "never silent without key",
+      "never voice learner errors or FILL/CHOICE answers",
+      "no mastery from listening/speaking",
+      "no commit/deploy without user approval",
+      "any MINOR change needs its own SPEC plan"
+    ],
+    "status": "IN_PROGRESS; WP1 gates pass; WP2 ranking policy accepted by user; deploying Vercel"
   }
 }
