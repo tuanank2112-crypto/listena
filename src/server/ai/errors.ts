@@ -9,6 +9,8 @@ export type AIProviderFailureReason =
   | "provider_not_configured"
   | "invalid_provider_configuration"
   | "upstream_unauthorized"
+  | "upstream_model_not_found"
+  | "upstream_invalid_request"
   | "rate_limited"
   | "upstream_failure"
   | "network_failure"
@@ -29,7 +31,11 @@ export interface AIProviderErrorOptions {
 
 export class AIProviderError extends Error {
   constructor(
-    readonly code: "AI_UNAVAILABLE" | "AI_RATE_LIMITED" | "AI_REQUEST_LIMIT",
+    readonly code:
+      | "AI_UNAVAILABLE"
+      | "AI_RATE_LIMITED"
+      | "AI_REQUEST_LIMIT"
+      | "AI_MISCONFIGURED",
     message: string,
     readonly details: AIProviderErrorOptions,
     readonly status = 503,
@@ -47,6 +53,28 @@ export class AIUnavailableError extends AIProviderError {
       options,
     );
     this.name = "AIUnavailableError";
+  }
+}
+
+/**
+ * A permanent configuration defect: the provider rejected the request itself
+ * (unknown model, bad credentials, malformed request), so retrying the same
+ * deployment can never succeed. This is deliberately distinct from
+ * `AIUnavailableError`, which invites a retry. Collapsing the two hides an
+ * operator mistake behind a "try again later" message for as long as the
+ * misconfiguration lives.
+ *
+ * The message names no key, endpoint, or upstream body: it only tells the
+ * learner that retrying is pointless and that an operator must act.
+ */
+export class AIMisconfiguredError extends AIProviderError {
+  constructor(options: Omit<AIProviderErrorOptions, "retryAfterSeconds">) {
+    super(
+      "AI_MISCONFIGURED",
+      "Gia sư AI chưa được cấu hình đúng nên chưa thể bắt đầu. Vui lòng báo quản trị viên; thử lại ngay sẽ không khắc phục được.",
+      options,
+    );
+    this.name = "AIMisconfiguredError";
   }
 }
 

@@ -31,6 +31,7 @@ export function startRetryDelayMs(retryAfterSeconds?: number) {
 export function shouldDiscardSessionStartId(code?: string) {
   return [
     "AI_UNAVAILABLE",
+    "AI_MISCONFIGURED",
     "AI_REQUEST_LIMIT",
     "IDEMPOTENCY_CONFLICT",
     "INVALID_INPUT",

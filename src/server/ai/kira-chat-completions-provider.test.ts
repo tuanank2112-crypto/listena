@@ -80,6 +80,15 @@ describe("KiraChatCompletionsProvider", () => {
     expect(JSON.stringify(body)).not.toContain("test-kira-key");
   });
 
+  it("accepts every allowlisted provider endpoint and no other", () => {
+    expect(resolveKiraBaseUrl("https://vyceai.com/v1")).toBe("https://vyceai.com/v1");
+    expect(resolveKiraBaseUrl("https://vyceai.com/v1/")).toBe("https://vyceai.com/v1");
+    // A supported origin does not make an arbitrary path on it supported.
+    expect(() => resolveKiraBaseUrl("https://vyceai.com/api/v1")).toThrow();
+    // Nor does a supported path on the wrong origin.
+    expect(() => resolveKiraBaseUrl("https://attacker.example/v1")).toThrow();
+  });
+
   it("only permits Kira's documented API origin before attaching credentials", () => {
     expect(resolveKiraBaseUrl("https://kiraai.vn/api/v1/")).toBe(
       "https://kiraai.vn/api/v1",
@@ -123,6 +132,93 @@ describe("KiraChatCompletionsProvider", () => {
       code: "AI_RATE_LIMITED",
       status: 503,
       details: { retryAfterSeconds: 60 },
+    });
+  });
+
+  // Regression for the 2026-09-17 outage: a non-existent KIRAAI_MODEL made
+  // every tutor call fail with 404 model_not_found, but the app reported the
+  // generic retry-later state, so the misconfiguration stayed invisible.
+  it("reports a missing model as a permanent misconfiguration, not an outage", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          error: {
+            message: "Model 'ghost-model' is not supported or not configured on the system.",
+            type: "invalid_request_error",
+            code: "model_not_found",
+          },
+        }),
+        { status: 404, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({
+      apiKey: "test-kira-key",
+      model: "ghost-model",
+    });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_MISCONFIGURED",
+      details: { reason: "upstream_model_not_found" },
+    });
+  });
+
+  it("treats rejected credentials as a misconfiguration rather than a retryable outage", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { type: "authentication_error" } }), {
+        status: 401,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_MISCONFIGURED",
+      details: { reason: "upstream_unauthorized" },
+    });
+  });
+
+  it("keeps an upstream 5xx retryable so a real outage is not mislabelled", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ error: { type: "server_error" } }), {
+        status: 503,
+        headers: { "content-type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const provider = new KiraChatCompletionsProvider({ apiKey: "test-kira-key" });
+
+    await expect(
+      provider.generateJson({
+        purpose: "lesson_tutor",
+        systemPrompt: "Test prompt",
+        input: {},
+        schemaName: "answer",
+        schema: { type: "object", additionalProperties: false, properties: {} },
+        maxOutputTokens: 1,
+      }),
+    ).rejects.toMatchObject({
+      code: "AI_UNAVAILABLE",
+      details: { reason: "upstream_failure" },
     });
   });
 

@@ -102,3 +102,42 @@ Chạy `npm run build` **trong khi** `next dev` đang chạy làm hỏng thư m�
 1. **Chọn model cho thật.** Bản miễn phí đủ để chứng minh vòng học chạy, nhưng bị giới hạn tần suất nên không dùng cho pilot được. Cần chốt model trả phí và hạn mức chi.
 2. **Cấu hình hosted.** `.env` chỉ là máy local. Preview và Production trên Vercel vẫn mang giá trị model cũ nếu chưa sửa, nên sẽ hỏng y hệt.
 3. **Có sửa mục 5.1 không.** Đây là lỗi làm cả đội mất nhiều ngày mà không thấy; nên sửa trước khi có người học thật.
+
+---
+
+## 8. Cập nhật cuối ngày — đổi nhà cung cấp và sửa phân loại lỗi
+
+### 8.1 Model miễn phí của Kira biến mất ngay trong ngày
+
+`ling-3.0-flash-free` chuyển sang `maintenance` chỉ vài giờ sau khi được chọn, và lúc đó **không còn model nào vừa miễn phí vừa hoạt động** trong danh mục Kira. Đây là bằng chứng trực tiếp cho rủi ro đã nêu ở mục 5.2: không thể dựa vào gói miễn phí cho sản phẩm thật.
+
+### 8.2 Chuyển sang Vyce AI
+
+User cung cấp nhà cung cấp mới. Endpoint thật là `https://vyceai.com/v1` (không phải `/api/v1`; các đường dẫn khác đều trả về HTML của ứng dụng một trang). Giao thức tương thích OpenAI Chat Completions nên **dùng lại nguyên provider hiện có, không cần adapter mới**.
+
+Danh mục 6 model: `claude-sonnet-4-6`, `deepseek-v4.1`, `deepseek-v4-flash`, `deepseek-v4-flash-lr`, `agnes-3.0-flash`, `grok-imagine-2`. Đang dùng `claude-sonnet-4-6`.
+
+Chất lượng quan sát được trên vòng học thật, với câu sai cố ý "I lose it yesterday":
+
+```text
+npcReply : "Okay, your blue suitcase is big. When did you lose it? Was it on your flight yesterday?"
+coach    : "Hãy kiểm tra lại thì trường tự sửa lỗi 'lose' → 'lost' nhé."
+error    : grammar | 'lose' -> 'lost', giải thích thì quá khứ đơn bằng tiếng Việt
+act      : RECAST | skill: grammar | score: 0.7
+```
+
+Đây là hành vi sư phạm thật (diễn đạt lại thay vì chê), khá hơn hẳn model miễn phí trước đó.
+
+### 8.3 Đã sửa trong code
+
+| Thay đổi | Lý do |
+|---|---|
+| Thêm lớp lỗi `AIMisconfiguredError` mã `AI_MISCONFIGURED` | Tách sai cấu hình vĩnh viễn khỏi sự cố tạm thời. Thông báo nói thẳng rằng thử lại không giúp gì và cần báo quản trị viên |
+| Provider phân loại 401/403/404/400 là sai cấu hình, 5xx vẫn là tạm thời | 404 `model_not_found` không bao giờ tự khỏi; gộp chung là nguyên nhân khiến lỗi sống sót lâu |
+| Đọc và ghi log `error.code` / `error.type` của nhà cung cấp | Trước đây chỉ log mã trạng thái nên không phân biệt được nguyên nhân. Cố ý **không** đọc `message` vì nó có thể vọng lại nội dung yêu cầu |
+| `knownStartFailure` xử lý `AI_MISCONFIGURED` thành `FAILED` | Trước đây rơi vào `UNKNOWN`, làm người học kẹt vĩnh viễn không có đường thoát |
+| `DEFAULT_MODEL` đổi khỏi `glm-5.3-flash-free` | Model mặc định trong code cũng không tồn tại: deployment nào quên đặt biến là hỏng |
+| Base URL đổi từ ghim cứng một tên miền sang danh sách cho phép trong code | Cho phép thêm nhà cung cấp mà vẫn giữ nguyên tính chất fail-closed: khóa API không thể bị cấu hình chuyển hướng sang host lạ |
+| Thêm `npm run ai:doctor [-- --probe]` | Kiểm cấu hình đối chiếu danh mục thật. Chính lệnh này phát hiện model miễn phí đã vào bảo trì |
+
+Bổ sung 4 test hồi quy: model không tồn tại, khóa bị từ chối, 5xx vẫn retryable, và danh sách cho phép base URL.

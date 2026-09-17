@@ -1,6 +1,11 @@
 import { createHash } from "node:crypto";
 import logger from "@/lib/logger";
-import { AIRateLimitedError, AIUnavailableError } from "@/server/ai/errors";
+import {
+  AIMisconfiguredError,
+  AIRateLimitedError,
+  AIUnavailableError,
+  type AIProviderFailureReason,
+} from "@/server/ai/errors";
 import type {
   StructuredAIProvider,
   StructuredAIRequest,
@@ -23,9 +28,29 @@ type ChatCompletionsPayload = {
 };
 
 const DEFAULT_BASE_URL = "https://kiraai.vn/api/v1";
-const KIRA_API_ORIGIN = "https://kiraai.vn";
-const KIRA_API_PATH = "/api/v1";
-const DEFAULT_MODEL = "glm-5.3-flash-free";
+
+/**
+ * The only endpoints this provider may send the API key to.
+ *
+ * The allowlist is in code, not configuration, on purpose: an attacker who can
+ * set `KIRAAI_BASE_URL` must not be able to redirect the credential to a host
+ * of their choosing. Adding an entry is a reviewable change, and anything else
+ * still fails closed.
+ *
+ * Both endpoints speak the same OpenAI-compatible Chat Completions contract,
+ * which is why one client serves them.
+ */
+const SUPPORTED_ENDPOINTS: ReadonlyArray<{ origin: string; path: string }> = [
+  { origin: "https://kiraai.vn", path: "/api/v1" },
+  { origin: "https://vyceai.com", path: "/v1" },
+];
+/**
+ * Must name a model that exists in the provider catalogue. `glm-5.3-flash-free`
+ * was the previous default and is absent from it, so any deployment that omitted
+ * `KIRAAI_MODEL` fell back to a guaranteed 404. Verify a replacement against
+ * `GET /models` before changing this.
+ */
+const DEFAULT_MODEL = "ling-3.0-flash-free";
 // Free-tier upstreams can queue a valid generation longer than the 20-second
 // default used by the direct OpenAI provider. HTTP wall time does not consume
 // Serverless execution time, while the cap keeps a stalled learner request bounded.
@@ -175,6 +200,7 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
           });
         }
 
+        const { upstreamCode, upstreamType } = await readUpstreamErrorCodes(response);
         logProviderFailure({
           provider: this.providerName,
           model: this.modelName,
@@ -182,12 +208,23 @@ export class KiraChatCompletionsProvider implements StructuredAIProvider {
           latencyMs,
           requestId,
           inputHash,
+          upstreamCode,
+          upstreamType,
         });
+
+        // A rejected request is a permanent defect, not an outage: surface it
+        // as such so the learner stops retrying and an operator is alerted.
+        if (isPermanentConfigurationStatus(response.status, upstreamCode)) {
+          throw new AIMisconfiguredError({
+            reason: configurationFailureReason(response.status, upstreamCode),
+            provider: this.providerName,
+            model: this.modelName,
+            requestId,
+          });
+        }
+
         throw new AIUnavailableError({
-          reason:
-            response.status === 401 || response.status === 403
-              ? "upstream_unauthorized"
-              : "upstream_failure",
+          reason: "upstream_failure",
           provider: this.providerName,
           model: this.modelName,
           requestId,
@@ -287,17 +324,21 @@ export function resolveKiraBaseUrl(baseUrl?: string) {
   try {
     const parsed = new URL(candidate);
     const normalizedPath = parsed.pathname.replace(/\/+$/, "") || "/";
+    const match = SUPPORTED_ENDPOINTS.find(
+      (endpoint) =>
+        endpoint.origin === parsed.origin && endpoint.path === normalizedPath,
+    );
     if (
-      parsed.origin !== KIRA_API_ORIGIN ||
-      normalizedPath !== KIRA_API_PATH ||
+      !match ||
+      parsed.protocol !== "https:" ||
       parsed.username ||
       parsed.password ||
       parsed.search ||
       parsed.hash
     ) {
-      throw new Error("Kira base URL must be the documented API origin");
+      throw new Error("Base URL must be one of the supported provider endpoints");
     }
-    return DEFAULT_BASE_URL;
+    return `${match.origin}${match.path}`;
   } catch {
     throw new AIUnavailableError({ reason: "invalid_provider_configuration" });
   }
@@ -386,6 +427,53 @@ function logProviderFailure(input: {
   finishReason?: string;
   outputFormat?: "raw" | "json_fence";
   outputLength?: number;
+  upstreamCode?: string;
+  upstreamType?: string;
 }) {
   logger.warn(input, "Kira chat completions request unavailable");
+}
+
+/**
+ * Reads only the upstream classification fields from an error body.
+ *
+ * Without these, a permanent `model_not_found` is indistinguishable in the
+ * logs from a transient overload: both appear as a bare status number. The
+ * upstream `message` is deliberately NOT read, because it can echo request
+ * content back; only the short machine codes are retained.
+ */
+async function readUpstreamErrorCodes(response: Response) {
+  try {
+    const body = (await response.json()) as {
+      error?: { code?: unknown; type?: unknown };
+    };
+    const code = typeof body?.error?.code === "string" ? body.error.code : undefined;
+    const type = typeof body?.error?.type === "string" ? body.error.type : undefined;
+    return {
+      upstreamCode: code?.slice(0, 64),
+      upstreamType: type?.slice(0, 64),
+    };
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * True when the provider rejected the request itself, so the same deployment
+ * will fail identically until an operator changes configuration.
+ */
+function isPermanentConfigurationStatus(status: number, upstreamCode?: string) {
+  if (status === 401 || status === 403 || status === 404) return true;
+  if (status === 400) return true;
+  return upstreamCode === "model_not_found";
+}
+
+function configurationFailureReason(
+  status: number,
+  upstreamCode?: string,
+): AIProviderFailureReason {
+  if (status === 401 || status === 403) return "upstream_unauthorized";
+  if (upstreamCode === "model_not_found" || status === 404) {
+    return "upstream_model_not_found";
+  }
+  return "upstream_invalid_request";
 }

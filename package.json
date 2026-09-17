@@ -30,6 +30,7 @@
     "tts:prebuild": "tsx scripts/tts-prebuild.ts",
     "eval": "tsx eval/run.ts",
     "eval:quality": "tsx eval/quality-run.ts",
+    "ai:doctor": "tsx scripts/ai-doctor.ts",
     "eval:learning": "tsx eval/learning-run.ts",
     "pilot:analyze": "tsx scripts/pilot-cohort-tool.ts"
   },

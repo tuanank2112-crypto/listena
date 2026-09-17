@@ -10,6 +10,7 @@ import {
 } from "@/lib/libsql-batch";
 import { prisma } from "@/lib/prisma";
 import {
+  AIMisconfiguredError,
   AIRequestBudgetError,
   AIUnavailableError,
   isAIProviderError,
@@ -493,6 +494,12 @@ function knownStartFailure(error: unknown) {
   if (error.code === "AI_UNAVAILABLE" && isKnownNoCallStartFailure(error)) {
     return { code: error.code, retryAfterSeconds: null };
   }
+  // The provider rejected the request itself, so no session can exist. Settling
+  // this as FAILED keeps the learner recoverable; leaving it UNKNOWN would
+  // strand every future start behind a misconfiguration they cannot clear.
+  if (error.code === "AI_MISCONFIGURED") {
+    return { code: error.code, retryAfterSeconds: null };
+  }
   return null;
 }
 
@@ -506,6 +513,9 @@ function replayKnownStartFailure(record: StartRequestRecord) {
   }
   if (record.errorCode === "AI_UNAVAILABLE") {
     return new AIUnavailableError({ reason: "provider_not_configured" });
+  }
+  if (record.errorCode === "AI_MISCONFIGURED") {
+    return new AIMisconfiguredError({ reason: "invalid_provider_configuration" });
   }
   if (record.errorCode === "ACTIVE_SESSION_EXISTS") {
     return new LearningSessionActiveConflictError();
