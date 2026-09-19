@@ -140,6 +140,15 @@ const FAMILIES: Array<ErrorFamily & { keywords: string[] }> = [
     hintVi: "Cùng một ý có cách nói lịch sự hơn: Could you… thay vì Give me…",
     keywords: ["politeness", "register", "formality", "rude"],
   },
+  {
+    // Last on purpose. "grammar" is what both the Prisma ErrorType enum and the
+    // model reach for when nothing more specific fits, so every precise family
+    // above must get its chance first — "grammar tense" belongs to `tense`.
+    key: "grammar",
+    labelVi: "Ngữ pháp chung",
+    hintVi: "Câu đúng ý nhưng chưa đúng cấu trúc tiếng Anh.",
+    keywords: ["grammar", "grammatical", "syntactic"],
+  },
 ];
 
 const FALLBACK: ErrorFamily = {

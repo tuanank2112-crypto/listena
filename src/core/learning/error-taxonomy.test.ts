@@ -49,6 +49,17 @@ describe("canonicalErrorType", () => {
     expect(canonicalErrorType("SEGMENTATION")).toBe("punctuation");
     expect(canonicalErrorType("SPELLING")).toBe("spelling");
     expect(canonicalErrorType("VOCABULARY")).toBe("word-choice");
+    expect(canonicalErrorType("GRAMMAR")).toBe("grammar");
+    // UNKNOWN is honest about itself and keeps its own slug.
+    expect(canonicalErrorType("UNKNOWN")).toBe("unknown");
+  });
+
+  it("lets a precise family win over the catch-all `grammar`", () => {
+    // Production returned a bare "grammar" on 2026-09-20; it must land in the
+    // general family, while anything more specific must not be swallowed by it.
+    expect(canonicalErrorType("grammar")).toBe("grammar");
+    expect(canonicalErrorType("grammar tense")).toBe("tense");
+    expect(canonicalErrorType("grammatical agreement")).toBe("agreement");
   });
 
   it("does not let a stem claim an unrelated word", () => {
