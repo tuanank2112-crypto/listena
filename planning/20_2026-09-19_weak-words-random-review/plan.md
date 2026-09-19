@@ -77,7 +77,7 @@ Lần này đọc được thông điệp thật: `DatabaseUnavailableError`. Tr
 | WP5 | E2E: 3 ca cho trang, 1 ca cho tốc độ | root | ✅ |
 | WP6 | WAL cho database E2E + đo 3 lượt | root | ✅ |
 | WP7 | Bộ SPEC + đồng bộ não | root | ✅ |
-| WP8 | Deploy production + nghiệm thu | root | ⬜ |
+| WP8 | Deploy production + nghiệm thu | root | ✅ |
 
 ## Checklist thực thi
 
@@ -89,7 +89,7 @@ Lần này đọc được thông điệp thật: `DatabaseUnavailableError`. Tr
 - [x] E2E chứng minh từ của học viên khác không rò ra
 - [x] Chẩn đoán và sửa flake `timeline.spec.ts` bằng nguyên nhân thật
 - [x] 5 gate local
-- [ ] Deploy production và nghiệm thu route mới
+- [x] Deploy production và nghiệm thu route mới (`listena-46nx6q1rd`, commit `f372bd7`)
 - [ ] Hỏi user về migration cho vòng 5 bước và combo
 
 ## Exit Gates
@@ -101,8 +101,22 @@ Lần này đọc được thông điệp thật: `DatabaseUnavailableError`. Tr
 | `npx vitest run` | **131 file / 840 test** (trước: 129/823) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có 2 route mới | ✅ local / ⬜ server |
 | `npx playwright test` | **43/43**, ba lượt liên tiếp | ✅ local / ⬜ server |
-| Nghiệm thu production | chưa chạy | ⬜ server |
+| Nghiệm thu production | alias `/` trả **200**; `/learner/vocabulary` trả **307** về `/login?callbackUrl=%2Flearner%2Fvocabulary`; `/api/learner/vocabulary-review` trả **401** khi ẩn danh | ✅ **server** |
 | Học viên thật dùng được trên production | **chặn bởi `NEXTAUTH_URL`** (Plan19) | ⬜ server |
+
+### 2026-09-19 22:05 — Deploy production
+
+`npx vercel --prod --yes --scope n-listen-ai` trên commit `f372bd7`: deployment `https://listena-46nx6q1rd-n-listen-ai.vercel.app` **READY**, alias `https://listena.vercel.app`.
+
+Nghiệm thu bằng request thật, không suy đoán:
+
+| Kiểm | Kết quả |
+|---|---|
+| `GET /` | `200` |
+| `GET /learner/vocabulary` (chưa đăng nhập) | `307` về `https://listena.vercel.app/login?callbackUrl=%2Flearner%2Fvocabulary` — route mới đã lên **và vẫn được guard** |
+| `GET /api/learner/vocabulary-review` (ẩn danh) | `401` |
+
+**Giới hạn trung thực:** không nghiệm thu được bằng một học viên thật vì chưa ai đăng nhập được trên production — rào cản `NEXTAUTH_URL` của Plan19 vẫn còn. Bằng chứng hiện có là 5 gate local, 43/43 Playwright trong Chromium thật, và ba mã trạng thái ở trên.
 
 ## Việc còn mở
 

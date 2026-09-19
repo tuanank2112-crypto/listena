@@ -450,3 +450,10 @@ User chọn "Tính năng Vocab Master", kèm ràng buộc **"không được tha
 **Bài học lặp lại:** heredoc Bash nhiều file tiếng Việt dài **lại** vỡ parse (não đã ghi từ Plan17) — dùng Write tool.
 
 **Còn mở:** deploy production + nghiệm thu; hỏi user về migration cho vòng 5 bước và combo; `NEXTAUTH_URL` vẫn chặn mọi nghiệm thu bằng người thật.
+
+### 22:05+07 — Commit, push, deploy Plan20
+
+- Commit `f372bd7`, push `8103c97..f372bd7`. (Plan19 đợt 2 là `8103c97`.)
+- Deploy production `https://listena-46nx6q1rd-n-listen-ai.vercel.app` **READY**, alias https://listena.vercel.app.
+- Nghiệm thu bằng request thật: `/` trả **200**; `/learner/vocabulary` trả **307** về `https://listena.vercel.app/login?callbackUrl=%2Flearner%2Fvocabulary` (route mới đã lên và vẫn được guard); `/api/learner/vocabulary-review` trả **401** khi ẩn danh.
+- **Giới hạn trung thực:** vẫn không nghiệm thu được bằng học viên thật vì rào cản `NEXTAUTH_URL` chưa gỡ.

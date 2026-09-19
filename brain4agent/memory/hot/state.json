@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan20_weak_words_local_accepted__uncommitted__blocked_on_nextauth_url_permission",
+  "system_status": "plan20_shipped_and_deployed__blocked_on_nextauth_url_permission",
   "active_plan": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "checkpoint": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -670,7 +670,7 @@
   "plan20_weak_words": {
     "date": "2026-09-19",
     "type": "MINOR with full SPEC set",
-    "committed": false,
+    "committed": true,
     "user_constraint": "khong duoc thay doi db - no schema change in this plan",
     "shipped": [
       "weak words list",
@@ -684,6 +684,8 @@
     "unit": "840 across 131 files",
     "e2e": "43/43 three consecutive runs",
     "flake_root_cause": "timeline.spec.ts failed with DatabaseUnavailableError, which database-errors.ts maps from SQLITE_BUSY: the Playwright process and the app server write the same SQLite file. Fixed by PRAGMA journal_mode=WAL on the temp E2E database only; WAL persists in the file so both processes get it. Was ~1 in 3 runs since 2026-09-17.",
-    "supersedes": "Plan19's compile-on-demand diagnosis, for the timeline case only - that diagnosis still holds for the other navigation flakes"
+    "supersedes": "Plan19's compile-on-demand diagnosis, for the timeline case only - that diagnosis still holds for the other navigation flakes",
+    "commit_sha": "f372bd7",
+    "deployment": "https://listena-46nx6q1rd-n-listen-ai.vercel.app READY, alias https://listena.vercel.app; / 200, /learner/vocabulary 307 -> login, /api/learner/vocabulary-review 401"
   }
 }
