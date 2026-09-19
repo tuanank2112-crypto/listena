@@ -142,7 +142,7 @@ function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; r
   }
 
   return (
-    <fieldset className="mt-4">
+    <fieldset className="mt-4 min-w-0">
       <legend className="text-xs font-black text-[#45584f]">Giọng tiếng Anh trên thiết bị này</legend>
       {supported === null || (voices.length === 0 && supported) ? (
         <p className="mt-1.5 text-[11px] font-bold text-[#8a918d]">Đang tải danh sách giọng…</p>
@@ -237,7 +237,7 @@ function AiVoicePicker({ label, voices, selected, onSelect, sample, lang }: {
 }) {
   if (!voices.length) return null;
   return (
-    <fieldset className="mt-4">
+    <fieldset className="mt-4 min-w-0">
       <legend className="text-xs font-black text-[#45584f]">{label}</legend>
       <div className="mt-1.5 space-y-1.5">
         {voices.map((voice, index) => {
@@ -323,7 +323,7 @@ export function VoiceSettings({ className = "" }: { className?: string }) {
         </>
       ) : null}
 
-      <fieldset className="mt-4">
+      <fieldset className="mt-4 min-w-0">
         <legend className="text-xs font-black text-[#45584f]">Tốc độ</legend>
         <div className="mt-1.5 grid grid-cols-3 gap-2">
           {VOICE_RATE_OPTIONS.map((option) => {

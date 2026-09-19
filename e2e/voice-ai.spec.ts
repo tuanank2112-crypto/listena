@@ -190,6 +190,40 @@ test("the learner can pick and keep a device voice without any AI key", async ({
   await expect(picker.getByRole("button", { name: /^Ava/ })).toHaveAttribute("aria-pressed", "true");
 });
 
+// Plan18 SPEC-P183: the picker must be reachable without starting a Mission.
+test("the voice page lets a learner choose a voice without starting a Mission", async ({ page }) => {
+  await page.addInitScript(() => {
+    const voices = [
+      { name: "Microsoft Andrew Online (Natural) - English (United States)", voiceURI: "andrew-uri", lang: "en-US", default: false, localService: false },
+      { name: "Microsoft Ava Online (Natural) - English (United States)", voiceURI: "ava-uri", lang: "en-US", default: false, localService: false },
+    ];
+    Object.defineProperty(window.speechSynthesis, "getVoices", { value: () => voices, configurable: true });
+  });
+  await login(page);
+
+  await page.getByRole("link", { name: "Giọng nói" }).first().click();
+  await expect(page).toHaveURL(/\/learner\/settings$/);
+
+  const picker = page.getByRole("group", { name: "Giọng tiếng Anh trên thiết bị này" });
+  await expect(picker).toBeVisible();
+  const ava = picker.getByRole("button", { name: /^Ava/ });
+  await ava.click();
+  await expect(ava).toHaveAttribute("aria-pressed", "true");
+
+  await page.reload();
+  await expect(picker.getByRole("button", { name: /^Ava/ })).toHaveAttribute("aria-pressed", "true");
+
+  // A <fieldset> defaults to min-inline-size: min-content, so the voice rows used
+  // to push the page 178px wider than a phone viewport (Plan18 F-01).
+  await page.setViewportSize({ width: 360, height: 780 });
+  await expect(picker).toBeVisible();
+  const width = await page.evaluate(() => ({
+    client: document.documentElement.clientWidth,
+    scroll: document.documentElement.scrollWidth,
+  }));
+  expect(width.scroll).toBeLessThanOrEqual(width.client);
+});
+
 test("pronunciation grading requires authentication", async ({ request }) => {
   const response = await request.post("/api/voice/pronunciation", {
     data: { clientAttemptId: crypto.randomUUID(), expected: "Hello.", transcript: "hello" },

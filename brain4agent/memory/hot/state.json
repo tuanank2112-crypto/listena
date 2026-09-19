@@ -502,9 +502,9 @@
     "gates_local": {
       "type_check": "0",
       "eslint": "0 errors / 28 warnings (baseline)",
-      "vitest": "129 files / 820 tests (was 126/779)",
-      "build": "PASS (66 route lines, 0 errors)",
-      "playwright": "39/39 (1 new case: picker renders, Ava beats Andrew in a real browser, pin survives reload)"
+      "vitest": "129 files / 820 tests",
+      "build": "Compiled successfully; route /learner/settings listed",
+      "playwright": "40/40"
     },
     "evidence_of_real_change": "voice-policy.test.ts pins Ava as the winner after the change and records Andrew as the winner before it",
     "forbidden_kept": [
@@ -552,6 +552,22 @@
       "created": "2026-09-19T15:11:55+07:00",
       "verified": "GET / -> 200; Permissions-Policy: camera=(), microphone=(self), geolocation=(); alias points at this deployment",
       "cli_lesson": "npx vercel --prod --yes fails with \"Not authorized\" unless --scope n-listen-ai is passed; the CLI default scope is the personal account. A branch push also triggers an automatic Preview build, which is NOT the production deployment."
+    },
+    "local_demo_2026_09_19": {
+      "how": "fresh temporary SQLite in temp dir, next start on :3101 with the real Vyce key; prisma/dev.db untouched",
+      "why_not_next_dev": "Turbopack dev server hung at 1.3 GB / 331s CPU during the first attempt; next start is far lighter and closer to production",
+      "screenshots": "Playwright with a real Windows+Edge voice list installed into speechSynthesis.getVoices",
+      "defects_found": [
+        "the Tự động row described the voice but never named it - fixed in 8cbf459 with a voiceTitle() helper",
+        "F-01: 178px horizontal overflow at 360px (scrollWidth 538 vs clientWidth 360) because <fieldset> defaults to min-inline-size: min-content; fixed with min-w-0 on all three fieldsets and pinned by an E2E that measures scrollWidth"
+      ]
+    },
+    "settings_page": {
+      "spec": "planning/18_2026-09-19_curated-browser-voices/specs/SPEC-P183-SETTINGS-PAGE.md",
+      "route": "/learner/settings (client page, no API, no DB, guard inherited from learner/layout.tsx)",
+      "nav": "learnerNav gains { href: /learner/settings, label: Giọng nói, icon: AudioLines }; mobile grid switched to grid-cols-5 so 9 cells stay two rows",
+      "reason": "the picker only existed inside the session player, so changing voice required starting a Mission (one AI call) even though the voice is used on every screen",
+      "kept": "VoiceSettings stays in the session player too"
     }
   }
 }

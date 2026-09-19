@@ -21,6 +21,8 @@
 | T15 | unit `speech.test.ts` | `speakWithBrowserVoice` khi engine AI đã đăng ký | engine AI **không** được gọi; engine fallback được gọi đúng `voiceURI` |
 | T16 | component `voice-settings` | Render với `getVoices()` giả lập | có mục "Tự động", ≤6 mục, mỗi mục có nút `Nghe thử …` |
 | T17 | E2E | Trang settings mở được, không lỗi console, app không câm khi `enabled:false` | pass |
+| T18 | E2E | `/learner/settings` mở được **không cần bắt đầu Mission**; chọn giọng rồi F5 vẫn giữ | pass |
+| T19 | E2E | Ở viewport 360px, `scrollWidth <= clientWidth` (ghim F-01) | pass |
 
 **CẤM** nghiệm thu bằng riêng unit test của hàm thuần (luật kernel): T16/T17 + smoke thủ công ở OPERATIONS §2.4 là bằng chứng tầng sản phẩm.
 
@@ -32,7 +34,7 @@
 | G2 lint | `npx eslint .` | ✅ 0 lỗi / 28 cảnh báo | — |
 | G3 unit | `npx vitest run` | ✅ 129 file / 820 test | — |
 | G4 build | `npm run build` | ✅ 66 dòng route | — |
-| G5 E2E | `npm run test:e2e` | ✅ 39/39 | — |
+| G5 E2E | `npm run test:e2e` | ✅ 40/40 | — |
 | G6 brain | `init_brain.js --check` exit 0 | ✅ | — |
 | G7 smoke Edge + Chrome (OPERATIONS §2.4) | thủ công | ⬜ | ⬜ chỉ user làm được; **không nghiệm thu được trên production** vì chưa ai đăng nhập được (mail chưa cấu hình, rào cản Plan09 có trước) |
 | G8 CI xanh sau push | GitHub Actions | — | ⬜ chưa kiểm (`gh` chưa đăng nhập trên máy này) |
@@ -47,7 +49,7 @@ Kế hoạch **chỉ được đóng** khi G1–G7 local ✅ **và** G7/G8 môi 
 | eslint | 0 lỗi / 28 cảnh báo | 0 lỗi / 28 cảnh báo |
 | vitest | 126 file / 779 test | **129 file / 820 test** |
 | build | PASS | PASS, 66 dòng route |
-| Playwright | 38/38 | **39/39** |
+| Playwright | 38/38 | **40/40** |
 | T4 `chooseEnglishVoice` trên máy Windows/Edge giả lập | `Microsoft Andrew Online (Natural)` | **`Microsoft Ava Online (Natural)`** |
 
 G1–G6 ✅. Deploy production đã chạy 2026-09-19: `https://listena-qm16tv2ln-n-listen-ai.vercel.app` READY, alias https://listena.vercel.app trả 200 với `Permissions-Policy: microphone=(self)`. G7 và G8 vẫn ⬜: smoke phải do user mở Edge/Chrome thật, và production hiện **không thể đăng nhập** (mail chưa cấu hình) nên picker chỉ nghiệm thu được ở local + Playwright.

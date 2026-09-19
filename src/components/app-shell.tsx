@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { clearOwnerIntents } from "@/lib/client-intent";
 import {
+  AudioLines,
   BarChart3,
   BrainCircuit,
   BookOpen,
@@ -27,6 +28,7 @@ const learnerNav = [
   { href: "/learner/games", label: "Trò chơi", icon: Gamepad2 },
   { href: "/learner/flashcards", label: "Ôn từ", icon: Sparkles },
   { href: "/learner/progress", label: "Tiến bộ", icon: BarChart3 },
+  { href: "/learner/settings", label: "Giọng nói", icon: AudioLines },
   { href: "/feedback", label: "Phản hồi", icon: MessageSquareText },
 ];
 
@@ -151,7 +153,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         aria-label="Điều hướng di động"
         className={cn(
           "fixed inset-x-3 bottom-3 z-50 grid rounded-[22px] border border-[#ded8cc] bg-[#fffdf8]/95 p-1.5 shadow-[0_14px_40px_rgba(34,47,40,.18)] backdrop-blur-xl lg:hidden",
-          isTeacher ? "grid-cols-5" : "grid-cols-4",
+          "grid-cols-5",
         )}
       >
         {navItems.map((item) => {

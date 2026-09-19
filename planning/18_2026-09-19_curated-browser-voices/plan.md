@@ -24,6 +24,8 @@
 - **2026-09-19 D3** — Điểm catalog KHÔNG được vượt tier. Công thức `quality = TIER_RANK*100 + listenability(0..99)`. Lý do: giữ bất biến Plan14 (Google REMOTE luôn cuối), chỉ tinh chỉnh **trong** một tier. Nếu để catalog vượt tier thì trên Android "Google US English" (có trong catalog) sẽ lật ngược giọng neural của máy.
 - **2026-09-19 D4** — Không đụng giọng tiếng Việt trong đợt này. Yêu cầu của user là "chuẩn tiếng Anh hơn"; mở rộng vi là phạm vi khác.
 - **2026-09-19 D5** — Preview trong Settings phải phát **đúng giọng trình duyệt được chọn**, không đi qua chuỗi engine AI ⇒ thêm entry point `speakWithBrowserVoice` dùng thẳng engine fallback.
+- **2026-09-19 D6 (sau demo local)** — Thêm trang `/learner/settings` và mục "Giọng nói" trong điều hướng. Lý do: picker chỉ nằm trong session player, muốn đổi giọng phải bắt đầu một Mission (tốn một lượt AI), trong khi giọng đó dùng ở mọi màn hình. Giữ nguyên picker trong session player. *(User yêu cầu sau khi xem demo.)*
+- **2026-09-19 D7** — `<fieldset>` phải có `min-w-0`. Đo được tràn ngang 178px ở bề rộng 360px vì `fieldset` mặc định `min-inline-size: min-content`. Ghim bằng test E2E đo `scrollWidth`.
 - **Quyết định bị thay thế:** *(chưa có)* — Plan14 "chính sách luôn trả giọng tốt nhất, học viên không cần chọn" nay được **bổ sung** (không xoá): chính sách vẫn là mặc định, học viên được phép ghi đè. Thứ tự xếp hạng của Plan14 (accent → tier → default → local) giữ nguyên, chỉ chèn thêm listenability **trong** tier.
 
 ## Vùng cấm (đã cân nhắc và quyết định KHÔNG làm)
@@ -48,6 +50,8 @@
 | WP5 | Skill `english-voices` (`.agents/skills/english-voices/` + shim `.claude/skills/`) | root | SPEC-P182 | ✅ |
 | WP6 | 5 gate local + ghi số đo thật | root | TESTING-ACCEPTANCE | ✅ |
 | WP7 | Đồng bộ não + ADR 0004 + `index.md`/`roadmap`/`changelog` | root | diff + `--check` exit 0 | ✅ |
+| WP9 | Demo local (DB tạm, server production :3101) + ảnh Playwright | root | 4 ảnh; phát hiện 2 lỗi UI | ✅ |
+| WP10 | Trang `/learner/settings` + nav + sửa tràn ngang (SPEC-P183) | root | SPEC-P183; E2E voice 5/5 | ✅ |
 | WP8 | Commit/push/deploy | — | commit `dd6a69f` (+ `2f55862` cho Plan17), push `origin/codex/vercel-turso-migration`, deploy production `https://listena-qm16tv2ln-n-listen-ai.vercel.app`, alias https://listena.vercel.app trả 200 | ✅ |
 
 ## Checklist thực thi
@@ -59,7 +63,9 @@
 5. [x] WP5 skill + shim ≤10 dòng
 6. [x] WP6 `npm run type-check` → `npx eslint .` → `npx vitest run` → `npm run build` → `npm run test:e2e`
 7. [x] WP7 não + ADR
-8. [ ] WP8 chờ user
+8. [x] WP8 commit + push + deploy (user cho phép)
+9. [x] WP9 demo local cho user duyệt
+10. [x] WP10 trang Giọng nói + sửa tràn ngang
 
 ## Bảng trỏ SPEC
 
@@ -70,6 +76,7 @@
 | [specs/SPEC-P180-CATALOG.md](specs/SPEC-P180-CATALOG.md) | Catalog giọng + công thức xếp hạng |
 | [specs/SPEC-P181-PICKER.md](specs/SPEC-P181-PICKER.md) | Preference, engine, UI chọn/nghe thử |
 | [specs/SPEC-P182-SKILL.md](specs/SPEC-P182-SKILL.md) | Skill `english-voices` |
+| [specs/SPEC-P183-SETTINGS-PAGE.md](specs/SPEC-P183-SETTINGS-PAGE.md) | Trang Giọng nói ngoài Mission + lỗi tràn ngang F-01 |
 | [specs/OPERATIONS.md](specs/OPERATIONS.md) | Cài giọng theo OS, deploy, rollback |
 | [specs/TESTING-ACCEPTANCE.md](specs/TESTING-ACCEPTANCE.md) | Ma trận test + Exit Gates |
 
@@ -93,3 +100,6 @@
 | 2026-09-19 15:08 | Commit | `2f55862` docs(plan17), `dd6a69f` feat(plan18) |
 | 2026-09-19 15:09 | Push | `origin/codex/vercel-turso-migration` d9321f4..dd6a69f |
 | 2026-09-19 15:12 | Deploy production | `https://listena-qm16tv2ln-n-listen-ai.vercel.app` READY; alias https://listena.vercel.app trả 200, header `microphone=(self)`; CLI cần `--scope n-listen-ai` |
+| 2026-09-19 15:30 | WP9 demo local (DB tạm :3101, AI Vyce thật) | 4 ảnh Playwright; dòng "Tự động" chưa nêu tên giọng ⇒ sửa ở `8cbf459` |
+| 2026-09-19 15:55 | WP10 trang `/learner/settings` + nav 5 cột | build liệt kê route `/learner/settings`; E2E voice 5/5 |
+| 2026-09-19 16:00 | F-01 tràn ngang 360px | `scrollWidth` 538 → 360 sau khi thêm `min-w-0` cho 3 `<fieldset>`; đã ghim bằng test |

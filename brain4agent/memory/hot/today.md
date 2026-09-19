@@ -355,3 +355,13 @@ User: "check lại não, sau đó lấy voice bên elevenlab làm 1 skills voice
 - **Giới hạn trung thực:** không nghiệm thu được picker **trên production** vì chưa ai đăng nhập được (thiếu RESEND_API_KEY… — rào cản Plan09 có từ trước, không phải do đợt này). Bằng chứng hiện có là 5 gate local + Playwright chạy trong Chromium thật.
 - Version giữ **0.7.0**; bump 0.8.0 là quyết định của user.
 - Giữ nguyên ngoài commit: `foo`, `test.xlsx`, `prisma/dev.db.bak-plan10`, file ký tự đặc biệt.
+
+### 15:20–16:05+07 — Demo local, rồi trang "Giọng nói" ngoài Mission (user duyệt và yêu cầu làm luôn)
+
+- **Demo local:** DB SQLite **tạm** trong temp (`prisma/dev.db` không bị đụng), `next start` :3101 (nhẹ hơn `next dev` rất nhiều — lần đầu dùng Turbopack dev server treo 1.3 GB/331s CPU), AI Vyce thật. Ảnh chụp bằng Playwright, danh sách giọng của máy Windows+Edge được cài vào `speechSynthesis.getVoices` — không giả gì khác.
+- **Kết quả demo:** Ava đứng đầu thay Andrew; ghim Emma sống qua F5; đổi accent sang en-GB thì Sonia/Ryan/Libby lên đầu và giọng Mỹ bị đánh dấu "không đúng accent"; máy chỉ có Zira/David hiện đúng gợi ý cài giọng Natural.
+- **Lỗi 1 (đã sửa, `8cbf459`):** dòng "Tự động" mô tả giọng nhưng không nêu tên ⇒ nay là "Đang dùng: Ava — …". Thêm `voiceTitle()` để nhãn dòng, nhãn nút nghe thử và dòng này cùng một nguồn.
+- **Lỗi 2 (F-01, đã sửa):** ở 360px trang **tràn ngang 178px** (`scrollWidth` 538 / `clientWidth` 360). Thủ phạm: `<fieldset>` mặc định `min-inline-size: min-content` nên tên giọng + nhãn nền tảng ép cả trang rộng ra, và `truncate` cũng vô hiệu. Sửa: `min-w-0` cho **cả ba** fieldset trong `voice-settings.tsx` (hai cái kia cùng lỗi tiềm ẩn). Sau sửa 360 = 360. Đã ghim bằng E2E đo `scrollWidth`.
+- **WP10 — trang `/learner/settings`** (SPEC-P183): picker trước đây chỉ có trong session player, muốn đổi giọng phải bắt đầu một Mission (tốn một lượt AI) dù giọng đó dùng ở mọi màn hình. Nay có mục **"Giọng nói"** trong điều hướng; picker trong session player **giữ nguyên**. Không API/DB mới, guard kế thừa `learner/layout.tsx`. Điều hướng di động chuyển `grid-cols-5` để 9 ô vẫn đúng 2 hàng.
+- **Gates:** type-check 0; eslint 0/28; vitest **820/820**; build Compiled successfully (có route `/learner/settings`); Playwright **40/40**.
+- Ghi chú: một lượt E2E đầy đủ giữa buổi fail `learning-regressions.spec.ts:131`; chạy riêng xanh và các lượt sau xanh — do máy chạy song song server demo + browser, không liên quan thay đổi voice.
