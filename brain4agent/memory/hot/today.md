@@ -605,3 +605,11 @@ User: "làm cái vocab master đi. đợi gì nữa?" ⇒ **duyệt migration t�
 **LỖI UI do nghiệm thu phơi ra (đã sửa + deploy lại):** ảnh chụp sau khi đọc hết thẻ vẫn hiện 20% trong khi API đã trả 40% — vì `setLearning(false)` chạy **trước** khi POST xong, nên dải hành trình hiện lại ở trạng thái cũ và học viên tưởng bấm hụt. Sửa: giữ màn thẻ từ, nút đổi "Đang lưu…" và chặn bấm lần hai, tới khi máy chủ trả lời. Ghi hỏng thì vẫn đóng nhưng **không** tick.
 
 **Token user dán trong chat:** tôi không dùng (đã lấy từ Vercel). Đã dặn user thu hồi token đó vì nó nằm trong lịch sử chat.
+
+### 07:00+07 — Đóng sự cố Vyce chậm
+
+User: "vì Vyce là gateway api nên nó chậm 1 chút. k sao cả." ⇒ **không còn là sự cố mở**. Lượt đầu nguội 60.5s so với 13-17s các lượt sau là đặc tính của gateway, đã chấp nhận. Đừng tốn thời gian vào đây nữa trừ khi user mở lại.
+
+### 07:05+07 — Chụp toàn bộ tác phẩm trên production
+
+Ảnh 7 màn hình (dashboard, bài học, chi tiết bài kèm chặng học, từ yếu, tiến bộ, trò chơi, giọng nói) bằng tài khoản thật trên `https://listena.vercel.app`, lưu trong scratchpad. Dashboard hiện đúng dữ liệu thật: lời chào "CHÀO LÊ Ý", phiên AI đang dở để tiếp tục, mục tiêu tự học đã lưu ("bàn thân", 10 phút, chủ đề "chơi game"), Nghe 37% / Từ vựng 42%, và lịch sử "AI đánh giá lượt học" 50/100, 60/100, 60/100 — đều là điểm AI chấm thật.

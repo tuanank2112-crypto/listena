@@ -762,5 +762,9 @@
     "migration_applied": "Turso production 2026-09-20: 32 tables/62 indexes -> 33/65, integrity ok, 0 foreign-key violations. The target has no _prisma_migrations table (it was built by import, not by prisma migrate), so nothing was recorded there and the tool said so.",
     "production_proof": "https://listena-nneyou0l4-n-listen-ai.vercel.app READY; the real learner went 20% -> 40% on a real lesson, with PRACTICE already ticked from an Attempt they had made earlier - the derivation working on real data"
   },
-  "turso_credentials_lesson": "TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are type Secret on PREVIEW but type Config on PRODUCTION, so `vercel env pull --environment=production` CAN decrypt them. Do not infer one environment's variable type from another's."
+  "turso_credentials_lesson": "TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are type Secret on PREVIEW but type Config on PRODUCTION, so `vercel env pull --environment=production` CAN decrypt them. Do not infer one environment's variable type from another's.",
+  "vyce_latency": {
+    "status": "ACCEPTED by the user 2026-09-20",
+    "note": "Vyce is a gateway API, so a slower first call is expected. Observed 60.5s on a cold first turn against 13-17s afterwards. Not an incident; do not spend time on it unless the user reopens it."
+  }
 }
