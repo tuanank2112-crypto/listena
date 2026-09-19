@@ -483,3 +483,24 @@ User chọn "Tính năng Vocab Master", kèm ràng buộc **"không được tha
 - **Điểm tích cực:** redirect sau khi từ chối nay về `https://listena.vercel.app/login`, đúng domain mở được — thêm một bằng chứng `NEXTAUTH_URL` đã đúng.
 - **Đã kích hoạt gửi mail thật:** `POST /api/account/password-reset/request` trả `202 {accepted:true}` trong 1.79s. Log runtime xác nhận request tới nơi, **không có lỗi**; nhưng tầng email không log lúc thành công và việc gửi chạy trong `after()`, nên **log không chứng minh được mail đã đi**.
 - **Nút thắt còn lại là HỘP THƯ CỦA USER.** Resend chưa có domain xác minh nên chỉ gửi được tới tuanank2112@gmail.com. Không có cách nào khác để lấy link: token chỉ nằm trong mail. Đang chờ user mở hộp thư.
+
+### 23:35–23:55+07 — 🎉 LẦN ĐẦU CHỨNG MINH AI CHẠY THẬT TRÊN PRODUCTION
+
+User dán link đặt lại mật khẩu từ hộp thư ⇒ **mail production GỬI ĐƯỢC THẬT** (bằng chứng đầu tiên; trước nay chỉ biết env đã cấu hình, chưa từng biết mail có đi).
+
+**Luồng thật, tuần tự, mọi bước đều là số thật:**
+1. `POST /api/account/password-reset/confirm` với token trong mail → `200 {"passwordReset":true}`.
+2. `POST /api/auth/callback/credentials` → `302 -> /learner/dashboard`, có cookie `__Secure-authjs.session-token`.
+3. `GET /api/auth/session` → `200` với `{"name":"lê ý","email":"tuanank2112@gmail.com","role":"LEARNER","isEmailVerified":true}`. ⇒ **Tài khoản đã tồn tại từ trước VÀ đã xác minh email**; đúng chẩn đoán: vướng mắc chỉ là mật khẩu ghi ở phiên trước không dùng được, không phải chưa xác minh.
+4. `GET /api/learner/next-action` → `200`, planner `p11-v1` trả `kind:"RESUME"` vì học viên có phiên đang mở ("Báo thất lạc hành lý..."). Đây là đường đúng của app — `POST /api/learning-sessions` với `mode:"MISSION"` mà không có `scenarioKey` trả `404 TARGET_UNAVAILABLE`; scenarioKey phải lấy từ planner như dashboard làm.
+5. Resume phiên `005f2628-e299-4d53-814c-70243ff8aff9`, gửi câu **cài lỗi cố ý**: *"Yesterday I lose my suitcase. It is a big blue suitcase and it have a red tag."*
+
+**AI trả lời (production, Vyce thật):**
+- `npcReply`: "I am checking our records for your big blue suitcase. Can you tell me your flight number, please?" — đúng vai nhân viên hàng không, giữ mạch hội thoại.
+- `coachMessage` tiếng Việt: "Học sinh nhớ dùng quá khứ đơn: 'I lost' chứ không phải 'I lose'..."
+- `detectedError`: `{type:"tense", actual:"lose", explanationVi:"Với 'Yesterday' cần dùng quá khứ đơn: 'I lost my suitcase'."}` — **bắt đúng lỗi đã cài**.
+- `score` 0.7, `confidence` 0.85, `pedagogicalAct` ASK_GUIDING, `targetSkill` grammar, `voiceScript` 4 dòng.
+
+**Ý nghĩa:** đây là gate **D3 (live AI)** trong Definition of Done của Plan12, mở từ đầu dự án tới giờ. Chuỗi đầy đủ đã chạy trên hạ tầng thật: mail → xác minh → đăng nhập → planner → phiên học → chấm điểm máy chủ → coaching AI tiếng Việt → voiceScript.
+
+**Đã dọn:** xoá file cookie phiên trong scratchpad ngay sau khi dùng xong.

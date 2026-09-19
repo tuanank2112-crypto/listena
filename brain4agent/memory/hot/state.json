@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan20_shipped__nextauth_url_FIXED__awaiting_permission_for_a_real_production_signin",
+  "system_status": "LIVE_AI_PROVEN_ON_PRODUCTION__d3_gate_open",
   "active_plan": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "checkpoint": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -705,5 +705,29 @@
       "VIENEU_DEFAULT_VOICE"
     ],
     "suspect": "the all-branches Preview NEXTAUTH_URL is probably wrong in principle - every Preview deployment has its own URL, so one fixed URL cannot serve them all. Left alone: its value is a Secret and cannot be read back, and guessing is worse."
+  },
+  "live_ai_production_proof": {
+    "date": "2026-09-19",
+    "deployment": "https://listena-blrqcio6d-n-listen-ai.vercel.app (alias https://listena.vercel.app)",
+    "mail": "PROVEN - the user received the password-reset email and pasted the link; this is the first evidence mail actually sends from production",
+    "account": "tuanank2112@gmail.com, name 'le y', role LEARNER, isEmailVerified true - it already existed and was already verified; the recorded password from the earlier session was simply wrong",
+    "session_id": "005f2628-e299-4d53-814c-70243ff8aff9",
+    "learner_input": "Yesterday I lose my suitcase. It is a big blue suitcase and it have a red tag.",
+    "ai_response": {
+      "npcReply": "I am checking our records for your big blue suitcase. Can you tell me your flight number, please?",
+      "coachMessage_vi": "Hoc sinh nho dung qua khu don: 'I lost' chu khong phai 'I lose'.",
+      "detectedError": {
+        "type": "tense",
+        "actual": "lose",
+        "explanationVi": "Voi 'Yesterday' can dung qua khu don: 'I lost my suitcase'."
+      },
+      "score": 0.7,
+      "confidence": 0.85,
+      "pedagogicalAct": "ASK_GUIDING",
+      "targetSkill": "grammar",
+      "voiceScriptLines": 4
+    },
+    "gotcha": "POST /api/learning-sessions with mode MISSION and no scenarioKey returns 404 TARGET_UNAVAILABLE; take the scenarioKey from /api/learner/next-action the way the dashboard does",
+    "plan12_gate": "D3 (live AI with reviewer quality) - the live half is now demonstrated; reviewer quality assessment is still open"
   }
 }
