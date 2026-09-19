@@ -739,10 +739,12 @@
     "forbidden_zone": "an unrecognised type keeps its own slug and is NEVER pooled into one 'other' bucket - pooling would sum unrelated counts past the threshold and teach the wrong lesson",
     "ordering_rule": "aggregate BEFORE the count>=3 filter; filtering first discards exactly the split entries the aggregation exists to rescue",
     "new_surface": "GET /api/learner/mistakes + a 'Loi hay lap' panel on the Progress page showing the learner's own wrong sentences with the Coach's Vietnamese explanation; deliberately silent per Plan14's forbidden zone",
-    "unit": "868 across 134 files",
+    "unit": "887 across 135 files",
     "e2e": "46/46",
     "committed": true,
     "commit_sha": "fd0dade",
-    "production_proof": "https://listena-6fesmywcp-n-listen-ai.vercel.app READY; signed in as the real learner, GET /api/learner/mistakes returned the 'tense' correction Vyce made an hour earlier, labelled 'Thi cua dong tu', with the learner's own wrong word and the Coach's Vietnamese explanation"
+    "production_proof": "https://listena-6fesmywcp-n-listen-ai.vercel.app READY; signed in as the real learner, GET /api/learner/mistakes returned the 'tense' correction Vyce made an hour earlier, labelled 'Thi cua dong tu', with the learner's own wrong word and the Coach's Vietnamese explanation",
+    "quote_fix": "detectedError.actual is a free string the model fills however it likes - production produced a genuine fragment ('lose'), two fragments packed into one string ('have lost / two bag'), and plain prose ('present tense with incorrect verb form'). The panel now quotes the learner's own message from the LEARNER turn the correction answered, and actual only decides what to underline, and only where it genuinely occurs. actual is never displayed.",
+    "grammar_family": "added after live data returned a bare 'grammar'; placed last so precise families win"
   }
 }

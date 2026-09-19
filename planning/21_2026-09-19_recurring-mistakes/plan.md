@@ -69,6 +69,20 @@ Trang Tiến bộ có thanh kỹ năng nhưng **không có gì** giải thích v
 
 Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên**. Cả khu này làm bằng câu sai của họ, nên nó không có một nút nghe nào — dù mọi màn hình khác trong app đều có. Ghi rõ ở [`SPEC-P214`](specs/SPEC-P214-mistakes-panel.md) để người sau đừng "bổ sung cho nhất quán".
 
+### 2026-09-20 02:40 — Demo phơi ra: trích dẫn của model có thể là chữ học viên chưa từng viết
+
+Ảnh chụp demo cho thấy khu này trích dẫn `"present tense with incorrect verb form"` như thể học viên đã gõ ra câu đó. Họ không hề. Đó là **văn mô tả của model** rơi vào `detectedError.actual` — một chuỗi tự do. Ở lượt khác model dồn hai mảnh vào `"have lost / two bag"`, và **chỉ một** mảnh có trong câu.
+
+Ba dạng đều lấy từ production, không phải giả định.
+
+**Sửa:** phần trích dẫn là **tin nhắn của học viên**, đọc từ lượt `LEARNER` mà lời sửa đang trả lời; `actual` chỉ còn nhiệm vụ **chỉ vào bên trong** câu đó, và chỉ những mảnh **thật sự có mặt** mới được tô. Văn mô tả tự động không tô gì. `actual` **không bao giờ** được hiển thị nữa.
+
+Ghép lượt duyệt theo `sessionId` + `sequence`, nên một lời sửa không thể mượn câu của phiên khác. Không tìm được lượt học viên thì chỉ hiện lời giải thích — **thà thiếu trích dẫn còn hơn bịa một câu**.
+
+`findHighlights` và `segmentHighlights` đặt ở `src/core/learning/text-highlight.ts`: máy chủ quyết định tô gì, client vẽ.
+
+**Bài học chung:** mọi trường tự do do model điền đều là **lời khẳng định chưa kiểm chứng**. Muốn đưa lên màn hình thì phải đối chiếu với thứ mình biết chắc — ở đây là chính tin nhắn của học viên.
+
 ## Work Packages
 
 | WP | Nội dung | Trạng thái |
@@ -76,8 +90,8 @@ Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên*
 | WP1 | `error-taxonomy.ts` — 18 họ lỗi + 14 unit test | ✅ |
 | WP2 | Chuẩn hoá lúc ghi trong `service.ts` | ✅ |
 | WP3 | Gộp trước ngưỡng + nhãn tiếng Việt ở `planner.ts` và `next-action.ts`; xoá 2 bản sao `formatErrorType` | ✅ |
-| WP4 | `mistakes.ts` + 7 unit test | ✅ |
-| WP5 | `GET /api/learner/mistakes` + 5 unit test | ✅ |
+| WP4 | `mistakes.ts` + `text-highlight.ts` + 25 unit test | ✅ |
+| WP5 | `GET /api/learner/mistakes` + 7 unit test | ✅ |
 | WP6 | Khu "Lỗi hay lặp" trên trang Tiến bộ | ✅ |
 | WP7 | 3 ca E2E | ✅ |
 | WP8 | Bộ SPEC + đồng bộ não | ✅ |
@@ -100,7 +114,7 @@ Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên*
 |---|---|---|
 | `npm run type-check` | 0 lỗi | ✅ local / ⬜ server |
 | `npx eslint .` | 0 lỗi / 0 cảnh báo | ✅ local / ⬜ server |
-| `npx vitest run` | **134 file / 868 test** (trước 131/840) | ✅ local / ⬜ server |
+| `npx vitest run` | **135 file / 887 test** (trước 131/840) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có `/api/learner/mistakes` | ✅ local / ⬜ server |
 | `npx playwright test` | **46/46** (trước 43/43) | ✅ local / ⬜ server |
 | Nghiệm thu production | `/learner/progress` **307** về login; `/api/learner/mistakes` ẩn danh **401**; và với học viên thật: **200** trả đúng một họ `tense` gắn nhãn **"Thì của động từ"** | ✅ **server** |

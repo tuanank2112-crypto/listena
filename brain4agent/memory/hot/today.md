@@ -543,3 +543,17 @@ User: "đâu? demo luôn". Gửi 3 câu cài lỗi khác nhau vào phiên Missio
 **Kết quả demo (ảnh trong scratchpad):** khu "Lỗi hay lặp" hiện **"Thì của động từ" ×2** — gộp đúng hai lượt lỗi thì khác nhau — mở sẵn với hai ví dụ kèm lời Coach tiếng Việt và tên phiên học; dưới là **"Ngữ pháp chung" ×1**. Ở 390px `scrollWidth === clientWidth === 390`, không tràn ngang.
 
 **QUAN SÁT CÒN MỞ (chất lượng dữ liệu của model, không phải lỗi mã):** ở một lượt Vyce đặt vào `detectedError.actual` một **mô tả** ("present tense with incorrect verb form") thay vì đoạn học viên viết sai. Giao diện hiển thị nó trong dấu trích dẫn nên đọc hơi lạ. Cách sửa có nguyên tắc: chỉ trích dẫn `actual` khi nó thật sự xuất hiện trong câu học viên vừa gửi (lượt LEARNER đứng ngay trước trong cùng phiên). Chưa làm — cần quyết định xem có đáng thêm một lần đọc lượt kề hay không.
+
+### 02:20–03:00+07 — Sửa đúng thứ demo phơi ra: trích dẫn phải là chữ học viên thật sự viết
+
+User: "ừ thế xử lý nó đi".
+
+**Vấn đề:** khu "Lỗi hay lặp" trích dẫn thẳng `detectedError.actual`. Nhưng đó là **chuỗi tự do do model điền**, và production cho ra **ba dạng khác nhau**: `"lose"` (đúng một đoạn học viên viết), `"have lost / two bag"` (hai mảnh dồn một chuỗi, chỉ một có trong câu), và `"present tense with incorrect verb form"` (**văn mô tả** — học viên chưa từng viết chữ nào như vậy). Trích dẫn thẳng nghĩa là có lúc đưa cho học viên những chữ họ **không hề viết** — nói dối về chính bài làm của họ.
+
+**Sửa:** trích dẫn nay là **tin nhắn của học viên**, đọc từ lượt `LEARNER` mà lời sửa đang trả lời. `actual` chỉ còn là **con trỏ**: `findHighlights` tách nó theo `/ ; , -> →` và giữ **chỉ** những mảnh thật sự có trong câu; không mảnh nào trùng thì không tô gì. `actual` **không bao giờ** hiển thị nữa. Ghép lượt theo `sessionId` + `sequence` nên không thể mượn câu của phiên khác; không tìm được lượt học viên thì chỉ hiện lời giải thích — thà thiếu trích dẫn còn hơn bịa.
+
+`findHighlights` + `segmentHighlights` đặt ở `src/core/learning/text-highlight.ts` (không phải trong module `server-only`) vì **máy chủ quyết định tô gì, client vẽ**. Route nay đọc **cả hai** actor nên `TURN_QUERY_LIMIT` 120 → **240**.
+
+**BÀI HỌC CHUNG, đáng nhớ hơn cả bản vá:** mọi trường tự do do model điền đều là **lời khẳng định chưa kiểm chứng**. Muốn đưa lên màn hình cho người dùng thì phải đối chiếu với thứ mình biết chắc — ở đây là chính tin nhắn của học viên.
+
+**Gates:** type-check 0; eslint 0/0; vitest **135 file / 887 test** (trước 134/869); build PASS; Playwright **46/46**. Deploy `listena-iqv78lrr8` READY. Ảnh chụp lại: hai ví dụ nay đều là câu thật của học viên, `lose` được tô đúng chỗ, dòng mô tả bịa đã biến mất.

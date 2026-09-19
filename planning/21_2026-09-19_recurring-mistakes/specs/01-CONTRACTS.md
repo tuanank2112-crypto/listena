@@ -37,7 +37,8 @@ export function aggregateRecurringErrors(errors: CountedError[]): AggregatedErro
 
 ```ts
 export interface MistakeExample {
-  actual: string;         // đoạn học viên viết sai
+  learnerText: string;    // tin nhắn của học viên, nguyên văn; rỗng khi không tìm được lượt
+  highlights: string[];   // các mảnh của `actual` THẬT SỰ có trong learnerText
   explanationVi: string;  // lời Coach đã giải thích
   sessionGoal: string;
   occurredAt: string;     // ISO
@@ -53,10 +54,19 @@ export interface MistakeFamily {
 
 export function buildMistakeHistory(input: {
   recurringErrors: CountedError[];
-  aiTurns: StoredAiTurn[];
+  turns: StoredTurn[];          // cả LEARNER lẫn AI, để ghép được cặp
   maxFamilies: number;
   maxExamplesPerFamily: number;
 }): MistakeFamily[];
+```
+
+**CẤM** đưa `detectedError.actual` ra phản hồi. Nó là con trỏ để tô, không phải nội dung để đọc — xem [`SPEC-P213 §1b`](SPEC-P213-mistakes-api.md).
+
+Hai hàm thuần dùng chung nằm ở `src/core/learning/text-highlight.ts`, vì **máy chủ quyết định tô gì, client vẽ**:
+
+```ts
+export function findHighlights(learnerText: string, actual: string): string[];
+export function segmentHighlights(text: string, highlights: string[]): TextSegment[];
 ```
 
 **BẮT BUỘC:** `count` lấy từ `recurringErrors` (nguồn của planner), **CẤM** đếm từ `examples.length` khi đã có số trong memory — xem bất biến BB3.
@@ -78,7 +88,7 @@ Phản hồi `200`:
 }
 ```
 
-Hằng số trong route, **không** lấy từ client: `AI_TURN_QUERY_LIMIT = 120`, `MAX_FAMILIES = 6`, `MAX_EXAMPLES_PER_FAMILY = 3`.
+Hằng số trong route, **không** lấy từ client: `TURN_QUERY_LIMIT = 240`, `MAX_FAMILIES = 6`, `MAX_EXAMPLES_PER_FAMILY = 3`.
 
 ### Bảng lỗi và hành vi bắt buộc của caller
 
