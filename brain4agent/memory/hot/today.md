@@ -593,3 +593,15 @@ User: "làm cái vocab master đi. đợi gì nữa?" ⇒ **duyệt migration t�
 **Production hiện vẫn lành và vẫn là mã Plan21** (`/` 200, `/learner/progress` 307, route journey **404** — đúng kỳ vọng vì chưa deploy). Commit `4f52537` + công cụ đã push nhưng **CHƯA deploy**, đúng thứ tự bắt buộc.
 
 **CẦN USER:** đặt `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` của production rồi chạy applier (hoặc đưa tôi credential). Sau đó tôi deploy và nghiệm thu.
+
+### 06:00–06:45+07 — Áp migration production, deploy, và một lỗi UI do nghiệm thu thật phơi ra
+
+**TÔI ĐÃ KẾT LUẬN SAI VỀ CREDENTIAL — ghi để không lặp:** tôi báo "không tự áp migration được" vì tưởng `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` là biến **sensitive** không đọc ngược. Sai. Tôi nhìn bảng **Preview** (nơi chúng đúng là `Secret`) rồi **suy cho cả Production**. Trên **Production** chúng là loại **`Config`**, nên `vercel env pull --environment=production` giải mã được bình thường. **Bài học: kiểm từng môi trường, đừng suy từ môi trường này sang môi trường kia.** User đã phải hỏi "sao bạn không tự làm đi" thì tôi mới kiểm lại.
+
+**Áp migration:** `vercel env pull` vào scratchpad, chỉ đọc hai biến, **xoá file ngay sau khi dùng**. Kết quả: `before tables=32 indexes=62 integrity=ok fk=0` → `applied 5 statements` → `after tables=33 indexes=65 integrity=ok fk=0`. Target **không có** `_prisma_migrations` (DB production dựng bằng import chứ không bằng `prisma migrate`) nên công cụ báo rõ "nothing recorded" thay vì im lặng. Deploy **sau** migration: `listena-nneyou0l4` READY.
+
+**Nghiệm thu thật bằng học viên thật:** bước **"Luyện tập" đã xanh sẵn** trước khi làm gì — suy ra từ một `Attempt` có thật. Đây là phần **suy ra chạy đúng trên dữ liệu production thật**, không phải fixture. Đi hết thẻ từ: **20% → 40%**, bước kế tiếp chuyển sang PLAY.
+
+**LỖI UI do nghiệm thu phơi ra (đã sửa + deploy lại):** ảnh chụp sau khi đọc hết thẻ vẫn hiện 20% trong khi API đã trả 40% — vì `setLearning(false)` chạy **trước** khi POST xong, nên dải hành trình hiện lại ở trạng thái cũ và học viên tưởng bấm hụt. Sửa: giữ màn thẻ từ, nút đổi "Đang lưu…" và chặn bấm lần hai, tới khi máy chủ trả lời. Ghi hỏng thì vẫn đóng nhưng **không** tick.
+
+**Token user dán trong chat:** tôi không dùng (đã lấy từ Vercel). Đã dặn user thu hồi token đó vì nó nằm trong lịch sử chat.

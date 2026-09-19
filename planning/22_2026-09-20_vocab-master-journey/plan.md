@@ -82,7 +82,7 @@ Và **CẤM** cho client gửi tên bước lên `POST`: nếu client chọn đ�
 | WP9 | Trang game nhận `?lesson=&mode=` | ✅ |
 | WP10 | 4 ca E2E | ✅ |
 | WP11 | Bộ SPEC + đồng bộ não | ✅ |
-| WP12 | **Áp migration lên Turso production**, rồi deploy | ⬜ |
+| WP12 | **Áp migration lên Turso production**, rồi deploy | ✅ |
 
 ## Checklist thực thi
 
@@ -93,7 +93,7 @@ Và **CẤM** cho client gửi tên bước lên `POST`: nếu client chọn đ�
 - [x] Combo đọc ngoài batch nguyên tử
 - [x] E2E chứng minh lượt chơi của học viên khác không đóng bước của mình
 - [x] 5 gate local
-- [ ] Áp migration production, xác minh integrity, rồi deploy
+- [x] Áp migration production, xác minh integrity, rồi deploy
 
 ## Exit Gates
 
@@ -104,10 +104,40 @@ Và **CẤM** cho client gửi tên bước lên `POST`: nếu client chọn đ�
 | `npx vitest run` | **138 file / 921 test** (trước 135/887) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có route journey | ✅ local / ⬜ server |
 | `npx playwright test` | **50/50** (trước 46/46) | ✅ local / ⬜ server |
-| Migration áp lên production + integrity | chưa chạy | ⬜ server |
-| Nghiệm thu production | chưa chạy | ⬜ server |
+| Migration áp lên production + integrity | **32 bảng/62 index → 33/65**, integrity ok, 0 vi phạm FK | ✅ **server** |
+| Nghiệm thu production | Học viên thật đi từ **20% → 40%**, bước LEARN ghi được, bước tiếp theo chuyển sang PLAY | ✅ **server** |
+
+### 2026-09-20 06:10 — Credential: tôi đã kết luận sai, và đây là chỗ sai
+
+Tôi báo "không tự áp migration được" vì tưởng `TURSO_*` là biến **sensitive** không đọc ngược. Sai: tôi nhìn bảng **Preview** (nơi chúng đúng là `Secret`) rồi suy cho cả Production. Trên **Production** chúng là loại **`Config`**, tức `vercel env pull` giải mã được.
+
+Bài học: kiểm từng môi trường, đừng suy từ môi trường này sang môi trường kia.
+
+Đã `vercel env pull` vào scratchpad, chỉ đọc hai biến cần, **xoá file ngay sau khi dùng**.
+
+### 2026-09-20 06:20 — Áp migration production và deploy
+
+```
+before: tables=32 indexes=62 integrity=ok foreign_key_violations=0
+to apply: table LessonJourneyProgress, 2 index, column AdaptiveGameRun.lessonId, 1 index
+applied 5 statements
+after:  tables=33 indexes=65 integrity=ok foreign_key_violations=0
+```
+
+Target không có `_prisma_migrations` (database production được dựng bằng import chứ không bằng `prisma migrate`), nên công cụ báo rõ "nothing recorded" thay vì im lặng.
+
+Deploy **sau** migration: `https://listena-nneyou0l4-n-listen-ai.vercel.app` READY.
+
+### 2026-09-20 06:35 — Nghiệm thu thật phơi ra một lỗi UI, đã sửa
+
+Chạy thử bằng học viên thật trên production: bước **"Luyện tập" đã xanh sẵn** trước khi làm gì — suy ra từ một `Attempt` có thật của học viên đó. Đây là **phần suy ra chạy đúng trên dữ liệu thật**, không phải fixture.
+
+Nhưng ảnh chụp sau khi đọc hết thẻ từ vẫn hiện **20%** trong khi API đã trả **40%**. Nguyên nhân: `setLearning(false)` chạy **trước** khi POST xong, nên dải hành trình hiện lại ở trạng thái cũ và học viên tưởng bấm hụt.
+
+**Sửa:** giữ màn thẻ từ lại, nút đổi thành "Đang lưu…" và không bấm được lần hai, cho tới khi máy chủ trả lời. Ghi hỏng thì vẫn đóng nhưng **không** tick — tuyên bố tiến độ chưa lưu vẫn là điều tệ hơn.
+
+Sau khi sửa và deploy lại: **40%**, hai bước xanh, bước kế tiếp là "Ghép từ".
 
 ## Việc còn mở
 
-- Áp migration lên Turso production **trước** khi deploy (xem [`OPERATIONS.md`](specs/OPERATIONS.md) mục 1 — deploy trước sẽ làm hỏng production).
 - Vyce chậm bất thường ở lượt đầu (60.5s) — sự cố ghi từ 2026-09-18, vẫn chưa điều tra.

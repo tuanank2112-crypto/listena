@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan22_vocab_master_local_accepted__migration_pending_on_production",
+  "system_status": "plan22_shipped_and_verified_on_production__migration_applied",
   "active_plan": "planning/22_2026-09-20_vocab-master-journey/plan.md",
   "checkpoint": "planning/22_2026-09-20_vocab-master-journey/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -757,6 +757,10 @@
     "test_threshold": "LESSON_TEST_PASS_SCORE = 80, not the reference app's 100: ListenAI grades free text with partial credit, so 100 on every exercise is a gate that can never close.",
     "unit": "921 across 138 files",
     "e2e": "50/50",
-    "committed": false
-  }
+    "committed": true,
+    "commit_sha": "4f52537",
+    "migration_applied": "Turso production 2026-09-20: 32 tables/62 indexes -> 33/65, integrity ok, 0 foreign-key violations. The target has no _prisma_migrations table (it was built by import, not by prisma migrate), so nothing was recorded there and the tool said so.",
+    "production_proof": "https://listena-nneyou0l4-n-listen-ai.vercel.app READY; the real learner went 20% -> 40% on a real lesson, with PRACTICE already ticked from an Attempt they had made earlier - the derivation working on real data"
+  },
+  "turso_credentials_lesson": "TURSO_DATABASE_URL and TURSO_AUTH_TOKEN are type Secret on PREVIEW but type Config on PRODUCTION, so `vercel env pull --environment=production` CAN decrypt them. Do not infer one environment's variable type from another's."
 }
