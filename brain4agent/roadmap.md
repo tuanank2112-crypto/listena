@@ -1,5 +1,18 @@
 # ListenAI roadmap
 
+## 2026-09-20 — Yêu cầu user sau khi xem production (ĐÃ GHI, CHƯA LÀM)
+
+User xem toàn bộ sản phẩm trên production rồi nêu ba thiếu sót. Đây là **ưu tiên kế tiếp**, chưa mở plan:
+
+**1. Chủ đề sinh bài tập phải là dữ liệu, không phải mã.** Hiện chỉ có **3 chủ đề** và chúng là union type biên dịch (`mission-templates.ts:4`) cộng một bản sao hard-code ở client (`games-client.tsx:66`), nên thêm một chủ đề phải sửa hai nơi rồi deploy. User muốn có **chức năng tạo chủ đề**. Điểm khó thật: `isMissionScenarioKey` đang làm rào kiểm ở planner và `next-action.ts` — thay union type bằng dữ liệu thì **vẫn phải kiểm**, tuyệt đối không nới thành nhận chuỗi tự do từ client vì như thế client điều khiển được prompt của AI.
+
+**2. Không đọc to và không dịch sẵn reasoning của AI.** `voice-script.ts` đang đẩy `coachMessage` thành dòng `COACH` tiếng Việt trong `voiceScript`, tức lời giải thích bị phát tự động mỗi lượt. User muốn bỏ hẳn phần đó, **thay bằng nút "giải nghĩa"** để học viên chủ động bấm. Đây là thu hẹp thêm vùng cấm Plan14: không chỉ câu sai của học viên, cả lời giải thích cũng không tự phát.
+
+**3.** (chưa nêu chi tiết — user nói "vài thiếu sót", hai mục trên là hai mục được nêu rõ.)
+
+Việc đã xong trước đó: Plan20/21/22 đã lên production và nghiệm thu bằng học viên thật. Còn mở: bump 0.8.0 (quyết định của user), và một đợt thử với người học thật để biết sản phẩm có dạy được hay không.
+
+
 ## 2026-09-19 — Plan17 skill `elevenlabs-voice` + tham khảo Vocab Master (DONE LOCAL, docs-only, chưa commit)
 
 Skill ElevenLabs đưa vào repo dưới dạng tài liệu quy trình ([canonical](../.agents/skills/elevenlabs-voice/SKILL.md), shim `.claude/skills/`), không thêm mã/SDK. Khảo sát app "English Vocab Master A2-B1" ghi ở [tham khảo](../docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md): ứng viên plan MINOR kế tiếp = lesson journey 5 bước cho remediation lesson, màn "Từ hay sai" + "Ôn tập ngẫu nhiên" từ evidence hiện có, 3 tốc độ nghe tại Nghe & viết, combo/điểm do server tính. Vùng cấm: chấm điểm client, bỏ đăng nhập, Firebase. Ưu tiên trước đó vẫn là Plan16 WP2/WP4/WP5 (key ElevenLabs thật, chi phí, bump 0.8.0) và mail production.

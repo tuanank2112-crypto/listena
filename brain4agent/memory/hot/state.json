@@ -766,5 +766,19 @@
   "vyce_latency": {
     "status": "ACCEPTED by the user 2026-09-20",
     "note": "Vyce is a gateway API, so a slower first call is expected. Observed 60.5s on a cold first turn against 13-17s afterwards. Not an incident; do not spend time on it unless the user reopens it."
+  },
+  "pending_user_requirements_2026_09_20": {
+    "recorded": "2026-09-20, after the user looked at production; they asked for the brain to be updated first and nothing implemented yet",
+    "1_topic_creation": {
+      "problem": "AI exercise generation has too few topics and they are mock data. mission-templates.ts:4 defines exactly three scenarios as a compile-time union type, MISSION_TEMPLATES mirrors it, and games-client.tsx:66 holds a second hard-coded copy of the same three for the UI. Adding one topic means editing two places and deploying.",
+      "wanted": "a feature to create topics; topics must be data that can be created and edited at run time, not a TypeScript type",
+      "caution": "isMissionScenarioKey is used as a guard in next-action.ts:116,186 and the planner. Replacing the union type must keep a data-backed check - it must NOT become 'accept any string from the client', because a client that picks the topic steers the AI prompt."
+    },
+    "2_no_spoken_reasoning": {
+      "problem": "voice-script.ts:88 runs prepareSpokenText(coachMessage,'vi') and lines 76/90 push {role:'COACH',lang:'vi'}, so the Coach's explanation is read aloud automatically on every AI turn",
+      "wanted": "stop voicing and auto-translating the reasoning; put an explain button ('giải nghĩa') there instead, so it is on demand",
+      "caution": "this narrows Plan14's forbidden zone further - not just the learner's wrong sentence, the explanation too. Check every place that builds voiceScript and every place that auto-plays an AI turn, including the session player reading the opening turn."
+    },
+    "status": "recorded only; no plan opened, no code touched"
   }
 }

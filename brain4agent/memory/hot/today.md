@@ -613,3 +613,31 @@ User: "vì Vyce là gateway api nên nó chậm 1 chút. k sao cả." ⇒ **khô
 ### 07:05+07 — Chụp toàn bộ tác phẩm trên production
 
 Ảnh 7 màn hình (dashboard, bài học, chi tiết bài kèm chặng học, từ yếu, tiến bộ, trò chơi, giọng nói) bằng tài khoản thật trên `https://listena.vercel.app`, lưu trong scratchpad. Dashboard hiện đúng dữ liệu thật: lời chào "CHÀO LÊ Ý", phiên AI đang dở để tiếp tục, mục tiêu tự học đã lưu ("bàn thân", 10 phút, chủ đề "chơi game"), Nghe 37% / Từ vựng 42%, và lịch sử "AI đánh giá lượt học" 50/100, 60/100, 60/100 — đều là điểm AI chấm thật.
+
+## 2026-09-20 07:20+07 — PHẢN HỒI USER SAU KHI XEM TÁC PHẨM (ghi não trước, chưa làm)
+
+User xem production xong và nêu **ba thiếu sót**. Yêu cầu tường minh: "giờ cập nhật não trước đi đã nhé" ⇒ **chỉ ghi, chưa triển khai**.
+
+### 1. Sinh bài tập bằng AI có QUÁ ÍT CHỦ ĐỀ, và chủ đề đang là mock-data
+
+Kiểm mã, đây là con số thật:
+
+- `src/server/ai/mission-templates.ts:4` — `MissionScenarioKey = "lost-luggage" | "cafe-order" | "mystery-clue"`: **đúng 3 chủ đề**, và nó là **union type biên dịch**, không phải dữ liệu. Thêm một chủ đề hôm nay = sửa mã + deploy.
+- `MISSION_TEMPLATES` (dòng 56) là `Record<MissionScenarioKey, MissionTemplate>` — cũng hard-code.
+- `src/app/learner/games/games-client.tsx:66` — `missionInfo` lặp lại **bản sao thứ hai** của cùng 3 chủ đề ở client (title, description, goal, icon, màu). Hai nơi phải sửa cùng lúc mới thêm được một chủ đề.
+
+**User muốn:** có **chức năng tạo chủ đề**, không phải danh sách cứng. Tức chủ đề phải là **dữ liệu** (tạo/sửa được lúc chạy), không phải kiểu TypeScript.
+
+Hệ quả kiến trúc cần cân nhắc khi làm: `isMissionScenarioKey` đang được dùng làm **rào kiểm** ở `next-action.ts:116,186` và planner — bỏ union type thì phải thay bằng kiểm tra theo dữ liệu, **không được** nới lỏng thành nhận chuỗi tự do từ client (client chọn được chủ đề thì nó tự điều khiển prompt của AI).
+
+### 2. Reasoning của AI KHÔNG NÊN nói ra và dịch sang tiếng Việt
+
+Hiện trạng: `src/core/voice/voice-script.ts:88` `prepareSpokenText(coachMessage, "vi")`, dòng 76 và 90 đẩy `{ role: "COACH", lang: "vi" }` vào `voiceScript` ⇒ **lời giải thích của Coach bị đọc to tự động** ở mỗi lượt AI.
+
+**User muốn:** bỏ phần đọc/dịch tự động đó, **thay bằng một nút "giải nghĩa"** ngay tại chỗ — học viên cần thì bấm, không thì thôi.
+
+Lưu ý khi làm: Plan14 đã có vùng cấm "không bao giờ đọc câu sai của học viên"; đây là **thu hẹp thêm một bước nữa** — kể cả lời giải thích cũng không tự phát. Phải kiểm lại mọi nơi dựng `voiceScript` và mọi nơi tự phát lượt AI (session player tự đọc lượt mở đầu).
+
+### Chưa làm gì
+
+Chưa mở plan, chưa đụng mã. Ba việc trên là **yêu cầu của user**, ưu tiên do user quyết khi quay lại.
