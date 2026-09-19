@@ -120,6 +120,14 @@ enum PersonalizedLessonStatus {
   ARCHIVED
 }
 
+enum LessonJourneyStep {
+  LEARN
+  PRACTICE
+  PLAY
+  LISTEN
+  TEST
+}
+
 enum AdaptiveGameMode {
   QUIZ
   MATCH
@@ -165,37 +173,38 @@ model User {
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
 
-  learnerProfile             LearnerProfile?
-  learnerMemory              LearnerMemory?
-  attempts                   Attempt[]
-  vocabularyMastery          VocabularyMastery[]
-  skillMastery               SkillMastery[]
-  flashcards                 Flashcard[]
-  reviewLogs                 ReviewLog[]
-  recommendations            Recommendation[]
-  aiInteractions             AIInteraction[]
-  learningSessions           LearningSession[]
+  learnerProfile               LearnerProfile?
+  learnerMemory                LearnerMemory?
+  attempts                     Attempt[]
+  vocabularyMastery            VocabularyMastery[]
+  skillMastery                 SkillMastery[]
+  flashcards                   Flashcard[]
+  reviewLogs                   ReviewLog[]
+  recommendations              Recommendation[]
+  aiInteractions               AIInteraction[]
+  learningSessions             LearningSession[]
   learningSessionStartRequests LearningSessionStartRequest[]
-  personalizedLessons        PersonalizedLesson[]
-  personalizedLessonAttempts PersonalizedLessonAttempt[]
-  adaptiveGameRuns           AdaptiveGameRun[]
-  adaptiveEvidence           AdaptiveEvidence[]
-  accountActionTokens        AccountActionToken[]
-  feedbackMessages           FeedbackMessage[]
-  lessonCreationRequests     LessonCreationRequest[]
-  coursesCreated             Course[]                    @relation("CourseCreator")
-  lessonsCreated             Lesson[]                    @relation("LessonCreator")
-  lessonsReviewed            Lesson[]                    @relation("LessonReviewer")
+  personalizedLessons          PersonalizedLesson[]
+  personalizedLessonAttempts   PersonalizedLessonAttempt[]
+  adaptiveGameRuns             AdaptiveGameRun[]
+  lessonJourney                LessonJourneyProgress[]
+  adaptiveEvidence             AdaptiveEvidence[]
+  accountActionTokens          AccountActionToken[]
+  feedbackMessages             FeedbackMessage[]
+  lessonCreationRequests       LessonCreationRequest[]
+  coursesCreated               Course[]                      @relation("CourseCreator")
+  lessonsCreated               Lesson[]                      @relation("LessonCreator")
+  lessonsReviewed              Lesson[]                      @relation("LessonReviewer")
 }
 
 model AccountActionToken {
-  id        String               @id @default(uuid())
-  userId    String
-  purpose   AccountActionPurpose
-  tokenHash String               @unique
-  expiresAt DateTime
+  id         String               @id @default(uuid())
+  userId     String
+  purpose    AccountActionPurpose
+  tokenHash  String               @unique
+  expiresAt  DateTime
   consumedAt DateTime?
-  createdAt DateTime             @default(now())
+  createdAt  DateTime             @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -297,13 +306,15 @@ model Lesson {
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
 
-  course           Course             @relation(fields: [courseId], references: [id])
-  createdBy        User               @relation("LessonCreator", fields: [createdById], references: [id])
-  reviewedBy       User?              @relation("LessonReviewer", fields: [reviewedById], references: [id])
+  course           Course                  @relation(fields: [courseId], references: [id])
+  createdBy        User                    @relation("LessonCreator", fields: [createdById], references: [id])
+  reviewedBy       User?                   @relation("LessonReviewer", fields: [reviewedById], references: [id])
   segments         LessonSegment[]
   vocabulary       LessonVocabulary[]
   exercises        Exercise[]
   attempts         Attempt[]
+  adaptiveGameRuns AdaptiveGameRun[]
+  journeyProgress  LessonJourneyProgress[]
   recommendations  Recommendation[]
   learningSessions LearningSession[]
   creationRequests LessonCreationRequest[]
@@ -379,28 +390,28 @@ model Exercise {
 }
 
 model Attempt {
-  id               String   @id @default(uuid())
-  userId           String
-  lessonId         String
-  exerciseId       String
-  submittedAnswer  String
-  normalizedAnswer String?
-  score            Float?
-  completionTimeMs Int?
-  replayCount      Int      @default(0)
-  hintCount        Int      @default(0)
-  playbackRate     Float    @default(1.0)
+  id                       String    @id @default(uuid())
+  userId                   String
+  lessonId                 String
+  exerciseId               String
+  submittedAnswer          String
+  normalizedAnswer         String?
+  score                    Float?
+  completionTimeMs         Int?
+  replayCount              Int       @default(0)
+  hintCount                Int       @default(0)
+  playbackRate             Float     @default(1.0)
   clientAttemptId          String?
   requestHash              String?
   resultJson               String?
-  enrichmentState          String   @default("NOT_REQUESTED")
+  enrichmentState          String    @default("NOT_REQUESTED")
   enrichmentLeaseId        String?
   enrichmentLeaseExpiresAt DateTime?
   // Plan13 P133 Answer Canvas: confidence bet 1..3 (NULL = no bet) and the
   // assist mode used ('FREE' | 'TILES' | 'SKELETON'). Additive, nullable.
   confidence               Int?
   assistMode               String?
-  createdAt                DateTime @default(now())
+  createdAt                DateTime  @default(now())
 
   user       User           @relation(fields: [userId], references: [id])
   lesson     Lesson         @relation(fields: [lessonId], references: [id])
@@ -524,7 +535,7 @@ model Recommendation {
 }
 
 model AIInteraction {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   userId             String?
   sessionId          String?
   turnId             String?
@@ -540,10 +551,10 @@ model AIInteraction {
   outputTokens       Int?
   estimatedCost      Float?
   fallbackReason     String?
-  schemaValid        Boolean  @default(true)
+  schemaValid        Boolean   @default(true)
   traceId            String?
-  success            Boolean  @default(true)
-  createdAt          DateTime @default(now())
+  success            Boolean   @default(true)
+  createdAt          DateTime  @default(now())
   // Plan13 (SPEC-P131 §1): explicit expiry of an ai_call_reservation lease.
   // NULL on rows written before the migration; readers fall back to
   // createdAt + AI_REQUEST_PENDING_LEASE_MS for those.
@@ -574,8 +585,8 @@ model LearningSession {
   completedAt   DateTime?
   updatedAt     DateTime              @updatedAt
 
-  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  lesson         Lesson?            @relation(fields: [lessonId], references: [id], onDelete: SetNull)
+  user           User                          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson         Lesson?                       @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   turns          LearningTurn[]
   evidence       LearningEvidence[]
   interventions  Intervention[]
@@ -591,16 +602,16 @@ model LearningSession {
 // session; the database-level check for that invariant lives in the additive
 // SQLite migration because Prisma schema syntax cannot express it.
 model LearningSessionStartRequest {
-  id            String                            @id @default(uuid())
-  userId        String
-  clientStartId String
-  payloadHash   String
-  status        LearningSessionStartRequestStatus @default(PENDING)
-  sessionId     String?
-  errorCode     String?
+  id                     String                            @id @default(uuid())
+  userId                 String
+  clientStartId          String
+  payloadHash            String
+  status                 LearningSessionStartRequestStatus @default(PENDING)
+  sessionId              String?
+  errorCode              String?
   errorRetryAfterSeconds Int?
-  createdAt     DateTime                          @default(now())
-  updatedAt     DateTime                          @updatedAt
+  createdAt              DateTime                          @default(now())
+  updatedAt              DateTime                          @updatedAt
 
   user    User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   // A committed replay record must retain its session reference. Deletion is
@@ -676,25 +687,25 @@ model Intervention {
 // Private persisted AI artifact. `contentJson` is safe for the owner-facing
 // player; `validatorJson` remains server-only and is never serialized to it.
 model PersonalizedLesson {
-  id                 String                   @id @default(uuid())
-  userId             String
-  status             PersonalizedLessonStatus @default(GENERATING)
-  targetSkill        String
-  cefrLevel          CefrLevel
-  difficulty         Float
-  title              String?
-  objectivesJson     String                   @default("[]")
-  contentJson        String?
-  validatorJson      String?
-  sourceSnapshotHash String
-  generationKey      String
-  provider           String?
-  model              String?
-  promptVersion      String
-  failureCode        String?
-  createdAt          DateTime                 @default(now())
-  readyAt            DateTime?
-  expiresAt          DateTime?
+  id                  String                   @id @default(uuid())
+  userId              String
+  status              PersonalizedLessonStatus @default(GENERATING)
+  targetSkill         String
+  cefrLevel           CefrLevel
+  difficulty          Float
+  title               String?
+  objectivesJson      String                   @default("[]")
+  contentJson         String?
+  validatorJson       String?
+  sourceSnapshotHash  String
+  generationKey       String
+  provider            String?
+  model               String?
+  promptVersion       String
+  failureCode         String?
+  createdAt           DateTime                 @default(now())
+  readyAt             DateTime?
+  expiresAt           DateTime?
   // Plan13 (SPEC-P131 §4): the async generation lease. Stale checks and the
   // personalization budget window read this mark, never createdAt, so a reused
   // FAILED row cannot be treated as expired the moment it is reclaimed.
@@ -706,8 +717,8 @@ model PersonalizedLesson {
   attempts   PersonalizedLessonAttempt[]
 
   @@unique([userId, generationKey])
-  @@index([userId, status, createdAt])
   @@unique([userId, targetSkill, sourceSnapshotHash])
+  @@index([userId, status, createdAt])
 }
 
 // Vocabulary remains globally normalized for SRS, while this join makes its
@@ -746,15 +757,15 @@ model PersonalizedLessonAttempt {
 
   lesson PersonalizedLesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@unique([lessonId, clientAttemptId])
-  @@index([userId, lessonId, createdAt])
   // Plan13 (SPEC-P131 §4, PL2): migration 20260917230200_plan13_ai_reliability
   // also creates the partial unique index
   //   "PersonalizedLessonAttempt_one_graded_per_exercise"
   //   ON ("lessonId", "exerciseId", "userId") WHERE "score" IS NOT NULL
   // Prisma cannot express a partial index, so it lives only in SQL. One graded
   // attempt per exercise per learner: a resubmission replays the stored result.
+
+  @@unique([lessonId, clientAttemptId])
+  @@index([userId, lessonId, createdAt])
 }
 
 // A run is issued by the server and owns every answer key. The browser sees
@@ -762,6 +773,10 @@ model PersonalizedLessonAttempt {
 model AdaptiveGameRun {
   id                    String                @id @default(uuid())
   userId                String
+  // Plan22: set when the run was started from a lesson journey, so its words
+  // come from that lesson and finishing it can complete that lesson's step.
+  // Null for the free-play runs on /learner/games.
+  lessonId              String?
   mode                  AdaptiveGameMode
   status                AdaptiveGameRunStatus @default(ACTIVE)
   targetSkill           String
@@ -772,9 +787,11 @@ model AdaptiveGameRun {
   expiresAt             DateTime
 
   user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson?             @relation(fields: [lessonId], references: [id], onDelete: SetNull)
   rounds AdaptiveGameRound[]
 
   @@index([userId, status, startedAt])
+  @@index([userId, lessonId, status])
 }
 
 model AdaptiveGameRound {
@@ -801,6 +818,25 @@ model AdaptiveGameRound {
 
 // This is separate from LearningEvidence because a game has no LearningSession
 // foreign key. It is the only game result allowed to drive future adaptation.
+/// Plan22 SPEC-P221 — which steps of a lesson's journey a learner has finished.
+/// One row per (learner, lesson, step); the row's existence IS the completion.
+model LessonJourneyProgress {
+  id          String            @id @default(uuid())
+  userId      String
+  lessonId    String
+  step        LessonJourneyStep
+  completedAt DateTime          @default(now())
+  /// What satisfied the step: an Attempt id, an AdaptiveGameRun id, or null for
+  /// LEARN, which is the learner saying they have read the words.
+  evidenceRef String?
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId, step])
+  @@index([userId, lessonId])
+}
+
 model AdaptiveEvidence {
   id               String   @id @default(uuid())
   userId           String
@@ -819,9 +855,9 @@ model AdaptiveEvidence {
   user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   vocabularyItem VocabularyItem? @relation(fields: [vocabularyItemId], references: [id], onDelete: SetNull)
 
+  @@unique([sourceKind, sourceId, skillKey])
   @@index([userId, skillKey, createdAt])
   @@index([userId, vocabularyItemId, createdAt])
-  @@unique([sourceKind, sourceId, skillKey])
 }
 
 model LessonCreationRequest {
@@ -843,4 +879,3 @@ model LessonCreationRequest {
   @@unique([userId, clientRequestId])
   @@index([userId, status, createdAt])
 }
-

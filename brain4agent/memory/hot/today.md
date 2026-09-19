@@ -557,3 +557,27 @@ User: "ừ thế xử lý nó đi".
 **BÀI HỌC CHUNG, đáng nhớ hơn cả bản vá:** mọi trường tự do do model điền đều là **lời khẳng định chưa kiểm chứng**. Muốn đưa lên màn hình cho người dùng thì phải đối chiếu với thứ mình biết chắc — ở đây là chính tin nhắn của học viên.
 
 **Gates:** type-check 0; eslint 0/0; vitest **135 file / 887 test** (trước 134/869); build PASS; Playwright **46/46**. Deploy `listena-iqv78lrr8` READY. Ảnh chụp lại: hai ví dụ nay đều là câu thật của học viên, `lose` được tô đúng chỗ, dòng mô tả bịa đã biến mất.
+
+## 2026-09-20 03:00–05:00+07 — Plan22: Vocab Master — chặng học 5 bước + combo do máy chủ tính (root, auto-mode)
+
+User: "làm cái vocab master đi. đợi gì nữa?" ⇒ **duyệt migration tường minh**. Đây là kế hoạch ĐẦU TIÊN từ Plan13 có đổi schema.
+
+**Khảo sát trước khi thiết kế, và nó cắt một nửa việc:** `AdaptiveGameRound` **ĐÃ** lưu `correct` + `score` theo `position` ⇒ **combo suy ra được, KHÔNG cần cột nào**. Thứ thiếu không phải dữ liệu mà là máy chủ chưa bao giờ **báo** con số đó ra, còn client thì tự bịa `Math.max(10, round(result.score * 20))` kèm comment "display-only" — nhưng học viên không đọc comment, họ đọc con số.
+
+**QUYẾT ĐỊNH NỀN — suy ra, đừng ghi hai lần:** cách hiển nhiên là ghi một dòng "đã xong bước X" mỗi khi học viên nộp bài/chơi xong. **ĐÃ LOẠI**: tạo bản sao thứ hai của sự thật, mà bản sao nào cũng trôi (ghi hỏng, deploy giữa chừng, dọn dữ liệu) rồi sẽ có người phải viết script đối soát. Đối chiếu từng bước với dữ liệu đã có thì **4/5 bước suy ra được**: PRACTICE từ `Attempt`, PLAY/LISTEN từ lượt chơi COMPLETED gắn bài, TEST từ điểm mọi exercise. Chỉ `LEARN` ("học viên đã đọc các từ") là không nơi nào ghi ⇒ **bảng mới tồn tại vì ĐÚNG MỘT bước**, và hành trình không thể lệch khỏi bằng chứng vì không có bản sao nào để lệch.
+
+**Migration `20260920030000_plan22_lesson_journey` (viết TAY, cộng thêm hoàn toàn):** bảng `LessonJourneyProgress` (unique `(userId, lessonId, step)` — chính khoá này chống ghi trùng, KHÔNG dùng kiểm-rồi-ghi vì đó là cuộc đua) + cột **nullable** `AdaptiveGameRun.lessonId` + 2 index. `dev.db` **KHÔNG bị áp** (đúng luật); E2E tự có schema qua `migrate deploy` trong globalSetup.
+
+**Ngưỡng `LESSON_TEST_PASS_SCORE = 80`, không phải 100:** app tham khảo lặp tới 100% nhưng ListenAI chấm văn tự do có điểm thành phần nên 100% ở mọi câu là cổng **không bao giờ đóng được** — hành trình sẽ nói dối về chính nó. Và dùng **điểm tốt nhất** mỗi exercise, không phải lần gần nhất: làm lại tệ hơn không được xoá thành tích đã đạt.
+
+**Game gắn bài — thay đổi giữ ở ĐÚNG MỘT chỗ:** `AdaptiveGameRun` là hệ con đã kiểm rất kỹ (seed tất định, `selectionSnapshotHash`, batch nguyên tử) nên chỉ đụng **kho từ ứng viên**: có `lessonId` thì lọc theo bài và **không** lấy từ riêng tư. Mọi thứ phía sau không đổi một dòng. Trang `/learner/games?lesson=&mode=` kiểm id **trên máy chủ**; id lạ bị bỏ qua im lặng thành lượt chơi tự do.
+
+**Combo đọc NGOÀI batch nguyên tử:** có thể nhét vào trong để đỡ một truy vấn — **đã loại**. Batch là ranh giới bền vững của câu trả lời; combo chỉ là cách nhìn vào thứ nó vừa ghi. Đổi rủi ro thật lấy một lần đọc là vụ trao đổi tồi.
+
+**LEARN phải tốn đúng công sức nó tuyên bố:** đây là bước duy nhất không có bằng chứng thật đứng sau, nó tin lời học viên. Nên chỉ nút ở **thẻ từ CUỐI CÙNG** mới ghi; mở ra đóng ngay không tính. Và **CẤM** client gửi tên bước lên `POST` — nếu client chọn được bước thì nó tự cấp cho mình 100%.
+
+**Bài học lặp lại lần thứ BA:** heredoc Bash nhiều file tiếng Việt dài lại vỡ parse (đã ghi ở Plan17 và Plan21). Dùng Write tool.
+
+**Gates:** type-check 0; eslint 0/0; vitest **138 file / 921 test** (trước 135/887); build PASS có `/api/learner/lessons/[lessonId]/journey`; Playwright **50/50** (trước 46/46). `prisma migrate status`: 11 migration, cái mới **đang chờ** trên dev.db (cố ý).
+
+**CÒN MỞ — thứ tự BẮT BUỘC:** áp migration lên Turso production **TRƯỚC**, rồi mới deploy. Deploy trước sẽ làm hỏng production vì mã mới truy vấn bảng/cột chưa tồn tại.

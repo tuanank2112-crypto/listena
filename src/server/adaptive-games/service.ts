@@ -27,6 +27,7 @@ import {
   nextVocabularyMastery,
   processReview,
 } from "./mastery";
+import { summariseRunProgress, type RunProgress } from "@/core/games/run-progress";
 import { skillMasteryPerformance } from "@/core/learner-model/skill-mastery";
 import { createSeededRandom, seededShuffle } from "./seeded-random";
 import {
@@ -98,7 +99,7 @@ export async function createAdaptiveGameRun(
   // The run id is minted before selection so the pool shuffle and every
   // round's distractors are reproducible from the persisted run (Plan13 G1).
   const runId = crypto.randomUUID();
-  const snapshot = await loadAdaptiveCandidateSnapshot(userId, targetSkill, runId);
+  const snapshot = await loadAdaptiveCandidateSnapshot(userId, targetSkill, runId, input.lessonId);
   const selected = selectAdaptiveGameCandidates(snapshot.candidates, now, ADAPTIVE_GAME_MAX_ROUNDS);
 
   if (selected.length < ADAPTIVE_GAME_MIN_ROUNDS) {
@@ -145,6 +146,7 @@ export async function createAdaptiveGameRun(
   return createAdaptiveGameRunWithAtomicBatch({
     runId,
     userId,
+    lessonId: input.lessonId ?? null,
     mode: input.mode,
     targetSkill,
     difficulty: snapshot.difficulty,
@@ -159,7 +161,11 @@ export async function submitAdaptiveGameAnswer(
   input: SubmitAdaptiveGameAnswerInput,
 ): Promise<PublicAdaptiveGameAnswerResult> {
   try {
-    return await submitAdaptiveGameAnswerWithAtomicBatch(userId, runId, input, new Date());
+    const result = await submitAdaptiveGameAnswerWithAtomicBatch(userId, runId, input, new Date());
+    // Plan22 SPEC-P222: read the run back and summarise it here, outside the
+    // atomic batch. That batch is the durability boundary and stays untouched;
+    // the combo is a view of what it wrote, not part of writing it.
+    return { ...result, progress: await loadRunProgress(userId, runId) };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
       // A client answer id can only belong to one round. The atomic batch
@@ -179,6 +185,7 @@ export async function submitAdaptiveGameAnswer(
 async function createAdaptiveGameRunWithAtomicBatch(input: {
   runId: string;
   userId: string;
+  lessonId: string | null;
   mode: CreateAdaptiveGameRunInput["mode"];
   targetSkill: string;
   difficulty: number;
@@ -198,6 +205,7 @@ async function createAdaptiveGameRunWithAtomicBatch(input: {
     atomicGameRunInsert({
       id: runId,
       userId: input.userId,
+      lessonId: input.lessonId,
       mode: input.mode,
       targetSkill: input.targetSkill,
       difficulty: input.difficulty,
@@ -409,6 +417,8 @@ async function submitAdaptiveGameAnswerWithAtomicBatch(
       feedbackVi,
       idempotent: false,
       ...(nextRound ? { nextRound } : {}),
+      // Replaced by the caller; see submitAdaptiveGameAnswer.
+      progress: summariseRunProgress([]),
     };
   }
 
@@ -453,6 +463,7 @@ type AtomicRoundCommitFence = {
 function atomicGameRunInsert(input: {
   id: string;
   userId: string;
+  lessonId: string | null;
   mode: CreateAdaptiveGameRunInput["mode"];
   targetSkill: string;
   difficulty: number;
@@ -469,8 +480,8 @@ function atomicGameRunInsert(input: {
   );
   return {
     sql: `INSERT INTO "AdaptiveGameRun"
-            ("id", "userId", "mode", "status", "targetSkill", "difficulty", "selectionSnapshotHash", "startedAt", "expiresAt")
-          SELECT ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?
+            ("id", "userId", "lessonId", "mode", "status", "targetSkill", "difficulty", "selectionSnapshotHash", "startedAt", "expiresAt")
+          SELECT ?, ?, ?, ?, 'ACTIVE', ?, ?, ?, ?, ?
           WHERE NOT EXISTS (
             SELECT 1 FROM "AdaptiveGameRun"
             WHERE "userId" = ? AND "startedAt" > ?
@@ -482,6 +493,7 @@ function atomicGameRunInsert(input: {
     values: [
       input.id,
       input.userId,
+      input.lessonId,
       input.mode,
       input.targetSkill,
       input.difficulty,
@@ -872,6 +884,18 @@ async function assertGameRunCreationRateLimit(
   );
 }
 
+/**
+ * The run's own rounds, summarised for display. Scoped to the caller so one
+ * learner can never read another's game.
+ */
+async function loadRunProgress(userId: string, runId: string): Promise<RunProgress> {
+  const rounds = await prisma.adaptiveGameRound.findMany({
+    where: { runId, run: { userId } },
+    select: { position: true, correct: true, score: true },
+  });
+  return summariseRunProgress(rounds);
+}
+
 function persistedAnswerResult(
   round: AnswerableRoundRow,
   idempotent: boolean,
@@ -881,6 +905,8 @@ function persistedAnswerResult(
     score: round.score ?? 0,
     feedbackVi: round.feedbackVi ?? "Kết quả đã được lưu.",
     idempotent,
+    // Replaced by the caller, which reads the whole run once the write settled.
+    progress: summariseRunProgress([]),
   };
 }
 
@@ -896,6 +922,11 @@ async function loadAdaptiveCandidateSnapshot(
   userId: string,
   targetSkill: "vocabulary" | "spelling",
   poolSeed: string,
+  /**
+   * Plan22: when present, the pool is this lesson's words and nothing else —
+   * a run that claims to be about a lesson must be about that lesson.
+   */
+  lessonId?: string,
 ) {
   const [profile, skillMasteries, curriculumVocabulary, privateVocabulary] = await Promise.all([
     prisma.learnerProfile.findUnique({
@@ -908,7 +939,7 @@ async function loadAdaptiveCandidateSnapshot(
     }),
     prisma.vocabularyItem.findMany({
       where: {
-        lessons: { some: { lesson: { status: "PUBLISHED" } } },
+        lessons: { some: { lessonId, lesson: { status: "PUBLISHED" } } },
       },
       orderBy: { lemma: "asc" },
       take: CANDIDATE_QUERY_LIMIT,
@@ -926,7 +957,9 @@ async function loadAdaptiveCandidateSnapshot(
     // Keep a bounded reserved slot for private vocabulary. A broad OR ordered
     // by lemma would let a large global curriculum crowd out the learner's
     // READY artifact vocabulary before it ever reaches the adaptive selector.
-    prisma.vocabularyItem.findMany({
+    // A lesson-scoped run takes no private words: the learner asked to play
+    // this lesson, so nothing from outside it may appear.
+    lessonId ? [] : prisma.vocabularyItem.findMany({
       where: {
         personalizedLessons: {
           some: { personalizedLesson: { userId, status: "READY" } },

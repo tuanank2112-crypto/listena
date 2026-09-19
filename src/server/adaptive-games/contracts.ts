@@ -1,11 +1,20 @@
 import { z } from "zod";
+import type { RunProgress } from "@/core/games/run-progress";
 import { normalizeText } from "@/core/text/normalize";
 
 export const AdaptiveGameModeSchema = z.enum(["QUIZ", "MATCH", "SPELL"]);
 export type AdaptiveGameModeInput = z.infer<typeof AdaptiveGameModeSchema>;
 
 export const CreateAdaptiveGameRunSchema = z
-  .object({ mode: AdaptiveGameModeSchema })
+  .object({
+    mode: AdaptiveGameModeSchema,
+    /**
+     * Plan22: start this run from a lesson's journey. The words then come from
+     * that lesson only, and completing the run closes that lesson's step.
+     * Absent for the free-play runs on /learner/games.
+     */
+    lessonId: z.string().uuid().optional(),
+  })
   .strict();
 export type CreateAdaptiveGameRunInput = z.infer<typeof CreateAdaptiveGameRunSchema>;
 
@@ -115,6 +124,12 @@ export interface PublicAdaptiveGameAnswerResult {
   feedbackVi: string;
   idempotent: boolean;
   nextRound?: PublicAdaptiveGameRound;
+  /**
+   * Plan22: the run so far, computed by the server from its own stored rounds.
+   * The client displays these numbers and never derives them — a combo the
+   * browser counted would be a score the browser awarded.
+   */
+  progress: RunProgress;
 }
 
 export function parsePublicAdaptiveGameRound(value: string): PublicAdaptiveGameRoundPayload {

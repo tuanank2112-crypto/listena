@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { cleanVocabularyMeaning } from "@/core/text/vocabulary";
+import { LessonJourneyBand } from "@/features/lesson-journey/lesson-journey-band";
 import { speakCurated } from "@/core/tts/speech";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
 import { AnswerCanvas } from "@/features/answer-canvas/answer-canvas";
@@ -102,6 +103,8 @@ export function LessonDetailClient({
 }) {
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  // Where the journey's PRACTICE and TEST steps scroll to.
+  const exercisesRef = useRef<HTMLDivElement | null>(null);
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -326,7 +329,19 @@ export function LessonDetailClient({
         <StartSessionButton lessonId={lesson.id} mode="LESSON_COACH" goal={`Thực hành chủ động nội dung ${lesson.title}`} label="Học cùng AI" className="shrink-0 [&_button]:w-full" />
       </div>
 
-      <div className="mb-5 flex items-center gap-3">
+      <LessonJourneyBand
+        lessonId={lesson.id}
+        words={lesson.vocabulary.map(({ vocabularyItem }) => ({
+          id: vocabularyItem.id,
+          displayText: vocabularyItem.displayText,
+          meaningVi: vocabularyItem.meaningVi,
+          ipa: vocabularyItem.ipa ?? null,
+          exampleSentence: vocabularyItem.exampleSentence ?? null,
+        }))}
+        onGoToExercises={() => exercisesRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+      />
+
+      <div ref={exercisesRef} className="mb-5 mt-6 flex items-center gap-3">
         <div className="h-2 flex-1 overflow-hidden rounded-full bg-[#ded8cc]"><motion.div className="h-full rounded-full bg-[#176b55]" animate={{ width: `${progress}%` }} /></div>
         <span className="text-xs font-black text-[#77817b]">{index + 1}/{lesson.exercises.length}</span>
       </div>

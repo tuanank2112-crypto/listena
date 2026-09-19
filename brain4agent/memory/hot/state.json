@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan21_shipped_and_verified_on_production__live_ai_proven",
-  "active_plan": "planning/21_2026-09-19_recurring-mistakes/plan.md",
-  "checkpoint": "planning/21_2026-09-19_recurring-mistakes/plan.md",
+  "system_status": "plan22_vocab_master_local_accepted__migration_pending_on_production",
+  "active_plan": "planning/22_2026-09-20_vocab-master-journey/plan.md",
+  "checkpoint": "planning/22_2026-09-20_vocab-master-journey/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -746,5 +746,17 @@
     "production_proof": "https://listena-6fesmywcp-n-listen-ai.vercel.app READY; signed in as the real learner, GET /api/learner/mistakes returned the 'tense' correction Vyce made an hour earlier, labelled 'Thi cua dong tu', with the learner's own wrong word and the Coach's Vietnamese explanation",
     "quote_fix": "detectedError.actual is a free string the model fills however it likes - production produced a genuine fragment ('lose'), two fragments packed into one string ('have lost / two bag'), and plain prose ('present tense with incorrect verb form'). The panel now quotes the learner's own message from the LEARNER turn the correction answered, and actual only decides what to underline, and only where it genuinely occurs. actual is never displayed.",
     "grammar_family": "added after live data returned a bare 'grammar'; placed last so precise families win"
+  },
+  "plan22_vocab_master": {
+    "date": "2026-09-20",
+    "type": "MINOR with full SPEC set, FIRST schema change since Plan13",
+    "migration": "20260920030000_plan22_lesson_journey - hand-written, purely additive: LessonJourneyProgress table + nullable AdaptiveGameRun.lessonId + 2 indexes. dev.db deliberately NOT migrated.",
+    "deploy_order": "MIGRATION FIRST, THEN DEPLOY. Deploying first breaks production: the new code queries a table and a column that do not exist yet.",
+    "core_decision": "derive, do not double-write. 4 of 5 steps are derived at read time from evidence already stored (Attempt, completed lesson-scoped runs, exercise scores); only LEARN is persisted because nothing else records that a learner read the words. The journey therefore cannot drift from its evidence - there is no second copy.",
+    "combo_needed_no_migration": "AdaptiveGameRound already stores correct+score per position; the client was inventing points with Math.max(10, round(score*20)). Now it renders the server's own total.",
+    "test_threshold": "LESSON_TEST_PASS_SCORE = 80, not the reference app's 100: ListenAI grades free text with partial credit, so 100 on every exercise is a gate that can never close.",
+    "unit": "921 across 138 files",
+    "e2e": "50/50",
+    "committed": false
   }
 }

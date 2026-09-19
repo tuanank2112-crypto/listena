@@ -25,6 +25,7 @@ import { StartSessionButton } from "@/features/learning-session/start-session-bu
 import { speakCurated } from "@/core/tts/speech";
 import { HiddenAudioButton } from "@/features/voice/hidden-audio-button";
 import { SpeakButton } from "@/features/voice/speak-button";
+import { comboLabelVi } from "@/core/games/run-progress";
 
 /**
  * Plan20 SPEC-P203 — dictation speeds at the round itself. A learner who cannot
@@ -45,6 +46,7 @@ import {
   type PublicGameAnswerResult,
   type PublicGameRound,
   type PublicGameRun,
+  type RunProgressView,
   type UiGameMode,
 } from "@/features/adaptive-games/client-contract";
 
@@ -100,11 +102,22 @@ async function readJson(response: Response) {
   return await response.json().catch(() => null) as unknown;
 }
 
-export function GamesClient() {
+export function GamesClient({ lessonId, lessonTitle, autoMode }: {
+  /** Set when the learner arrived from a lesson journey; scopes the run's words. */
+  lessonId?: string;
+  lessonTitle?: string;
+  /** Start this mode straight away, so the journey's button is one click. */
+  autoMode?: UiGameMode;
+} = {}) {
   const [mode, setMode] = useState<UiGameMode | null>(null);
   const [run, setRun] = useState<PublicGameRun | null>(null);
   const [roundIndex, setRoundIndex] = useState(0);
-  const [score, setScore] = useState(0);
+  /**
+   * Plan22 SPEC-P222: the run as the server counts it — points, streak, best
+   * streak. The client used to invent points from `result.score * 20`; now it
+   * renders the server's own total, so what a learner sees is what was scored.
+   */
+  const [progress, setProgress] = useState<RunProgressView | null>(null);
   const [lives, setLives] = useState(3);
   const [timeLeft, setTimeLeft] = useState(60);
   const [feedback, setFeedback] = useState<"correct" | "wrong" | null>(null);
@@ -156,12 +169,12 @@ export function GamesClient() {
   }, [currentRound?.id, quizWord, voicePreferences.autoSpeak, voicePreferences.rate]);
 
   function resetLocalState() {
+    setProgress(null);
     if (advanceTimerRef.current !== null) {
       window.clearTimeout(advanceTimerRef.current);
       advanceTimerRef.current = null;
     }
     setRoundIndex(0);
-    setScore(0);
     setLives(3);
     setFeedback(null);
     setFeedbackMessage("");
@@ -193,7 +206,7 @@ export function GamesClient() {
       const response = await fetch("/api/game-runs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(createGameRunRequest(nextMode)),
+        body: JSON.stringify(createGameRunRequest(nextMode, lessonId)),
       });
       const payload = await readJson(response) as { run?: PublicGameRun } | null;
       if (!response.ok || !payload?.run?.id || !Array.isArray(payload.run.rounds)) {
@@ -273,15 +286,25 @@ export function GamesClient() {
     void sendPendingAnswer();
   }
 
+  // Plan22: the journey's button should be one click, not two. Guarded by a ref
+  // so a re-render never starts a second run, and never retried on failure —
+  // the learner then picks a mode themselves with the error in front of them.
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (!autoMode || autoStartedRef.current) return;
+    autoStartedRef.current = true;
+    void startGame(autoMode);
+    // Only ever on the first render that carries a mode.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoMode]);
+
+  const combo = comboLabelVi(progress?.streak ?? 0);
+
   function settleServerResult(result: PublicGameAnswerResult) {
     setFeedback(result.correct ? "correct" : "wrong");
     setFeedbackMessage(result.feedbackVi);
-    if (result.correct) {
-      // This is display-only; the server's score/evidence is authoritative.
-      setScore((value) => value + Math.max(10, Math.round(result.score * 20)));
-    } else {
-      setLives((value) => Math.max(0, value - 1));
-    }
+    if (result.progress) setProgress(result.progress);
+    if (!result.correct) setLives((value) => Math.max(0, value - 1));
 
     advanceTimerRef.current = window.setTimeout(() => {
       setFeedback(null);
@@ -357,6 +380,11 @@ export function GamesClient() {
           </section>
 
           <section className="mt-10 border-t border-[#ded8cc] pt-8">
+            {lessonTitle && (
+              <p className="mb-4 rounded-2xl bg-[#dff2e8] px-4 py-3 text-sm font-black text-[#176b55]">
+                Đang chơi với từ của bài: {lessonTitle}
+              </p>
+            )}
             <div className="mb-4">
               <p className="text-xs font-black uppercase tracking-[.16em] text-[#d89a2b]">Quick comeback</p>
               <h2 className="mt-1 text-2xl font-black tracking-[-.04em]">Luyện phản xạ trong 5 phút</h2>
@@ -386,7 +414,7 @@ export function GamesClient() {
           <motion.div initial={{ scale: .94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="paper-card w-full rounded-[32px] p-7 text-center sm:p-9">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-[#f7d779] text-[#18332d]"><Trophy className="h-8 w-8" /></div>
             <p className="mt-6 text-xs font-black uppercase tracking-[.2em] text-[#ef765d]">{gameEndedByRounds ? "Hoàn thành" : "Tạm dừng"}</p>
-            <h1 className="mt-2 text-5xl font-black tracking-[-.06em]">{score}</h1>
+            <h1 className="mt-2 text-5xl font-black tracking-[-.06em]">{progress?.totalScore ?? 0}</h1>
             <p className="mt-1 text-sm font-bold text-[#758078]">điểm · {lives} tim còn lại</p>
             {!gameEndedByRounds && <p className="mt-3 text-sm font-bold text-[#a6493c]">Lượt còn lại sẽ hết hạn an toàn; bạn có thể tạo lượt mới khi sẵn sàng.</p>}
             <div className="mt-7 grid grid-cols-2 gap-3">
@@ -409,7 +437,10 @@ export function GamesClient() {
 
           <div className="mb-4 flex items-center justify-between rounded-2xl bg-[#18332d] px-4 py-3 text-white">
             <span className="flex items-center gap-2 text-sm font-black"><Clock3 className="h-4 w-4 text-[#f7d779]" /> {timeLeft}s</span>
-            <span className="text-sm font-black">{score} điểm</span>
+            <span className="flex items-center gap-2 text-sm font-black">
+              {combo && <span className="rounded-full bg-[#f7d779] px-2 py-0.5 text-xs font-black text-[#18332d]">{combo}</span>}
+              {progress?.totalScore ?? 0} điểm
+            </span>
             <span className="flex gap-1">{[0, 1, 2].map((heart) => <Heart key={heart} className={`h-4 w-4 ${heart < lives ? "fill-[#ef765d] text-[#ef765d]" : "text-white/25"}`} />)}</span>
           </div>
 

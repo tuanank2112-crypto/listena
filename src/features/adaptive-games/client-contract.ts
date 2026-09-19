@@ -45,12 +45,23 @@ export interface PublicGameRun {
   rounds: PublicGameRound[];
 }
 
+export interface RunProgressView {
+  answered: number;
+  total: number;
+  correct: number;
+  streak: number;
+  bestStreak: number;
+  totalScore: number;
+}
+
 export interface PublicGameAnswerResult {
   correct: boolean;
   score: number;
   feedbackVi: string;
   idempotent: boolean;
   nextRound?: PublicGameRound;
+  /** Plan22: counted by the server. The client only renders it. */
+  progress?: RunProgressView;
 }
 
 const modeByUi: Record<UiGameMode, AdaptiveGameMode> = {
@@ -59,8 +70,11 @@ const modeByUi: Record<UiGameMode, AdaptiveGameMode> = {
   spell: "SPELL",
 };
 
-export function createGameRunRequest(mode: UiGameMode) {
-  return { mode: modeByUi[mode] };
+export function createGameRunRequest(mode: UiGameMode, lessonId?: string) {
+  // Plan22: a run started from a lesson journey carries the lesson, so the
+  // server draws its words from that lesson and completing the run closes the
+  // lesson's step. Free play sends no lesson.
+  return lessonId ? { mode: modeByUi[mode], lessonId } : { mode: modeByUi[mode] };
 }
 
 export function createGameAnswerRequest(input: {
