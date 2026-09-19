@@ -188,6 +188,7 @@ model User {
   personalizedLessonAttempts   PersonalizedLessonAttempt[]
   adaptiveGameRuns             AdaptiveGameRun[]
   lessonJourney                LessonJourneyProgress[]
+  missionScenarios             LearnerMissionScenario[]
   adaptiveEvidence             AdaptiveEvidence[]
   accountActionTokens          AccountActionToken[]
   feedbackMessages             FeedbackMessage[]
@@ -820,6 +821,36 @@ model AdaptiveGameRound {
 // foreign key. It is the only game result allowed to drive future adaptation.
 /// Plan22 SPEC-P221 — which steps of a lesson's journey a learner has finished.
 /// One row per (learner, lesson, step); the row's existence IS the completion.
+/// Plan23 SPEC-P232 — a mission scenario the learner asked for, written by the
+/// AI from their own words and grounded in their level.
+///
+/// The three built-in scenarios stay in code as `MISSION_TEMPLATES`; these are
+/// the ones a learner creates, and they belong to that learner alone.
+model LearnerMissionScenario {
+  id                   String    @id @default(uuid())
+  userId               String
+  /// What the learner typed to ask for it, kept so they can see where it came from.
+  sourcePrompt         String
+  title                String
+  npcName              String
+  npcRole              String
+  learnerGoal          String
+  openingLine          String
+  firstPrompt          String
+  /// JSON string arrays, the same shape the in-code templates use.
+  targetVocabularyJson String    @default("[]")
+  targetGrammarJson    String    @default("[]")
+  maxTurns             Int       @default(7)
+  /// Soft delete: a scenario a session already used must stay resolvable.
+  archivedAt           DateTime?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, archivedAt, createdAt])
+}
+
 model LessonJourneyProgress {
   id          String            @id @default(uuid())
   userId      String

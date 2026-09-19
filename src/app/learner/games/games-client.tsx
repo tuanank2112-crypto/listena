@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { StartSessionButton } from "@/features/learning-session/start-session-button";
+import { MyScenarios } from "@/features/mission-scenarios/my-scenarios";
 import { speakCurated } from "@/core/tts/speech";
 import { HiddenAudioButton } from "@/features/voice/hidden-audio-button";
 import { SpeakButton } from "@/features/voice/speak-button";
@@ -378,6 +379,8 @@ export function GamesClient({ lessonId, lessonTitle, autoMode }: {
               ))}
             </div>
           </section>
+
+          <MyScenarios />
 
           <section className="mt-10 border-t border-[#ded8cc] pt-8">
             {lessonTitle && (

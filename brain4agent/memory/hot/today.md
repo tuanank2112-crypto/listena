@@ -641,3 +641,37 @@ Lưu ý khi làm: Plan14 đã có vùng cấm "không bao giờ đọc câu sai 
 ### Chưa làm gì
 
 Chưa mở plan, chưa đụng mã. Ba việc trên là **yêu cầu của user**, ưu tiên do user quyết khi quay lại.
+
+## 2026-09-20 07:40–09:30+07 — Plan23: Chủ đề của học viên + Giải nghĩa khi được hỏi (root, auto-mode)
+
+User: "bạn cứ sáng tạo những gì bạn muốn để phù hợp ứng dụng học thuật... tôi k muốn nó bị truyền thống hoá khi có sự kết hợp của a.i".
+
+**Nguyên tắc nền rút ra:** hai thiếu sót user nêu là **cùng một lỗi** — sản phẩm đang **quyết thay** học viên. Quyết họ chỉ được tập 3 tình huống; quyết họ cần nghe giải thích tiếng Việt mỗi lượt. Một app học truyền thống làm đúng hai việc đó. Cả hai phần Plan23 đều là **trả quyền quyết định về cho học viên**.
+
+### Phần 1 — Giải nghĩa khi được hỏi
+
+`voice-script.ts` bỏ hẳn khối đẩy dòng `COACH` tiếng Việt. Giữ `RECAST` **có chủ đích**: nó là **mẫu để bắt chước**, không phải lời giảng. Màn hội thoại: khối Coach lui sau nút **"Giải nghĩa"** (đóng mặc định), bên trong có nút loa — mở là một hành động, nghe là hành động khác.
+
+### Phần 2 — Chủ đề do học viên tạo, AI viết
+
+**ĐÃ LOẠI cách "đúng kiểu kỹ sư"**: màn CRUD chủ đề (nhập tiêu đề, nhân vật, câu mở đầu). Học viên A1-A2 không biết một tình huống luyện nói cần trường gì; đổi danh sách cứng lấy cái form vẫn là truyền thống, chỉ thêm việc. Chọn: họ viết **một câu tiếng Việt**, AI dựng tình huống.
+
+**Chi tiết đắt tìm được khi đọc mã:** học viên **đã** khai `preferredTopics` ở dashboard (tài khoản thật ghi "chơi game") mà **không nơi nào dùng**. Sản phẩm hỏi rồi bỏ qua câu trả lời. Nay sở thích + lỗi hay lặp (Plan21) + từ hay sai (Plan20) thành ngữ cảnh cho AI viết.
+
+**Model chỉ được quyết phần hư cấu.** `maxTurns` do máy chủ đặt — tình huống tự đặt ngân sách lượt có thể tiêu hết buổi học mà học viên đã chọn thời lượng. `additionalProperties:false` + validate zod lại sau khi provider trả về.
+
+**QUYẾT ĐỊNH KIẾN TRÚC QUAN TRỌNG — khoá `custom-<uuid>`:** `isMissionScenarioKey` là rào kiểm ở **6 file**; biến nó thành truy vấn DB thì planner/repository/session service đều phải thành async — sửa lớn, rủi ro cao, cho một tính năng nhỏ. Nên chủ đề riêng nhận ra được bằng **HÌNH DẠNG** (`isKnownScenarioKey`, đồng bộ, không DB), còn **quyền sở hữu kiểm ĐÚNG MỘT CHỖ**: `loadCustomMissionTemplate(userId, key)`. **VÙNG CẤM: rào kiểm hình dạng KHÔNG PHẢI kiểm quyền** — khoá của người khác nạp ra `null`, session service trả `404` y như khoá bịa (đã ghim E2E).
+
+**Orchestrator KHÔNG được đụng DB:** `tutor-orchestrator.ts` hiện không import Prisma, và chính ranh giới đó cho phép test nó với provider giả không cần database. Nên caller nạp template rồi **truyền vào** như `lessonContext`. Hệ quả phải xử: `planDailyQuest` chỉ nhận khoá built-in ⇒ tách rõ đường Daily Quest và đường chủ đề riêng thay vì dùng chung biến `plannedScenarioKey`.
+
+**Xoá của người khác trả 404 chứ không 403**, cố ý: 403 sẽ xác nhận chủ đề đó tồn tại.
+
+**Migration `20260920080000_plan23_learner_mission_scenarios`**: một bảng mới, cộng thêm hoàn toàn. `dev.db` không bị áp.
+
+**BẰNG CHỨNG HÀNH VI ĐÃ ĐỔI THẬT:** `e2e/learning-regressions.spec.ts` trước khẳng định lời Coach **hiện ngay** sau khi chấm — và nó **ĐỎ** sau thay đổi. Nay khẳng định ngược lại. Một test phải đổi chiều mới là bằng chứng.
+
+**Hai bẫy Playwright đã vấp và ghi lại:** (1) `getByRole("button",{name})` khớp **chuỗi con** nên "Giải nghĩa" cũng khớp "Ẩn giải nghĩa" — phải `exact: true`; (2) `.last()` chạy trước khi lượt AI thứ hai kịp render thì trỏ nhầm lượt — phải chờ `toHaveCount(2)` rồi mới `.last()`.
+
+**Gates:** type-check 0; eslint 0/0; vitest **139 file / 939 test** (trước 138/921); build PASS; Playwright **53/53** (trước 50/50).
+
+**CÒN MỞ:** áp migration production **trước** rồi mới deploy; và **E2E KHÔNG phủ đường sinh chủ đề bằng AI thật** (gieo sẵn để khỏi tốn lượt AI) — phải thử tay một lần trên production.

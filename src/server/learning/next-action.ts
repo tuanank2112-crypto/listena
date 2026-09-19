@@ -4,7 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { aggregateRecurringErrors } from "@/core/learning/error-taxonomy";
 import { getLearnerMemory } from "@/server/learner-memory/repository";
-import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+import { isKnownScenarioKey } from "@/server/ai/mission-templates";
 import type { NextAction } from "@/features/learning-session/types";
 
 export type { NextAction } from "@/features/learning-session/types";
@@ -113,7 +113,7 @@ export async function computeNextAction(
   }
 
   const scenarioKey = await nextMissionScenario(userId, sessionId);
-  if (isMissionScenarioKey(scenarioKey)) {
+  if (isKnownScenarioKey(scenarioKey)) {
     const latestEvidence = evidence[0];
     return {
       kind: "MISSION",
@@ -183,7 +183,7 @@ async function nextMissionScenario(userId: string, sessionId: string | undefined
 function readScenarioKey(stateJson: string) {
   try {
     const parsed = JSON.parse(stateJson) as { scenarioKey?: unknown };
-    return parsed && typeof parsed.scenarioKey === "string" && isMissionScenarioKey(parsed.scenarioKey)
+    return parsed && typeof parsed.scenarioKey === "string" && isKnownScenarioKey(parsed.scenarioKey)
       ? parsed.scenarioKey
       : null;
   } catch {

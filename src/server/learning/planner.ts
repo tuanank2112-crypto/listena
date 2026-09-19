@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { selectDailyQuestScenarioDetail } from "@/server/ai/daily-quest";
-import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+import { isKnownScenarioKey } from "@/server/ai/mission-templates";
 import { getLearnerIntent } from "@/server/learner-intent";
 import { getLearnerMemory } from "@/server/learner-memory/repository";
 import { prisma } from "@/lib/prisma";
@@ -180,7 +180,7 @@ export async function planNextLearningAction(
     }
   }
 
-  if (isMissionScenarioKey(scenarioKey)) {
+  if (isKnownScenarioKey(scenarioKey)) {
     const topicReason = scenarioSelection.preferenceInfluenced
       ? "Tình huống hôm nay ưu tiên một chủ đề bạn đã chọn."
       : "Tình huống hôm nay được chọn để bạn tiếp tục dùng tiếng Anh chủ động.";
@@ -257,7 +257,7 @@ async function findRecentScenarioKeys(userId: string) {
   return sessions.flatMap(({ stateJson }) => {
     try {
       const value = JSON.parse(stateJson) as { scenarioKey?: unknown };
-      return typeof value.scenarioKey === "string" && isMissionScenarioKey(value.scenarioKey)
+      return typeof value.scenarioKey === "string" && isKnownScenarioKey(value.scenarioKey)
         ? [value.scenarioKey]
         : [];
     } catch {

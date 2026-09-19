@@ -4,8 +4,30 @@ import type { LessonTutorContext } from "@/server/ai/tutor-grounding";
 export type MissionScenarioKey = "lost-luggage" | "cafe-order" | "mystery-clue";
 export const LESSON_COACH_SCENARIO_KEY = "lesson-coach";
 
+/**
+ * Plan23 SPEC-P232 — a learner's own scenario, addressed as `custom-<id>`.
+ *
+ * The three built-ins stay in this file because they ship with the product and
+ * need no database. A learner's scenarios live in `LearnerMissionScenario` and
+ * are addressed by a key with this prefix, so a key can still be *recognised*
+ * synchronously everywhere a guard runs, while the template behind it is loaded
+ * — and ownership checked — only where a template is actually needed.
+ */
+export const CUSTOM_SCENARIO_PREFIX = "custom-";
+
+export function customScenarioKey(id: string): string {
+  return `${CUSTOM_SCENARIO_PREFIX}${id}`;
+}
+
+export function customScenarioId(key: string): string | null {
+  if (!key.startsWith(CUSTOM_SCENARIO_PREFIX)) return null;
+  const id = key.slice(CUSTOM_SCENARIO_PREFIX.length);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null;
+}
+
 export interface MissionTemplate {
-  key: MissionScenarioKey | typeof LESSON_COACH_SCENARIO_KEY;
+  /** A built-in key, the lesson-coach key, or `custom-<uuid>`. */
+  key: string;
   title: string;
   npcName: string;
   npcRole: string;
@@ -102,7 +124,35 @@ export function isMissionScenarioKey(
   return typeof value === "string" && Object.hasOwn(MISSION_TEMPLATES, value);
 }
 
-export function getMissionTemplate(scenarioKey?: string): MissionTemplate {
+/**
+ * Is this a scenario key the server is willing to carry around?
+ *
+ * Built-ins are recognised by name; a learner's scenario by shape. This is a
+ * **syntactic** check and deliberately not an ownership check: it exists so the
+ * planner, the repository and the session service can keep validating keys
+ * without every one of them growing a database read. Ownership is enforced once,
+ * where the template is loaded (`loadCustomMissionTemplate`), and a key nobody
+ * owns simply resolves to nothing there.
+ */
+export function isKnownScenarioKey(value: string | undefined): value is string {
+  if (typeof value !== "string") return false;
+  return isMissionScenarioKey(value) || customScenarioId(value) !== null;
+}
+
+/**
+ * Resolve a scenario key to a template.
+ *
+ * `customTemplate` is passed in by the caller that owns the database — the
+ * orchestrator stays free of Prisma, which is the boundary that lets it be
+ * tested against a fake provider with no database at all. An unknown key falls
+ * back to the first built-in rather than throwing, because a session that has
+ * already started must always have a scenario to continue with.
+ */
+export function getMissionTemplate(
+  scenarioKey?: string,
+  customTemplate?: MissionTemplate | null,
+): MissionTemplate {
+  if (customTemplate && scenarioKey && customTemplate.key === scenarioKey) return customTemplate;
   return isMissionScenarioKey(scenarioKey)
     ? MISSION_TEMPLATES[scenarioKey]
     : MISSION_TEMPLATES["lost-luggage"];

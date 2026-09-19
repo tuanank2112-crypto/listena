@@ -85,10 +85,18 @@ export function buildTurnVoiceScript(content: unknown): VoiceScript | null {
     }
   }
 
-  const coach = prepareSpokenText(coachMessage, "vi");
-  for (const line of coach.lines) {
-    lines.push({ role: "COACH", lang: line.lang, text: line.text, rate: COACH_RATE });
-  }
+  // Plan23 SPEC-P231: the Coach's explanation is deliberately NOT here.
+  //
+  // It used to be appended as a Vietnamese COACH line, so every AI turn ended
+  // by reading the reasoning aloud in the learner's first language. A learner
+  // practising English should not be pulled back into Vietnamese on a turn they
+  // may have understood perfectly; the explanation now waits behind a button
+  // they press when they want it (`session-player.tsx`).
+  //
+  // `coachMessage` is still read at the top of this function because a turn
+  // carrying only a coach message is still a turn worth voicing — the NPC half
+  // of it — and because its absence with no npcReply means there is nothing to
+  // say at all.
 
   return lines.length ? { version: VOICE_SCRIPT_VERSION, lines } : null;
 }

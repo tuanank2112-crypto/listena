@@ -30,6 +30,7 @@ import {
   type RecentTutorTurn,
 } from "@/server/ai/tutor-orchestrator";
 import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+import { loadCustomMissionTemplate } from "@/server/learning/mission-scenarios";
 import { turnBudgetForDailyMinutes } from "@/server/learning/decision";
 import { toLearningSessionDto } from "@/server/learning/dto";
 import {
@@ -167,8 +168,16 @@ export async function createLearningSession(
   // A replay with a changed body must report IDEMPOTENCY_CONFLICT above. For
   // a genuinely new start, never let an invalid/stale authored target fall
   // through to getMissionTemplate's defensive default scenario.
+  // Plan23: a MISSION may target a built-in scenario or one this learner wrote.
+  // The shape check runs here; ownership is proved below by actually loading
+  // the template, so a key belonging to somebody else fails the same way an
+  // invented one does.
+  const customTemplate = input.mode === "MISSION"
+    ? await loadCustomMissionTemplate(userId, input.scenarioKey)
+    : null;
   if (
     input.mode === "MISSION"
+    && !customTemplate
     && !isMissionScenarioKey(input.scenarioKey)
   ) {
     throw new LearningSessionTargetUnavailableError();
@@ -235,6 +244,7 @@ export async function createLearningSession(
       learnerContext,
       lessonContext,
       maxTurns,
+      customTemplate,
       ...(input.mode === "DAILY_QUEST" ? { recentScenarioKeys } : {}),
     });
   } catch (error) {
@@ -1295,6 +1305,10 @@ export async function submitLearningTurn(
       recentTurns: makeRecentTurns(snapshot),
       learnerContext: makeLearnerContext(learnerContext, learnerMemory),
       lessonContext: makeLessonContext(snapshot.lesson),
+      // A continuing session names its scenario in its own state; resolving it
+      // again keeps a learner's scenario playable for the whole session even if
+      // they archive it midway.
+      customTemplate: await loadCustomMissionTemplate(userId, currentState.scenarioKey),
     });
   } catch (error) {
     await settleUserAICall(reservation, {

@@ -454,6 +454,7 @@ export function LearningSessionPlayer({ sessionId }: { sessionId: string }) {
 
 function TurnBubble({ turn, npcName, sessionId, onReplay }: { turn: SessionTurn; npcName: string; sessionId: string; onReplay: (turn: SessionTurn) => void }) {
   const [practiceOpen, setPracticeOpen] = useState(false);
+  const [explainOpen, setExplainOpen] = useState(false);
   const practiceLines = repeatableLines(turn.voiceScript).slice(0, 3);
   if (turn.actor === "LEARNER") {
     return (
@@ -489,9 +490,40 @@ function TurnBubble({ turn, npcName, sessionId, onReplay }: { turn: SessionTurn;
         </div>
       )}
       {coachMessage && (
-        <div className="mr-auto flex max-w-[92%] items-start gap-3 rounded-2xl border border-[#e7c969] bg-[#fff2bf] px-4 py-3 text-sm font-bold leading-6 text-[#675119] sm:max-w-[82%]">
-          <Bot className="mt-0.5 h-4 w-4 shrink-0" />
-          <div><p className="mb-0.5 text-[10px] font-black uppercase tracking-[.13em]">AI Coach</p><p className="whitespace-pre-wrap">{coachMessage}</p></div>
+        /**
+         * Plan23 SPEC-P231: the explanation waits to be asked for.
+         *
+         * It used to sit open under every AI turn and be read aloud in
+         * Vietnamese. A learner who understood the English turn was pulled out
+         * of it anyway. Now the turn stays in English and this is one tap away.
+         */
+        <div className="mr-auto max-w-[92%] sm:max-w-[82%]">
+          <button
+            type="button"
+            aria-expanded={explainOpen}
+            onClick={() => setExplainOpen((open) => !open)}
+            className={`inline-flex min-h-9 items-center gap-2 rounded-xl px-3 text-xs font-black transition ${
+              explainOpen ? "bg-[#f7d779] text-[#675119]" : "border-2 border-[#e7c969] text-[#8a6f22] hover:bg-[#fff2bf]"
+            }`}
+          >
+            <Bot className="h-4 w-4" /> {explainOpen ? "Ẩn giải nghĩa" : "Giải nghĩa"}
+          </button>
+          {explainOpen && (
+            <div className="mt-2 flex items-start gap-3 rounded-2xl border border-[#e7c969] bg-[#fff2bf] px-4 py-3 text-sm font-bold leading-6 text-[#675119]">
+              <div className="min-w-0 flex-1">
+                <p className="mb-0.5 text-[10px] font-black uppercase tracking-[.13em]">AI Coach</p>
+                <p className="whitespace-pre-wrap break-words">{coachMessage}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void speakCurated({ text: coachMessage, lang: "vi" })}
+                className="shrink-0 rounded-lg p-1 text-[#8a6f22] transition hover:bg-[#f7d779]"
+                aria-label="Đọc phần giải nghĩa"
+              >
+                <Volume2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
     </motion.div>

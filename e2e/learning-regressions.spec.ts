@@ -101,9 +101,24 @@ test("AI comeback resets, persists server grading, and completion is counted onc
   expect((await db.intervention.findUniqueOrThrow({ where: { id: challenge.id } })).status).toBe("COMPLETED");
   await input.fill("suitcase");
   await page.getByRole("button", { name: "Gửi comeback" }).click();
-  await expect(page.getByText("Bạn đã trả lời đúng bài tập. Hãy tiếp tục nhé!")).toBeVisible();
+  // Plan23: the Coach's message is no longer pushed at the learner. It is there
+  // when they ask for it, and it is still there after a reload.
+  const coachText = "Bạn đã trả lời đúng bài tập. Hãy tiếp tục nhé!";
+  // `exact` matters: the accessible name matches as a substring, so a plain
+  // "Giải nghĩa" would also select an already-open "Ẩn giải nghĩa".
+  const explainButtons = page.getByRole("button", { name: "Giải nghĩa", exact: true });
+  // Two AI turns have been graded by now; waiting on the count is what makes
+  // `.last()` mean the turn we just answered rather than whichever had rendered.
+  await expect(explainButtons).toHaveCount(2);
+  await expect(page.getByText(coachText)).toHaveCount(0);
+  await explainButtons.last().click();
+  await expect(page.getByText(coachText)).toBeVisible();
+
   await page.reload();
-  await expect(page.getByText("Bạn đã trả lời đúng bài tập. Hãy tiếp tục nhé!")).toBeVisible();
+  await expect(explainButtons).toHaveCount(2);
+  await expect(page.getByText(coachText)).toHaveCount(0);
+  await explainButtons.last().click();
+  await expect(page.getByText(coachText)).toBeVisible();
   const evidence = await db.learningEvidence.findMany({ where: { sessionId: session.id }, orderBy: { createdAt: "asc" } });
   expect(evidence.map((item) => item.score)).toEqual([0, 1]);
   const saved = await db.learningSession.findUniqueOrThrow({ where: { id: session.id } });

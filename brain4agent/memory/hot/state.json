@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan22_shipped_and_verified_on_production__migration_applied",
-  "active_plan": "planning/22_2026-09-20_vocab-master-journey/plan.md",
-  "checkpoint": "planning/22_2026-09-20_vocab-master-journey/plan.md",
+  "system_status": "plan23_local_accepted__migration_pending_on_production",
+  "active_plan": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
+  "checkpoint": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -767,18 +767,15 @@
     "status": "ACCEPTED by the user 2026-09-20",
     "note": "Vyce is a gateway API, so a slower first call is expected. Observed 60.5s on a cold first turn against 13-17s afterwards. Not an incident; do not spend time on it unless the user reopens it."
   },
-  "pending_user_requirements_2026_09_20": {
-    "recorded": "2026-09-20, after the user looked at production; they asked for the brain to be updated first and nothing implemented yet",
-    "1_topic_creation": {
-      "problem": "AI exercise generation has too few topics and they are mock data. mission-templates.ts:4 defines exactly three scenarios as a compile-time union type, MISSION_TEMPLATES mirrors it, and games-client.tsx:66 holds a second hard-coded copy of the same three for the UI. Adding one topic means editing two places and deploying.",
-      "wanted": "a feature to create topics; topics must be data that can be created and edited at run time, not a TypeScript type",
-      "caution": "isMissionScenarioKey is used as a guard in next-action.ts:116,186 and the planner. Replacing the union type must keep a data-backed check - it must NOT become 'accept any string from the client', because a client that picks the topic steers the AI prompt."
-    },
-    "2_no_spoken_reasoning": {
-      "problem": "voice-script.ts:88 runs prepareSpokenText(coachMessage,'vi') and lines 76/90 push {role:'COACH',lang:'vi'}, so the Coach's explanation is read aloud automatically on every AI turn",
-      "wanted": "stop voicing and auto-translating the reasoning; put an explain button ('giải nghĩa') there instead, so it is on demand",
-      "caution": "this narrows Plan14's forbidden zone further - not just the learner's wrong sentence, the explanation too. Check every place that builds voiceScript and every place that auto-plays an AI turn, including the session player reading the opening turn."
-    },
-    "status": "recorded only; no plan opened, no code touched"
+  "plan23_own_topics": {
+    "date": "2026-09-20",
+    "type": "MINOR with full SPEC set, migration 20260920080000_plan23_learner_mission_scenarios (not yet applied to production)",
+    "principle": "both gaps the user named are the same fault: the product was deciding for the learner - which three situations they may practise, and that they need the reasoning read to them in Vietnamese. A traditional learning app does exactly those two things.",
+    "key_architecture": "a learner's scenario is addressed as custom-<uuid>, so isKnownScenarioKey stays synchronous in all six files that guard keys. Ownership is checked in exactly one place, loadCustomMissionTemplate. A shape guard is NOT a permission check.",
+    "orchestrator_boundary": "tutor-orchestrator.ts imports no Prisma and must not; the caller loads the template and passes it in, the way lessonContext already works. planDailyQuest only accepts built-in keys, so the quest path and the custom path are now separate.",
+    "unit": "939 across 139 files",
+    "e2e": "53/53",
+    "not_covered_by_tests": "the real AI authoring path - E2E seeds scenarios to avoid spending AI calls, so authoring must be tried by hand once on production",
+    "committed": false
   }
 }

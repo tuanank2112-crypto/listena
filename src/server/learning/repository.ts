@@ -2,7 +2,7 @@ import "server-only";
 
 import type { Prisma, PrismaClient } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
-import { isMissionScenarioKey } from "@/server/ai/mission-templates";
+import { isKnownScenarioKey } from "@/server/ai/mission-templates";
 
 const DAILY_QUEST_HISTORY_LIMIT = 3;
 
@@ -209,7 +209,7 @@ export class LearningSessionRepository {
     return sessions.flatMap(({ stateJson }) => {
       try {
         const parsed = JSON.parse(stateJson) as { scenarioKey?: unknown };
-        return typeof parsed.scenarioKey === "string" && isMissionScenarioKey(parsed.scenarioKey)
+        return typeof parsed.scenarioKey === "string" && isKnownScenarioKey(parsed.scenarioKey)
           ? [parsed.scenarioKey]
           : [];
       } catch {

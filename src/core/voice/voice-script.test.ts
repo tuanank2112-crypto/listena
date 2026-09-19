@@ -14,7 +14,7 @@ const turn = {
 };
 
 describe("buildTurnVoiceScript", () => {
-  it("voices the NPC in English, the corrected recast slowly, and the coach in Vietnamese", () => {
+  it("voices the NPC in English and the corrected recast slowly, and nothing else", () => {
     const script = buildTurnVoiceScript(turn);
     expect(script?.version).toBe("v1");
     expect(script?.lines).toEqual([
@@ -22,9 +22,24 @@ describe("buildTurnVoiceScript", () => {
       { role: "NPC", lang: "en", text: "What does your suitcase look like?", rate: NPC_RATE },
       { role: "NPC", lang: "en", text: "Tell me the colour.", rate: NPC_RATE },
       { role: "RECAST", lang: "en", text: "I lost my bag.", rate: RECAST_RATE },
-      { role: "COACH", lang: "vi", text: "Bạn nói 'I lose my bag', thì quá khứ là 'lost'.", rate: COACH_RATE },
-      { role: "COACH", lang: "en", text: "Try: I lost my bag.", rate: COACH_RATE },
     ]);
+  });
+
+  it("never reads the Coach's explanation aloud", () => {
+    // Plan23: a learner practising English is not pulled back into Vietnamese
+    // on a turn they may have understood. The explanation waits for a button.
+    const script = buildTurnVoiceScript(turn);
+    expect(script?.lines.some((line) => line.lang === "vi")).toBe(false);
+    expect(script?.lines.map((line) => line.text).join(" ")).not.toContain("thì quá khứ");
+  });
+
+  it("still says nothing at all for a turn with neither an NPC reply nor a coach message", () => {
+    expect(buildTurnVoiceScript({ pedagogicalAct: "ASK_GUIDING" })).toBeNull();
+  });
+
+  it("voices a turn that carries only an NPC reply", () => {
+    const script = buildTurnVoiceScript({ npcReply: "Hello there." });
+    expect(script?.lines).toEqual([{ role: "NPC", lang: "en", text: "Hello there.", rate: NPC_RATE }]);
   });
 
   it("never voices the learner's erroneous sentence as a model", () => {

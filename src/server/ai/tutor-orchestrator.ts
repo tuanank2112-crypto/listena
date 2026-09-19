@@ -13,6 +13,7 @@ import {
   getMissionTemplate,
   isMissionScenarioKey,
   LESSON_COACH_SCENARIO_KEY,
+  type MissionTemplate,
 } from "@/server/ai/mission-templates";
 import {
   buildGroundedTutorContext,
@@ -45,11 +46,20 @@ export interface StartMissionInput {
   recentScenarioKeys?: string[];
   /** Server-derived scope from the learner's declared daily time budget. */
   maxTurns?: number;
+  /**
+   * Plan23: a scenario this learner wrote, already loaded and ownership-checked
+   * by the caller. Passed in rather than read here so this module stays free of
+   * Prisma — the boundary that lets it be tested against a fake provider with
+   * no database at all.
+   */
+  customTemplate?: MissionTemplate | null;
 }
 
 export interface EvaluateTutorTurnInput {
   state: MissionState;
   learnerMessage: string;
+  /** See StartMissionInput.customTemplate. */
+  customTemplate?: MissionTemplate | null;
   learnerKey?: string;
   recentTurns?: RecentTutorTurn[];
   learnerContext?: LearnerTutorContext;
@@ -86,7 +96,11 @@ export async function startMission(
   options: TutorRuntimeOptions = {},
 ): Promise<StartMissionResult> {
   const now = options.now ?? new Date();
-  const plannedScenarioKey = isMissionScenarioKey(input.scenarioKey)
+  // Two separate things that used to be one. The Daily Quest planner picks
+  // among the built-in scenarios and may only be handed one of those; a
+  // learner's own scenario is not a quest candidate and goes straight to the
+  // template resolver instead.
+  const builtInScenarioKey = isMissionScenarioKey(input.scenarioKey)
     ? input.scenarioKey
     : undefined;
   const dailyQuest =
@@ -98,13 +112,16 @@ export async function startMission(
           dueVocabulary: input.learnerContext?.dueVocabulary,
           preferredTopics: input.learnerContext?.preferredTopics,
           recentScenarioKeys: input.recentScenarioKeys,
-          scenarioKey: plannedScenarioKey,
+          scenarioKey: builtInScenarioKey,
         })
       : undefined;
   const template =
     input.mode === "LESSON_COACH"
       ? createLessonCoachTemplate(input.lessonContext)
-      : getMissionTemplate(dailyQuest?.scenarioKey ?? plannedScenarioKey);
+      : getMissionTemplate(
+          input.customTemplate?.key ?? dailyQuest?.scenarioKey ?? builtInScenarioKey,
+          input.customTemplate,
+        );
   const state = MissionStateSchema.parse(
     createMissionState(template, {
       goal: input.goal ?? dailyQuest?.goal,
@@ -148,7 +165,7 @@ export async function evaluateTutorTurn(
   const template =
     state.scenarioKey === LESSON_COACH_SCENARIO_KEY
       ? createLessonCoachTemplate(input.lessonContext)
-      : getMissionTemplate(state.scenarioKey);
+      : getMissionTemplate(state.scenarioKey, input.customTemplate);
   const groundedContext = buildGroundedTutorContext({
     template,
     learnerGoal: state.learnerGoal,
