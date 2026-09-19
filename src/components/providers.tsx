@@ -13,6 +13,7 @@ import { CompositeSpeechEngine } from "@/core/tts/composite-engine";
 import { ElevenLabsSpeechEngine } from "@/core/tts/elevenlabs-engine";
 import { VieNeuSpeechEngine } from "@/core/tts/vie-engine";
 import { WebSpeechEngine } from "@/core/tts/web-speech-engine";
+import type { EnglishAccent } from "@/core/voice/voice-policy";
 import { loadVoiceCapabilities } from "@/features/voice/voice-capabilities";
 import { getVoicePreferences } from "@/features/voice/voice-preferences";
 
@@ -34,9 +35,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       return (await loadVoiceCapabilities()).aiVoice;
     };
     const getVoiceId = (key: "en-US" | "en-GB" | "vi") => getVoicePreferences().aiVoices[key];
+    // Plan18: the learner may pin a browser voice per accent; it overrides the
+    // curated policy for the English browser engine only.
+    const getPreferredVoiceURI = (accent: EnglishAccent) => getVoicePreferences().browserVoices[accent];
     const aiEnglish = new ElevenLabsSpeechEngine({ isAvailable: isAiVoiceAvailable, getAccent, getVoiceId });
     const aiVietnamese = new ElevenLabsSpeechEngine({ isAvailable: isAiVoiceAvailable, getAccent, getVoiceId });
-    const english = new WebSpeechEngine({ getAccent });
+    const english = new WebSpeechEngine({ getAccent, getPreferredVoiceURI });
     const vietnamese = new CompositeSpeechEngine([aiVietnamese, new VieNeuSpeechEngine()]);
     const vietnameseFallback = new WebSpeechEngine();
 

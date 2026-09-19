@@ -157,6 +157,39 @@ test("without a recogniser the typed path stays and the settings explain it", as
   await expect(page.getByText(/chưa hỗ trợ nói để trả lời/)).toBeVisible();
 });
 
+// Plan18 SPEC-P181: the device voice picker must render and pin a voice with no
+// AI key configured. Headless Chromium usually reports zero voices, so the test
+// installs a deterministic list the same way a real device would expose one.
+test("the learner can pick and keep a device voice without any AI key", async ({ page }) => {
+  await page.addInitScript(() => {
+    const voices = [
+      { name: "Microsoft Andrew Online (Natural) - English (United States)", voiceURI: "andrew-uri", lang: "en-US", default: false, localService: false },
+      { name: "Microsoft Ava Online (Natural) - English (United States)", voiceURI: "ava-uri", lang: "en-US", default: false, localService: false },
+      { name: "Microsoft Zira - English (United States)", voiceURI: "zira-uri", lang: "en-US", default: true, localService: true },
+    ];
+    Object.defineProperty(window.speechSynthesis, "getVoices", { value: () => voices, configurable: true });
+  });
+  await login(page);
+  await startMission(page);
+
+  await page.getByRole("button", { name: "Cài đặt giọng nói" }).click();
+  const picker = page.getByRole("group", { name: "Giọng tiếng Anh trên thiết bị này" });
+  await expect(picker).toBeVisible();
+  // The curated catalogue must put Ava ahead of the alphabetically earlier Andrew.
+  await expect(picker.getByRole("button", { name: "Nghe thử Ava" })).toBeVisible();
+  const auto = picker.getByRole("button", { name: /Tự động/ });
+  await expect(auto).toHaveAttribute("aria-pressed", "true");
+
+  const ava = picker.getByRole("button", { name: /^Ava/ });
+  await ava.click();
+  await expect(ava).toHaveAttribute("aria-pressed", "true");
+  await expect(auto).toHaveAttribute("aria-pressed", "false");
+
+  await page.reload();
+  await page.getByRole("button", { name: "Cài đặt giọng nói" }).click();
+  await expect(picker.getByRole("button", { name: /^Ava/ })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("pronunciation grading requires authentication", async ({ request }) => {
   const response = await request.post("/api/voice/pronunciation", {
     data: { clientAttemptId: crypto.randomUUID(), expected: "Hello.", transcript: "hello" },

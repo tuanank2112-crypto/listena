@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan16_voice_rollout_in_progress",
-  "active_plan": "planning/16_2026-09-18_voice-rollout/plan.md",
-  "checkpoint": "planning/16_2026-09-18_voice-rollout/plan.md",
+  "system_status": "plan18_curated_browser_voices_done_local__plan16_wp2_wp4_wp5_open",
+  "active_plan": "planning/18_2026-09-19_curated-browser-voices/plan.md",
+  "checkpoint": "planning/18_2026-09-19_curated-browser-voices/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -466,6 +466,78 @@
       "url": "https://listena-obno3mqll-n-listen-ai.vercel.app",
       "alias": "https://listena.vercel.app",
       "readyState": "READY"
+    }
+  },
+  "previous_active_plan": "planning/17_2026-09-19_voice-skill-vocab-reference/plan.md",
+  "plan17": {
+    "date": "2026-09-19",
+    "scope": "docs-only PATCH: skill elevenlabs-voice (.agents/skills canonical + .claude/skills shim, upstream elevenlabs/skills MIT 9edcbd4) + docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md",
+    "code_changed": false,
+    "db_changed": false,
+    "committed": false,
+    "brain_check": "exit 0 (2026-09-19 02:40+07, after sync)",
+    "open": "Plan16 WP2/WP4/WP5 (ElevenLabs key, cost, bump 0.8.0); AI Studio editor link needs Google login; no UI screenshots"
+  },
+  "plan18": {
+    "date": "2026-09-19",
+    "request": "user: add other voices that sound smoother, easier to listen to and more standard English, delivered as skills rather than an ElevenLabs API key",
+    "user_choices": {
+      "voice_source": "free neural voices already on the device/browser",
+      "scope": "skill + code + voice picker UI (MINOR, full SPEC package)"
+    },
+    "defects_found": [
+      "rankEnglishVoices fell through to name.localeCompare, so inside the NEURAL tier on Windows+Edge the winner was the alphabetically first voice (Andrew beat Ava) and nobody had vetted it",
+      "the learner had no way to change the browser voice; the only picker was for ElevenLabs voices and is empty without a key"
+    ],
+    "design": [
+      "browser-voice-catalog.ts: 40 vetted free voices (Microsoft Natural, Apple, Google, legacy SAPI) with a listenability score 0..99, matched by NORMALISED NAME and never by voiceURI",
+      "voiceQualityScore = TIER_RANK*100 + listenability; the score can never cross a tier, so the Plan14 order (accent > tier > default > local) is intact and Google/REMOTE stays last",
+      "preference browserVoices per English accent, localStorage only (key listena.voice.v1 unchanged), never sent to the server, never mastery/evidence/planner",
+      "WebSpeechEngine.getPreferredVoiceURI read at speak time; voiceCache key includes the pin so a settings change applies without a reload; English only",
+      "speakWithBrowserVoice bypasses the AI engine for the settings preview (speakCurated would answer with ElevenLabs on a keyed deployment)",
+      "BrowserVoicePicker: Tu dong first, max 6 rows plus the pin when it ranks lower, warning when a pinned voice is uninstalled, install hint when no NEURAL voice exists",
+      "skill english-voices: .agents/skills/english-voices (SKILL.md rules E1-E10 + references/voice-catalog.md + references/install-voices.md) plus a <=10 line .claude/skills shim"
+    ],
+    "gates_local": {
+      "type_check": "0",
+      "eslint": "0 errors / 28 warnings (baseline)",
+      "vitest": "129 files / 820 tests (was 126/779)",
+      "build": "PASS (66 route lines, 0 errors)",
+      "playwright": "39/39 (1 new case: picker renders, Ava beats Andrew in a real browser, pin survives reload)"
+    },
+    "evidence_of_real_change": "voice-policy.test.ts pins Ava as the winner after the change and records Andrew as the winner before it",
+    "forbidden_kept": [
+      "no new dependency, sidecar, downloaded model, API key, endpoint or DB change",
+      "Vietnamese voice untouched",
+      "catalogue only adds points, never filters",
+      "novelty voices still excluded",
+      "Google/REMOTE still ranked, not removed"
+    ],
+    "adr": "docs/adr/0004-curated-browser-voices.md",
+    "committed": false,
+    "open": [
+      "commit/push/deploy (user approval)",
+      "manual smoke on Edge + Chrome (Plan18 OPERATIONS 2.4)",
+      "Plan16 WP2/WP4/WP5 still blocked on an ElevenLabs key"
+    ],
+    "voices_added_second_round": {
+      "reason": "user 2026-09-19: add whichever voices you like best / are rated best",
+      "added": [
+        "christopher",
+        "eric",
+        "ana (child, score 50)",
+        "alex",
+        "nicky",
+        "aaron",
+        "arthur"
+      ],
+      "catalogue_size": 47,
+      "procedure": "SPEC-P180 table updated first (rule C7), then code, then tests"
+    },
+    "user_machine_voices": {
+      "probe": "System.Speech GetInstalledVoices on the user machine",
+      "result": "only Microsoft David Desktop and Microsoft Zira Desktop (legacy SAPI, scores 32/34)",
+      "meaning": "the user must open the app in Edge or install Windows natural voices to actually hear the improvement; the UI now says so"
     }
   }
 }

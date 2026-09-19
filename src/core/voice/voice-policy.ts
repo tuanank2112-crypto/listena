@@ -16,7 +16,15 @@
  *   excluded (superseded decision, Plan14).
  *
  * Novelty voices are excluded outright: they are never a pronunciation model.
+ *
+ * Plan18 adds one refinement inside a tier: a curated catalogue of vetted
+ * voices (`browser-voice-catalog`) contributes a `listenability` score, so the
+ * dozen Microsoft Natural voices on a Windows/Edge machine are no longer
+ * ordered alphabetically. The score is capped below one tier step, so the
+ * ranking above is untouched.
  */
+
+import { lookupCuratedVoice, type CuratedBrowserVoice } from "./browser-voice-catalog";
 
 export type EnglishAccent = "en-US" | "en-GB";
 
@@ -35,6 +43,10 @@ export interface VoiceChoice<V extends CandidateVoice = CandidateVoice> {
   tier: VoiceTier;
   /** False when the learner asked for one accent and only another was available. */
   accentMatched: boolean;
+  /** Curated catalogue entry when this voice is one we have vetted (Plan18). */
+  curated?: CuratedBrowserVoice;
+  /** Sort score: `TIER_RANK * 100 + listenability`. */
+  quality: number;
 }
 
 export const DEFAULT_ENGLISH_ACCENT: EnglishAccent = "en-US";
@@ -95,6 +107,19 @@ export function classifyVoiceTier(voice: CandidateVoice): VoiceTier {
 
 const TIER_RANK: Record<VoiceTier, number> = { NEURAL: 4, PREMIUM: 3, SYSTEM: 2, REMOTE: 1 };
 
+/** One tier step. Listenability is capped below this so it can never cross a tier. */
+const TIER_STEP = 100;
+
+/**
+ * Sort score for a voice (Plan18 SPEC-P180 §2). The tier decides the hundreds
+ * digit, the curated listenability only orders voices inside that tier, and an
+ * unknown voice simply scores the bare tier.
+ */
+export function voiceQualityScore(voice: CandidateVoice): number {
+  const listenability = lookupCuratedVoice(voice.name)?.listenability ?? 0;
+  return TIER_RANK[classifyVoiceTier(voice)] * TIER_STEP + listenability;
+}
+
 function normaliseLang(lang: string) {
   return lang.replace("_", "-").toLowerCase();
 }
@@ -110,17 +135,27 @@ function accentScore(voice: CandidateVoice, accent: EnglishAccent) {
  * Rank every acceptable English voice for the requested accent, best first.
  * Exact-accent voices always outrank other English accents: a learner who chose
  * British English must not hear an American neural voice merely because it is
- * "better" on paper. Within an accent, the tier decides, then the OS default.
+ * "better" on paper. Within an accent the quality score decides (tier first,
+ * curated listenability inside the tier), then the OS default.
  */
 export function rankEnglishVoices<V extends CandidateVoice>(voices: V[], accent: EnglishAccent): Array<VoiceChoice<V>> {
   return voices
     .filter((voice) => accentScore(voice, accent) > 0 && !isExcludedVoice(voice))
-    .map((voice) => ({ voice, tier: classifyVoiceTier(voice), accentMatched: accentScore(voice, accent) === 2 }))
+    .map((voice) => {
+      const curated = lookupCuratedVoice(voice.name);
+      return {
+        voice,
+        tier: classifyVoiceTier(voice),
+        accentMatched: accentScore(voice, accent) === 2,
+        quality: voiceQualityScore(voice),
+        ...(curated ? { curated } : {}),
+      };
+    })
     .sort((a, b) => {
       const accentDelta = accentScore(b.voice, accent) - accentScore(a.voice, accent);
       if (accentDelta) return accentDelta;
-      const tierDelta = TIER_RANK[b.tier] - TIER_RANK[a.tier];
-      if (tierDelta) return tierDelta;
+      const qualityDelta = b.quality - a.quality;
+      if (qualityDelta) return qualityDelta;
       if (a.voice.default !== b.voice.default) return a.voice.default ? -1 : 1;
       if (a.voice.localService !== b.voice.localService) return a.voice.localService ? -1 : 1;
       return a.voice.name.localeCompare(b.voice.name);

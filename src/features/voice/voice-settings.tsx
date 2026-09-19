@@ -1,12 +1,27 @@
 "use client";
 
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
 import { AudioLines, Sparkles, Volume2 } from "lucide-react";
-import { speakCurated, stopSpeech } from "@/core/tts/speech";
+import { speakCurated, speakWithBrowserVoice, stopSpeech } from "@/core/tts/speech";
 import { isSpeechRecognitionSupported } from "@/core/voice/speech-recognition";
-import { chooseEnglishVoice, ENGLISH_ACCENT_LABELS, type EnglishAccent, type VoiceTier } from "@/core/voice/voice-policy";
+import {
+  ENGLISH_ACCENT_LABELS,
+  rankEnglishVoices,
+  type EnglishAccent,
+  type VoiceChoice,
+  type VoiceTier,
+} from "@/core/voice/voice-policy";
 import { loadVoiceCapabilities, useVoiceCapabilities, type PublicCuratedVoice } from "./voice-capabilities";
-import { setPreferredAiVoice, setVoicePreferences, useVoicePreferences, VOICE_RATE_OPTIONS } from "./voice-preferences";
+import {
+  setPreferredAiVoice,
+  setPreferredBrowserVoice,
+  setVoicePreferences,
+  useVoicePreferences,
+  VOICE_RATE_OPTIONS,
+} from "./voice-preferences";
+
+/** More than this and the learner stops reading; voice 7 is worse anyway (SPEC-P181 U1). */
+const MAX_BROWSER_VOICE_CHOICES = 6;
 
 const SAMPLE_LINE = "Hello! I lost my suitcase at the airport. Could you help me find it?";
 const SAMPLE_LINE_VI = "Bạn nói rất rõ. Hãy thử lại câu này chậm hơn một chút nhé.";
@@ -24,22 +39,188 @@ const AI_TIER_LABELS: Record<PublicCuratedVoice["tier"], string> = {
   OK: "dùng được",
 };
 
-function subscribeVoicesChanged(listener: () => void) {
+const noSubscription = () => () => {};
+
+/**
+ * The voices installed on this device, read as an external store. Chrome
+ * populates the list asynchronously, so an empty list means "still loading",
+ * never "none" (SPEC-P181 U4); `supported === null` until the client looks.
+ * `getVoices()` hands back a fresh array every call, so the snapshot is cached
+ * by element identity — `useSyncExternalStore` requires a stable reference.
+ */
+interface SystemVoiceState {
+  voices: SpeechSynthesisVoice[];
+  supported: boolean | null;
+}
+
+const SERVER_VOICE_STATE: SystemVoiceState = { voices: [], supported: null };
+let voiceState: SystemVoiceState = SERVER_VOICE_STATE;
+
+function subscribeSystemVoices(listener: () => void) {
   if (typeof window === "undefined" || !window.speechSynthesis) return () => {};
   window.speechSynthesis.addEventListener("voiceschanged", listener);
   return () => window.speechSynthesis.removeEventListener("voiceschanged", listener);
 }
 
-function describeEnglishVoice(accent: EnglishAccent) {
-  if (typeof window === "undefined" || !window.speechSynthesis) return "Trình duyệt này không có giọng đọc.";
-  const voices = window.speechSynthesis.getVoices();
-  const choice = chooseEnglishVoice(voices, accent);
-  if (!choice) return voices.length ? "Chưa có giọng tiếng Anh phù hợp trên thiết bị." : "";
-  const accentNote = choice.accentMatched ? "" : " (thiết bị không có giọng đúng accent, đang dùng giọng Anh khác)";
-  return `${choice.voice.name}: ${TIER_LABELS[choice.tier]}${accentNote}`;
+function getSystemVoices(): SystemVoiceState {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    if (voiceState.supported !== false) voiceState = { voices: [], supported: false };
+    return voiceState;
+  }
+  const next = window.speechSynthesis.getVoices();
+  const unchanged =
+    voiceState.supported === true &&
+    next.length === voiceState.voices.length &&
+    next.every((voice, index) => voice === voiceState.voices[index]);
+  if (!unchanged) voiceState = { voices: next, supported: true };
+  return voiceState;
 }
 
-const noSubscription = () => () => {};
+const getServerSystemVoices = () => SERVER_VOICE_STATE;
+
+/** Test helper: forget the cached voice snapshot between renders. */
+export function resetSystemVoiceSnapshotForTests() {
+  voiceState = SERVER_VOICE_STATE;
+}
+
+function useSystemVoices() {
+  return useSyncExternalStore(subscribeSystemVoices, getSystemVoices, getServerSystemVoices);
+}
+
+/**
+ * Learner-facing picker for the free voices already on this device
+ * (Plan18 SPEC-P181 §5). Preview goes through `speakWithBrowserVoice` so it
+ * plays the system voice even when the ElevenLabs engine is configured.
+ */
+export interface BrowserVoiceOptions {
+  /** Rows to render, best first: the top slice plus the pin when it fell outside. */
+  shown: Array<VoiceChoice<SpeechSynthesisVoice>>;
+  /** The pinned voice, when it still exists on this device. */
+  pinnedChoice?: VoiceChoice<SpeechSynthesisVoice>;
+  /** What "Tự động" resolves to right now. */
+  auto?: VoiceChoice<SpeechSynthesisVoice>;
+  /** A pin that no longer matches any installed voice (SPEC-P181 U5). */
+  pinnedMissing: boolean;
+}
+
+/**
+ * Turn the ranked voices into the rows the picker shows (SPEC-P181 U1/U5).
+ * Pure so the trimming and the missing-pin case can be tested without a DOM.
+ */
+export function buildBrowserVoiceOptions(
+  ranked: Array<VoiceChoice<SpeechSynthesisVoice>>,
+  pinned: string | undefined,
+  hasVoices: boolean,
+  max = MAX_BROWSER_VOICE_CHOICES,
+): BrowserVoiceOptions {
+  const pinnedChoice = pinned
+    ? ranked.find((item) => item.voice.voiceURI === pinned || item.voice.name === pinned)
+    : undefined;
+  const top = ranked.slice(0, max);
+  // A pin outside the top slice must still be visible as the active choice.
+  const shown = pinnedChoice && !top.includes(pinnedChoice) ? [...top, pinnedChoice] : top;
+  return {
+    shown,
+    ...(pinnedChoice ? { pinnedChoice } : {}),
+    ...(ranked[0] ? { auto: ranked[0] } : {}),
+    pinnedMissing: Boolean(pinned) && hasVoices && !pinnedChoice,
+  };
+}
+
+function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; rate: number; pinned?: string }) {
+  const { voices, supported } = useSystemVoices();
+
+  const ranked = useMemo(() => rankEnglishVoices(voices, accent), [voices, accent]);
+  const { shown, pinnedChoice, auto, pinnedMissing } = useMemo(
+    () => buildBrowserVoiceOptions(ranked, pinned, voices.length > 0),
+    [ranked, pinned, voices.length],
+  );
+  const hasNeural = ranked.some((item) => item.tier === "NEURAL");
+
+  if (supported === false) {
+    return <p className="mt-4 text-[11px] font-bold leading-5 text-[#8a918d]">Trình duyệt này không có giọng đọc.</p>;
+  }
+
+  return (
+    <fieldset className="mt-4">
+      <legend className="text-xs font-black text-[#45584f]">Giọng tiếng Anh trên thiết bị này</legend>
+      {supported === null || (voices.length === 0 && supported) ? (
+        <p className="mt-1.5 text-[11px] font-bold text-[#8a918d]">Đang tải danh sách giọng…</p>
+      ) : (
+        <div className="mt-1.5 space-y-1.5">
+          <VoiceRow
+            active={!pinned || pinnedMissing}
+            title="Tự động (tốt nhất trên máy này)"
+            subtitle={auto ? `Đang dùng: ${describeChoice(auto)}` : "Thiết bị chưa có giọng tiếng Anh phù hợp."}
+            onSelect={() => setPreferredBrowserVoice(accent, undefined)}
+            onPreview={auto ? () => void speakWithBrowserVoice({ text: SAMPLE_LINE, lang: "en", voiceURI: auto.voice.voiceURI, rate }) : undefined}
+            previewLabel="Nghe thử giọng tự động"
+          />
+          {shown.map((choice) => (
+            <VoiceRow
+              key={choice.voice.voiceURI || choice.voice.name}
+              active={Boolean(pinnedChoice) && pinnedChoice === choice}
+              title={choice.curated?.label ?? choice.voice.name}
+              badge={choice.curated?.platform}
+              subtitle={describeChoice(choice)}
+              onSelect={() => setPreferredBrowserVoice(accent, choice.voice.voiceURI || choice.voice.name)}
+              onPreview={() => void speakWithBrowserVoice({ text: SAMPLE_LINE, lang: "en", voiceURI: choice.voice.voiceURI, rate })}
+              previewLabel={`Nghe thử ${choice.curated?.label ?? choice.voice.name}`}
+            />
+          ))}
+        </div>
+      )}
+      {pinnedMissing && (
+        <p className="mt-2 text-[11px] font-bold leading-5 text-[#a33f3a]">
+          Giọng bạn đã chọn không còn trên thiết bị này, đang tạm dùng giọng tự động.
+        </p>
+      )}
+      {supported && voices.length > 0 && !hasNeural && (
+        <p className="mt-2 text-[11px] font-bold leading-5 text-[#8a918d]">
+          Máy bạn mới chỉ có giọng hệ thống đời cũ. Mở app bằng Microsoft Edge để có ngay giọng Natural miễn phí, hoặc
+          cài thêm ở Windows: Settings → Accessibility → Narrator → Add natural voices.
+        </p>
+      )}
+    </fieldset>
+  );
+}
+
+function describeChoice(choice: VoiceChoice<SpeechSynthesisVoice>) {
+  const accentNote = choice.accentMatched ? "" : " (không đúng accent bạn chọn)";
+  return `${choice.curated?.note ?? TIER_LABELS[choice.tier]}${accentNote}`;
+}
+
+function VoiceRow({ active, title, subtitle, badge, onSelect, onPreview, previewLabel }: {
+  active: boolean;
+  title: string;
+  subtitle: string;
+  badge?: string;
+  onSelect: () => void;
+  onPreview?: () => void;
+  previewLabel: string;
+}) {
+  return (
+    <div className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 ${active ? "border-[#176b55] bg-[#dff2e8]" : "border-[#ded8cc] bg-white"}`}>
+      <button type="button" onClick={onSelect} aria-pressed={active} className="min-w-0 flex-1 text-left">
+        <span className="block text-sm font-black">
+          {title}
+          {badge && <span className="ml-1.5 text-[10px] font-black uppercase tracking-[.1em] text-[#176b55]">{badge}</span>}
+        </span>
+        <span className="block truncate text-[11px] font-bold text-[#8a918d]">{subtitle}</span>
+      </button>
+      {onPreview && (
+        <button
+          type="button"
+          aria-label={previewLabel}
+          onClick={onPreview}
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#18332d] text-[#f7d779]"
+        >
+          <Volume2 className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 function AiVoicePicker({ label, voices, selected, onSelect, sample, lang }: {
   label: string;
@@ -72,8 +253,9 @@ function AiVoicePicker({ label, voices, selected, onSelect, sample, lang }: {
 }
 
 /**
- * Learner voice preferences (Plan14 SPEC-P142 §2, Plan15 §1): engine (AI voice
- * or browser), accent, curated AI voices, speed, auto-read and coach voice.
+ * Learner voice preferences (Plan14 SPEC-P142 §2, Plan15 §1, Plan18 SPEC-P181):
+ * engine (AI voice or browser), accent, the browser voice picker, curated AI
+ * voices, speed, auto-read and coach voice.
  */
 export function VoiceSettings({ className = "" }: { className?: string }) {
   const preferences = useVoicePreferences();
@@ -81,11 +263,6 @@ export function VoiceSettings({ className = "" }: { className?: string }) {
   useEffect(() => {
     void loadVoiceCapabilities();
   }, []);
-  const voiceDescription = useSyncExternalStore(
-    subscribeVoicesChanged,
-    () => describeEnglishVoice(preferences.accent),
-    () => "",
-  );
   const sttSupported = useSyncExternalStore(noSubscription, isSpeechRecognitionSupported, () => true);
   const aiVoiceActive = capabilities.aiVoice && preferences.engine === "auto";
 
@@ -118,6 +295,8 @@ export function VoiceSettings({ className = "" }: { className?: string }) {
         </select>
       </label>
 
+      <BrowserVoicePicker accent={preferences.accent} rate={preferences.rate} pinned={preferences.browserVoices[preferences.accent]} />
+
       {aiVoiceActive ? (
         <>
           <AiVoicePicker
@@ -137,9 +316,7 @@ export function VoiceSettings({ className = "" }: { className?: string }) {
             lang="vi"
           />
         </>
-      ) : (
-        voiceDescription && <p className="mt-1.5 text-[11px] font-bold leading-5 text-[#8a918d]">Giọng đang dùng: {voiceDescription}</p>
-      )}
+      ) : null}
 
       <fieldset className="mt-4">
         <legend className="text-xs font-black text-[#45584f]">Tốc độ</legend>

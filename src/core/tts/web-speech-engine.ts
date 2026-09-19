@@ -7,6 +7,12 @@ import { DEFAULT_ENGLISH_ACCENT, type EnglishAccent } from "@/core/voice/voice-p
 export interface WebSpeechEngineOptions {
   /** Learner accent preference, read at speak time so a settings change applies immediately. */
   getAccent?: () => EnglishAccent;
+  /**
+   * The English voice the learner pinned in settings (Plan18 SPEC-P181), read
+   * at speak time for the same reason. It only overrides the curated policy,
+   * never an explicit `options.voice`.
+   */
+  getPreferredVoiceURI?: (accent: EnglishAccent) => string | undefined;
 }
 
 /**
@@ -20,9 +26,11 @@ export class WebSpeechEngine implements SpeechEngine {
   private voices: SpeechSynthesisVoice[] = [];
   private voiceCache = new Map<string, SpeechSynthesisVoice | null>();
   private readonly getAccent: () => EnglishAccent;
+  private readonly getPreferredVoiceURI: (accent: EnglishAccent) => string | undefined;
 
   constructor(options: WebSpeechEngineOptions = {}) {
     this.getAccent = options.getAccent ?? (() => DEFAULT_ENGLISH_ACCENT);
+    this.getPreferredVoiceURI = options.getPreferredVoiceURI ?? (() => undefined);
   }
 
   async prepare(): Promise<SpeakResult> {
@@ -91,6 +99,11 @@ export class WebSpeechEngine implements SpeechEngine {
     return selectSystemVoice({ voices: this.voices, lang: tag });
   }
 
+  /** Voice URIs differ per browser, so a pin is matched against both fields. */
+  private findVoice(nameOrUri: string) {
+    return this.voices.find((voice) => voice.name === nameOrUri || voice.voiceURI === nameOrUri);
+  }
+
   private refreshVoices() {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     const voices = window.speechSynthesis.getVoices();
@@ -107,13 +120,20 @@ export class WebSpeechEngine implements SpeechEngine {
       return undefined;
     }
 
-    const exact = preferredVoice
-      ? this.voices.find((voice) => voice.name === preferredVoice || voice.voiceURI === preferredVoice)
-      : undefined;
+    const exact = preferredVoice ? this.findVoice(preferredVoice) : undefined;
     if (exact) return exact;
 
-    const cacheKey = `${lang}:${preferredVoice ?? ""}`;
+    // The learner's pinned voice only applies to English (Plan18 D4). A pin for
+    // a voice that is no longer installed simply falls through to the policy.
+    const pinned = lang.toLowerCase().startsWith("en") ? this.getPreferredVoiceURI(this.getAccent()) : undefined;
+    const cacheKey = `${lang}:${preferredVoice ?? ""}:${pinned ?? ""}`;
     if (this.voiceCache.has(cacheKey)) return this.voiceCache.get(cacheKey) ?? undefined;
+
+    const pinnedVoice = pinned ? this.findVoice(pinned) : undefined;
+    if (pinnedVoice) {
+      this.voiceCache.set(cacheKey, pinnedVoice);
+      return pinnedVoice;
+    }
 
     const selected = selectSystemVoice({ voices: this.voices, lang, preferredVoice });
     this.voiceCache.set(cacheKey, selected ?? null);

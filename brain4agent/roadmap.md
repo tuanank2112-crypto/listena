@@ -1,5 +1,9 @@
 # ListenAI roadmap
 
+## 2026-09-19 — Plan17 skill `elevenlabs-voice` + tham khảo Vocab Master (DONE LOCAL, docs-only, chưa commit)
+
+Skill ElevenLabs đưa vào repo dưới dạng tài liệu quy trình ([canonical](../.agents/skills/elevenlabs-voice/SKILL.md), shim `.claude/skills/`), không thêm mã/SDK. Khảo sát app "English Vocab Master A2-B1" ghi ở [tham khảo](../docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md): ứng viên plan MINOR kế tiếp = lesson journey 5 bước cho remediation lesson, màn "Từ hay sai" + "Ôn tập ngẫu nhiên" từ evidence hiện có, 3 tốc độ nghe tại Nghe & viết, combo/điểm do server tính. Vùng cấm: chấm điểm client, bỏ đăng nhập, Firebase. Ưu tiên trước đó vẫn là Plan16 WP2/WP4/WP5 (key ElevenLabs thật, chi phí, bump 0.8.0) và mail production.
+
 ## 2026-09-18 — Plan16 rollout Voice AI (PLANNED, worker thực thi)
 
 Bước kế tiếp là [Plan16](../planning/16_2026-09-18_voice-rollout/plan.md): commit Plan15 + CI → xác minh giọng thật bằng `voice:doctor` với key ElevenLabs → env Vercel + deploy + smoke → theo dõi chi phí → bump 0.8.0 → đồng bộ não. Cần user: key, duyệt commit, Vercel, duyệt bump.
@@ -31,6 +35,9 @@ Tinh nang AI da chet hoan toan do `KIRAAI_MODEL` tro toi model khong ton tai; da
 1. Phan biet sai cau hinh voi qua tai trong tang provider; validate model luc doc cau hinh; log than loi cua provider. Khong de mot loi vinh vien nup duoi thong bao "thu lai sau".
 2. Chot model tra phi va han muc chi; free tier rate-limit gat nen khong dung cho nguoi hoc that.
 3. Them mot smoke that cham provider vao quy trinh; toan bo test hien dung provider tat dinh nen khong bao gio bat duoc loai loi nay.
+
+## Voice (ngoài bậc thang Plan12)
+Plan18 (2026-09-19, DONE LOCAL) đóng phần "nghe hay mà không tốn tiền": catalog giọng trình duyệt đã thẩm định + học viên tự chọn giọng + skill `english-voices`. Việc còn lại của mảng voice là Plan16 WP2/WP4/WP5 và phụ thuộc **một đầu vào của user**: key ElevenLabs (giọng AI trả phí). Không có key thì app vẫn nghe tốt bằng giọng Natural miễn phí, nên đây không còn là đường tới hạn.
 
 ## Current master plan
 [Plan12](../planning/12_2026-09-17_project-completion-release/plan.md), PLANNED 2026-09-17: hoàn thiện dự án tới 1.0.0 theo Definition of Done D1–D6 (integrity, hosted+rollback+mail, live AI có reviewer, causal next action, pilot đã đánh giá, handover). Contract kỹ thuật vẫn ở [Plan11](../planning/11_2026-09-16_ai-native-evidence-gates/plan.md); hosted/mail vẫn Plan07/09.

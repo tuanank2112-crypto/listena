@@ -78,6 +78,59 @@ describe("chooseEnglishVoice", () => {
   });
 });
 
+describe("curated listenability (Plan18)", () => {
+  // A real Windows 11 + Edge machine: many Microsoft Natural voices in one tier.
+  const windowsEdge = [
+    voice("Microsoft Andrew Online (Natural) - English (United States)", "en-US"),
+    voice("Microsoft Aria Online (Natural) - English (United States)", "en-US"),
+    voice("Microsoft Ava Online (Natural) - English (United States)", "en-US"),
+    voice("Microsoft Emma Online (Natural) - English (United States)", "en-US"),
+    voice("Microsoft Zira - English (United States)", "en-US", { default: true }),
+    voice("Google US English", "en-US", { localService: false }),
+  ];
+
+  it("picks the most listenable voice inside the tier, not the alphabetical one", () => {
+    // Before Plan18 the sort fell through to name order and returned "Andrew".
+    const choice = chooseEnglishVoice(windowsEdge, "en-US");
+    expect(choice?.voice.name).toMatch(/Ava Online \(Natural\)/);
+    expect(choice?.curated?.key).toBe("ava");
+    expect(choice?.tier).toBe("NEURAL");
+
+    const order = rankEnglishVoices(windowsEdge, "en-US").map((item) => item.curated?.key);
+    expect(order).toEqual(["ava", "emma", "andrew", "aria", "zira", "google us english"]);
+  });
+
+  it("never lets a curated score cross a tier boundary", () => {
+    // Google US English is curated (60) but REMOTE; the uncurated system voice wins.
+    const ranked = rankEnglishVoices(
+      [voice("Google US English", "en-US", { localService: false }), voice("Some Unknown Voice", "en-US")],
+      "en-US",
+    );
+    expect(ranked.map((item) => item.voice.name)).toEqual(["Some Unknown Voice", "Google US English"]);
+    expect(ranked[0]?.quality).toBe(200);
+    expect(ranked[1]?.quality).toBe(160);
+  });
+
+  it("keeps the requested accent ahead of a higher-scoring voice in another accent", () => {
+    const ranked = rankEnglishVoices(
+      [
+        voice("Microsoft Ava Online (Natural) - English (United States)", "en-US"),
+        voice("Microsoft Thomas Online (Natural) - English (United Kingdom)", "en-GB"),
+      ],
+      "en-GB",
+    );
+    expect(ranked[0]?.voice.name).toMatch(/Thomas/);
+    expect(ranked[0]?.quality).toBeLessThan(ranked[1]?.quality ?? 0);
+  });
+
+  it("still ranks voices that are not in the catalogue", () => {
+    const ranked = rankEnglishVoices([voice("Microsoft Natasha Online (Natural) - English (Australia)", "en-AU")], "en-US");
+    expect(ranked[0]?.curated).toBeUndefined();
+    expect(ranked[0]?.quality).toBe(400);
+    expect(ranked[0]?.accentMatched).toBe(false);
+  });
+});
+
 describe("chooseVietnameseVoice", () => {
   it("returns the default Vietnamese voice when present", () => {
     const voices = [voice("Linh", "vi-VN"), voice("An", "vi-VN", { default: true }), voice("Samantha", "en-US")];

@@ -18,6 +18,12 @@ export interface VoicePreferences {
   engine: "auto" | "browser";
   /** Learner-chosen curated AI voice per language key; empty means the server's best pick. */
   aiVoices: Partial<Record<VoiceKey, string>>;
+  /**
+   * Learner-chosen browser/OS voice per English accent (Plan18 SPEC-P181).
+   * Stores the `voiceURI`; a missing entry means the curated policy decides.
+   * Kept apart from `aiVoices`, whose sanitiser only accepts ElevenLabs ids.
+   */
+  browserVoices: Partial<Record<EnglishAccent, string>>;
 }
 
 export const VOICE_PREFERENCES_STORAGE_KEY = "listena.voice.v1";
@@ -29,6 +35,7 @@ export const DEFAULT_VOICE_PREFERENCES: VoicePreferences = {
   coachVoice: true,
   engine: "auto",
   aiVoices: {},
+  browserVoices: {},
 };
 
 export const VOICE_RATE_OPTIONS: Array<{ value: VoicePreferences["rate"]; label: string }> = [
@@ -53,6 +60,24 @@ function sanitizeVoices(value: unknown): VoicePreferences["aiVoices"] {
   return output;
 }
 
+/**
+ * A browser `voiceURI` is free-form: "Microsoft Ava Online (Natural) - English
+ * (United States)", "urn:moz-tts:…", "com.apple.voice.premium.en-US.Ava". Only
+ * the shape is checked; a URI that no longer exists is handled at speak time.
+ */
+function sanitizeBrowserVoices(value: unknown): VoicePreferences["browserVoices"] {
+  if (!value || typeof value !== "object") return {};
+  const raw = value as Record<string, unknown>;
+  const output: VoicePreferences["browserVoices"] = {};
+  for (const key of ["en-US", "en-GB"] as const) {
+    const uri = raw[key];
+    if (typeof uri !== "string") continue;
+    const trimmed = uri.trim();
+    if (trimmed && trimmed.length <= 200) output[key] = trimmed;
+  }
+  return output;
+}
+
 function sanitize(value: unknown): VoicePreferences {
   if (!value || typeof value !== "object") return DEFAULT_VOICE_PREFERENCES;
   const raw = value as Record<string, unknown>;
@@ -64,6 +89,7 @@ function sanitize(value: unknown): VoicePreferences {
     coachVoice: typeof raw.coachVoice === "boolean" ? raw.coachVoice : DEFAULT_VOICE_PREFERENCES.coachVoice,
     engine: raw.engine === "browser" ? "browser" : "auto",
     aiVoices: sanitizeVoices(raw.aiVoices),
+    browserVoices: sanitizeBrowserVoices(raw.browserVoices),
   };
 }
 
@@ -82,9 +108,8 @@ export function getVoicePreferences(): VoicePreferences {
   return current;
 }
 
-export function setVoicePreferences(patch: Partial<VoicePreferences>) {
-  const previous = getVoicePreferences();
-  current = sanitize({ ...previous, ...patch, aiVoices: { ...previous.aiVoices, ...(patch.aiVoices ?? {}) } });
+function commit(next: VoicePreferences) {
+  current = next;
   try {
     window.localStorage.setItem(VOICE_PREFERENCES_STORAGE_KEY, JSON.stringify(current));
   } catch {
@@ -93,19 +118,38 @@ export function setVoicePreferences(patch: Partial<VoicePreferences>) {
   listeners.forEach((listener) => listener());
 }
 
+export function setVoicePreferences(patch: Partial<VoicePreferences>) {
+  const previous = getVoicePreferences();
+  commit(
+    sanitize({
+      ...previous,
+      ...patch,
+      aiVoices: { ...previous.aiVoices, ...(patch.aiVoices ?? {}) },
+      browserVoices: { ...previous.browserVoices, ...(patch.browserVoices ?? {}) },
+    }),
+  );
+}
+
 /** Set (or clear with undefined) the chosen AI voice for one language key. */
 export function setPreferredAiVoice(key: VoiceKey, voiceId: string | undefined) {
   const previous = getVoicePreferences();
   const aiVoices = { ...previous.aiVoices };
   if (voiceId) aiVoices[key] = voiceId;
   else delete aiVoices[key];
-  current = sanitize({ ...previous, aiVoices });
-  try {
-    window.localStorage.setItem(VOICE_PREFERENCES_STORAGE_KEY, JSON.stringify(current));
-  } catch {
-    // ignore
-  }
-  listeners.forEach((listener) => listener());
+  commit(sanitize({ ...previous, aiVoices }));
+}
+
+/**
+ * Pin the browser/OS voice for one English accent (Plan18 SPEC-P181).
+ * `undefined` clears the pin and hands the choice back to the curated policy.
+ * The other accent keeps its own pin.
+ */
+export function setPreferredBrowserVoice(accent: EnglishAccent, voiceURI: string | undefined) {
+  const previous = getVoicePreferences();
+  const browserVoices = { ...previous.browserVoices };
+  if (voiceURI) browserVoices[accent] = voiceURI;
+  else delete browserVoices[accent];
+  commit(sanitize({ ...previous, browserVoices }));
 }
 
 export function subscribeVoicePreferences(listener: () => void) {

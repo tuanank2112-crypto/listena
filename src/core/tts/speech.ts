@@ -220,6 +220,45 @@ async function speakSingle(options: SpeakOptions): Promise<SpeakResult> {
   return result;
 }
 
+export interface SpeakWithBrowserVoiceOptions {
+  text: string;
+  lang: SpeechLanguage;
+  /** `voiceURI` or `name` of the system voice to force. */
+  voiceURI?: string;
+  rate?: number;
+}
+
+/**
+ * Speak through the browser/OS engine only, skipping the AI engine entirely
+ * (Plan18 SPEC-P181 §4). The settings preview needs this: with an ElevenLabs
+ * key configured, `speak` would answer a "listen to this system voice" button
+ * with the AI voice instead.
+ */
+export async function speakWithBrowserVoice(options: SpeakWithBrowserVoiceOptions): Promise<SpeakResult> {
+  if (!options.text.trim()) return { ok: false, status: "unavailable" };
+
+  sequenceToken += 1;
+  const requestId = latestRequestId + 1;
+  latestRequestId = requestId;
+  activeController?.abort();
+  activeController = null;
+  await englishEngine?.stop();
+  await englishFallbackEngine?.stop();
+  await vietnameseEngine?.stop();
+  await vietnameseFallbackEngine?.stop();
+  if (requestId !== latestRequestId) return { ok: false, status: "cancelled" };
+  updateSpeechState(initialState);
+
+  const engine = options.lang === "vi" ? vietnameseFallbackEngine : englishFallbackEngine;
+  if (!engine) return { ok: false, status: "unavailable" };
+
+  return tryEngine(
+    engine,
+    { text: options.text, lang: options.lang, voice: options.voiceURI, speed: options.rate ?? 1 },
+    requestId,
+  );
+}
+
 export interface SpeakLineInput {
   lang: SpeechLanguage;
   text: string;

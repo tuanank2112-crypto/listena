@@ -308,3 +308,40 @@ User: "tiếp tục triển khai theo plan 16. tôi cho phép bạn chọn voice
 - Live probe: `GET /api/health` 200 OK, `Permissions-Policy: microphone=(self)` active; các route âm thanh mới (`/api/voice/tts`, `/api/game-runs/[runId]/rounds/[roundId]/audio`, `/api/learner/personalized-lessons/[lessonId]/exercises/[exerciseId]/audio`) hoạt động đúng theo auth boundary.
 
 
+
+
+## 2026-09-19 02:05–02:40+07 — Plan17: skill `elevenlabs-voice` + tham khảo Vocab Master A2-B1 (root, auto-mode)
+
+User: "check lại não, sau đó lấy voice bên elevenlab làm 1 skills voice vào repo nhé chứ k lấy api. sau đó tham khảo thêm các chức năng có trong 2 link này [english-vocab-master-a2-b1.ai.studio; aistudio.google.com/apps/8af2415c…]".
+
+- **Bước 0:** `init_brain.js --check` exit 0 (NÃO ĐÃ OK, marker v1.4.0). Repo sạch, chỉ 4 file untracked cần giữ. Plan16 WP4/WP5 vẫn ⬜ (không có key ElevenLabs local/Vercel).
+- **Diễn giải:** "skill voice, không lấy API" = tài liệu quy trình theo chuẩn agentskills.io, KHÔNG thêm mã/SDK. Nguồn: https://github.com/elevenlabs/skills (MIT, commit 9edcbd4, 2026-09-09) có 10 skill; lấy `text-to-speech` + `setup-api-key`.
+- **Đã làm (chưa commit):** `.agents/skills/elevenlabs-voice/SKILL.md` (luật R1–R10: không hard-code voice ID, không gọi từ client, không thêm SDK, không câm khi thiếu key, không đọc câu sai/đáp án FILL, không ghi mastery, không lộ key, qua prepareSpokenText, model mặc định, MINOR cần plan; công thức A–D; bảng khác biệt với upstream) + `references/listenai-voice-contract.md` (module, endpoint, env, bảng lỗi) + `references/upstream/` 6 file nguyên văn; shim `.claude/skills/elevenlabs-voice/SKILL.md` (≤10 dòng). `docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md`. `planning/17_2026-09-19_voice-skill-vocab-reference/plan.md` (PATCH, chỉ plan.md).
+- **Khảo sát link:** app deploy là Vite/React + Firebase Auth/Firestore + speechSynthesis; **không gọi Gemini/LLM**; 50 từ/5 chủ đề, schema có collocations + exampleVi; vòng 5 bước learn→practice→play→listen→test (progress % theo bài, tự nhảy bước dở); Practice 3 dạng xoay vòng; Match có combo + điểm tích lũy; Dictation 0.75×/1.0×/1.2×; Test cuối bài lặp tới 100%; "Từ hay sai" (wrongCount>0) + Random Review xuyên bài; dùng được không đăng nhập (local-user). Link editor AI Studio redirect Google login → chưa xem. ego-browser chưa cài; Tabbit exit 69 (browser chưa mở) → không có ảnh UI.
+- **Đề xuất (chưa quyết):** plan MINOR "Lesson journey + Từ hay sai + Random Review + tốc độ nghe tại Nghe & viết + combo do server tính"; vùng cấm: chấm điểm client, bỏ đăng nhập, Firebase.
+- **Bài học:** heredoc Bash nhiều file tiếng Việt dài bị lỗi parse → dùng Write tool/script node cho tài liệu dài.
+
+## 2026-09-19 14:30-15:10+07 - Plan18: giọng Anh miễn phí nghe hay hơn + học viên tự chọn giọng (root, auto-mode)
+
+**Yêu cầu user:** "thêm các voice khác nghe thanh thoát hơn, dễ nghe hơn mà chuẩn tiếng anh hơn… tôi cần voices đó là các skills chứ k phải dùng api key của elevenlab". Hỏi lại và user chốt: nguồn = **giọng neural miễn phí của máy/trình duyệt**; phạm vi = **skill + code + UI chọn giọng** (MINOR, đủ bộ SPEC).
+
+**Hai lỗ hổng thật tìm được khi rà mã (không phải suy đoán):**
+1. `rankEnglishVoices` xếp theo tier rồi rơi xuống `name.localeCompare`. Trên máy Windows + Edge, tier NEURAL có hơn 10 giọng Microsoft Natural nên giọng thắng là giọng **đứng đầu alphabet**: "Andrew" thắng "Ava" chỉ vì A-n < A-v. Không ai từng thẩm định giọng đó có dễ nghe hay không.
+2. Học viên **không có ô chọn giọng trình duyệt**; picker duy nhất trong Settings là cho giọng ElevenLabs và nó rỗng khi không có key.
+
+**Đã làm (chưa commit):** `src/core/voice/browser-voice-catalog.ts` (40 giọng đã thẩm định: Microsoft Natural, Apple, Google, SAPI cũ; `listenability` 0..99; `normaliseVoiceName` cắt đuôi locale, nhãn hãng và hậu tố "Multilingual" của Edge); `voice-policy.ts` thêm `voiceQualityScore = TIER_RANK*100 + listenability` và `VoiceChoice.curated/quality` (accent -> quality -> default -> local; **điểm không bao giờ vượt tier**); preference `browserVoices` theo accent + `setPreferredBrowserVoice`; `WebSpeechEngine.getPreferredVoiceURI` (khoá `voiceCache` chứa cả giọng ghim nên đổi giọng ăn ngay, không cần F5); `speakWithBrowserVoice` trong `speech.ts` (nghe thử đi thẳng engine trình duyệt, bỏ qua engine AI); `BrowserVoicePicker` + `buildBrowserVoiceOptions` trong `voice-settings.tsx` (tối đa 6 mục cộng mục đã ghim, "Tự động" luôn đầu, cảnh báo giọng đã gỡ, gợi ý cài giọng khi không có NEURAL); skill `english-voices` (`.agents/skills/english-voices/` SKILL.md luật E1-E10 + `references/voice-catalog.md` + `references/install-voices.md`, shim `.claude/skills/` 8 dòng); ADR 0004; bộ SPEC Plan18.
+
+**Gates local (số thật):** type-check 0; eslint 0 lỗi / 28 cảnh báo (đúng baseline); vitest **129 file / 820 test** (trước: 126/779); `next build` PASS (66 dòng route, 0 lỗi); Playwright **39/39** (thêm ca "the learner can pick and keep a device voice without any AI key": Ava thắng Andrew trong trình duyệt thật, ghim sống qua reload).
+
+**Bằng chứng khác biệt thật:** test trong `voice-policy.test.ts` ghim rõ máy Windows/Edge giả lập trả `Ava` **sau** thay đổi, `Andrew` **trước** thay đổi.
+
+**Vùng cấm đã giữ:** không dependency mới, không sidecar/model tải về, không key, không endpoint, không đụng DB; không đổi giọng tiếng Việt; lựa chọn giọng chỉ ở `localStorage` (khoá `listena.voice.v1` giữ nguyên), không gửi server, không ghi mastery/LearningEvidence/planner; giọng Google vẫn được xếp hạng (không loại); giọng novelty vẫn bị loại.
+
+**Còn mở:** commit/push/deploy (chờ user); smoke thủ công trên Edge + Chrome (Plan18 OPERATIONS §2.4); Plan16 WP2/WP4/WP5 vẫn mở vì chưa có key ElevenLabs.
+
+### Bổ sung 15:05+07 theo yêu cầu user ("thêm giọng nào ưng nhất / rating best" + "commit push deploy luôn")
+
+- Kiểm giọng THẬT trên máy user bằng `System.Speech`: chỉ có **Microsoft David Desktop** và **Microsoft Zira Desktop** (SAPI đời cũ, điểm 32/34) — đúng nguyên nhân "nghe máy móc", và đúng trường hợp UI hiện gợi ý cài giọng Natural. Giọng "Online (Natural)" của Edge không xuất hiện trong SAPI nên phải mở bằng Edge mới nghe được.
+- Thêm 7 giọng được đánh giá cao vào catalog (sửa bảng SPEC-P180 §4 trước theo luật C7): Christopher, Eric, Ana (Microsoft Natural en-US), Alex, Nicky, Aaron (Apple en-US), Arthur (Apple en-GB). Catalog 40 → **47 mục**.
+- Ana và Maisie là giọng trẻ em: hạ điểm có chủ ý (50/55) dù Ana nằm trong tier NEURAL, nếu không nó sẽ chen lên đầu danh sách.
+- 5 gate chạy lại: type-check 0; eslint 0/28; vitest 129 file / **820 test**; build Compiled successfully; Playwright **39/39**.

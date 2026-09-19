@@ -1,11 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   getSpeechState,
+  registerEnglishFallbackSpeechEngine,
   registerEnglishSpeechEngine,
+  registerVietnameseFallbackSpeechEngine,
   registerVietnameseSpeechEngine,
   setSpeechWarningHandler,
   shouldAttemptFallback,
   speak,
+  speakWithBrowserVoice,
   stopSpeech,
   subscribeSpeechState,
   type SpeechEngine,
@@ -258,5 +261,53 @@ describe("speakLines / speakCurated / speakVoiceScript (Plan14)", () => {
     );
     expect(engine.speak).toHaveBeenCalledWith(expect.objectContaining({ text: "Hello.", speed: 0.8 }), expect.anything());
     expect(viEngine.speak).not.toHaveBeenCalled();
+  });
+});
+
+describe("speakWithBrowserVoice (Plan18)", () => {
+  afterEach(async () => {
+    await stopSpeech();
+    registerEnglishSpeechEngine(null);
+    registerEnglishFallbackSpeechEngine(null);
+    registerVietnameseSpeechEngine(null);
+    registerVietnameseFallbackSpeechEngine(null);
+  });
+
+  it("bỏ qua engine AI và ép đúng giọng hệ thống", async () => {
+    const ai = createEngine();
+    const browser = createEngine();
+    registerEnglishSpeechEngine(ai);
+    registerEnglishFallbackSpeechEngine(browser);
+
+    const result = await speakWithBrowserVoice({
+      text: "Hello",
+      lang: "en",
+      voiceURI: "Microsoft Ava Online (Natural) - English (United States)",
+      rate: 0.8,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(ai.speak).not.toHaveBeenCalled();
+    expect(browser.speak).toHaveBeenCalledWith(
+      { text: "Hello", lang: "en", voice: "Microsoft Ava Online (Natural) - English (United States)", speed: 0.8 },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it("dùng engine trình duyệt của tiếng Việt và không đụng engine tiếng Anh", async () => {
+    const english = createEngine();
+    const vietnamese = createEngine();
+    registerEnglishFallbackSpeechEngine(english);
+    registerVietnameseFallbackSpeechEngine(vietnamese);
+
+    await speakWithBrowserVoice({ text: "Xin chào", lang: "vi" });
+    expect(english.speak).not.toHaveBeenCalled();
+    expect(vietnamese.speak).toHaveBeenCalledTimes(1);
+  });
+
+  it("trả unavailable khi chưa có engine trình duyệt hoặc text rỗng", async () => {
+    expect(await speakWithBrowserVoice({ text: "Hello", lang: "en" })).toEqual({ ok: false, status: "unavailable" });
+    registerEnglishFallbackSpeechEngine(createEngine());
+    expect(await speakWithBrowserVoice({ text: "   ", lang: "en" })).toEqual({ ok: false, status: "unavailable" });
   });
 });
