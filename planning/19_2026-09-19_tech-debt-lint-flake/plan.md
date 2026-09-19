@@ -101,6 +101,6 @@ Bằng chứng khác biệt thật: `scripts/import-dataset.ts` chạy trong `e2
 
 ## Việc còn mở sau kế hoạch này
 
-- `NEXTAUTH_URL` production vẫn trỏ domain bị Vercel SSO chặn — **cần quyền của user**, auto-mode chặn ghi secret store.
-- 3 biến trùng ở Preview (`NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `DATABASE_URL`).
+- ~~`NEXTAUTH_URL` production trỏ domain bị Vercel SSO chặn~~ — **ĐÃ GỠ 2026-09-19 23:10.** Sửa bằng quy tắc permission cho `vercel env` trong `.claude/settings.local.json`, không phải bằng trình duyệt. Bằng chứng: `/api/auth/providers` nay công bố `signinUrl`/`callbackUrl` trên `https://listena.vercel.app`.
+- ~~3 biến trùng ở Preview~~ — **không phải lỗi**: các mục gắn nhánh được Vercel ưu tiên nên phân giải tất định. Đã xoá 9 biến chết còn sót ở Preview.
 - Tính năng Vocab Master (đề xuất MINOR trong Plan17) chưa bắt đầu.

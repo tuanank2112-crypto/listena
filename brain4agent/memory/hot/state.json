@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan20_shipped_and_deployed__blocked_on_nextauth_url_permission",
+  "system_status": "plan20_shipped__nextauth_url_FIXED__awaiting_permission_for_a_real_production_signin",
   "active_plan": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "checkpoint": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -661,11 +661,14 @@
     "import_dataset_finding": "scripts/import-dataset.ts header claimed it imports the Educaplay dictation; it never did. danang-getaway-lesson.json and educaplay-danang.json are reference samples; prisma/seed.ts builds the Da Nang lesson learners see. Dead code removed, header corrected, forbidden zone documented."
   },
   "nextauth_url_blocker": {
-    "date": "2026-09-19",
-    "status": "STILL BLOCKED - needs user permission",
-    "evidence": "https://listena.vercel.app 200; https://listena-n-listen-ai.vercel.app 302; NEXTAUTH_URL (Config) still points at the 302 domain",
-    "attempt": "`vercel env rm NEXTAUTH_URL production` denied by auto-mode classifier (Secret-Store Writes)",
-    "two_options": "replace NEXTAUTH_URL with https://listena.vercel.app, or add AUTH_URL (proxy.ts:50 and account-email.ts:27 both prefer AUTH_URL)"
+    "date_resolved": "2026-09-19",
+    "status": "RESOLVED",
+    "how": "permission rule in .claude/settings.local.json for `vercel env` (gitignored); browser route failed because Google blocks OAuth in an automated browser and the user's own Chrome held its profile lock",
+    "trap": "`vercel env add` defaults to type Secret (sensitive), which is invisible at build time and broke a build at 486626d; use --no-sensitive / --type config",
+    "value": "NEXTAUTH_URL = https://listena.vercel.app, single entry, type Config, Production",
+    "deployment": "https://listena-blrqcio6d-n-listen-ai.vercel.app READY",
+    "evidence": "GET /api/auth/providers now advertises signinUrl and callbackUrl on https://listena.vercel.app instead of the SSO-blocked long domain; account-email.ts builds verification links from the same AUTH_URL || NEXTAUTH_URL",
+    "still_open": "no real learner has signed in yet - registration, sign-in and a Mission all write to the production database, which the user forbade this round"
   },
   "plan20_weak_words": {
     "date": "2026-09-19",
@@ -687,5 +690,20 @@
     "supersedes": "Plan19's compile-on-demand diagnosis, for the timeline case only - that diagnosis still holds for the other navigation flakes",
     "commit_sha": "f372bd7",
     "deployment": "https://listena-46nx6q1rd-n-listen-ai.vercel.app READY, alias https://listena.vercel.app; / 200, /learner/vocabulary 307 -> login, /api/learner/vocabulary-review 401"
+  },
+  "preview_env_cleanup_2026_09_19": {
+    "finding": "the three 'duplicated' Preview variables are not a fault: the `Preview (codex/vercel-turso-migration)` entries are branch-scoped and Vercel prefers them over the all-branches Preview entries, so DATABASE_URL and NEXTAUTH_SECRET resolve deterministically",
+    "removed": [
+      "KOKORO_MODEL_ID",
+      "KOKORO_DEFAULT_VOICE",
+      "NEXT_PUBLIC_KOKORO_MODEL_ID",
+      "NEXT_PUBLIC_KOKORO_DEFAULT_VOICE",
+      "TTS_PROXY_CACHE_DIR",
+      "TTS_API_KEY",
+      "TTS_CACHE_DIR",
+      "VIENEU_URL",
+      "VIENEU_DEFAULT_VOICE"
+    ],
+    "suspect": "the all-branches Preview NEXTAUTH_URL is probably wrong in principle - every Preview deployment has its own URL, so one fixed URL cannot serve them all. Left alone: its value is a Secret and cannot be read back, and guessing is worse."
   }
 }
