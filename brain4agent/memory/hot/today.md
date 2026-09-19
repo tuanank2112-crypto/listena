@@ -476,3 +476,10 @@ User chọn "Tính năng Vocab Master", kèm ràng buộc **"không được tha
 - `NEXTAUTH_URL` bản Preview-mọi-nhánh (loại Secret, 7 ngày trước) nhiều khả năng **sai về bản chất**: mỗi deployment Preview có URL riêng nên một URL cố định không thể đúng cho mọi bản. Chưa đụng vì không đọc được giá trị Secret và không đoán.
 - `OPENAI_API_KEY`/`OPENAI_MODEL`/`OPENAI_BASE_URL` còn ở Production+Preview nhưng `AI_PROVIDER=vyce` nên vô hiệu; OpenAI Responses vẫn là đường thay thế trong mã nên chưa xoá.
 - **CHƯA kiểm chứng bằng người thật**: đăng ký/đăng nhập/chạy Mission đều **ghi vào DB production**, mà user ràng buộc "không được thay đổi db" — cần user cho phép riêng.
+
+### 23:15–23:30+07 — Chạy luồng thật trên production (user cho phép ghi DB)
+
+- **Đăng nhập thất bại, nhưng KHÔNG phải vì xác minh email.** `POST /api/auth/callback/credentials` với tuanank2112@gmail.com + mật khẩu ghi ở phiên trước trả `302 -> /login?error=CredentialsSignin&code=credentials`. Đọc `src/server/auth/config.ts`: mã `email_not_verified` chỉ được trả **sau khi mật khẩu đúng**, `auth_locked` khi bị khoá; mã chung `credentials` nghĩa là **mật khẩu sai hoặc tài khoản không tồn tại**. ⇒ mật khẩu `LnUx4ifW0de9bMj6!7` ghi ở phiên trước **không dùng được** — nhiều khả năng tài khoản đã tồn tại từ trước nên lần đăng ký đó là no-op (route trả 202 giống hệt dù tài khoản có hay không, xem `register/route.ts:184-189`).
+- **Điểm tích cực:** redirect sau khi từ chối nay về `https://listena.vercel.app/login`, đúng domain mở được — thêm một bằng chứng `NEXTAUTH_URL` đã đúng.
+- **Đã kích hoạt gửi mail thật:** `POST /api/account/password-reset/request` trả `202 {accepted:true}` trong 1.79s. Log runtime xác nhận request tới nơi, **không có lỗi**; nhưng tầng email không log lúc thành công và việc gửi chạy trong `after()`, nên **log không chứng minh được mail đã đi**.
+- **Nút thắt còn lại là HỘP THƯ CỦA USER.** Resend chưa có domain xác minh nên chỉ gửi được tới tuanank2112@gmail.com. Không có cách nào khác để lấy link: token chỉ nằm trong mail. Đang chờ user mở hộp thư.
