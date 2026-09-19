@@ -6,6 +6,7 @@ import {
   GeneratedScenarioSchema,
   SCENARIO_AUTHOR_SYSTEM_PROMPT,
   buildScenarioAuthorInput,
+  clampGeneratedScenarioLists,
   toMissionTemplate,
 } from "./scenario-author";
 
@@ -115,5 +116,80 @@ describe("toMissionTemplate", () => {
   it("does not carry the Vietnamese summary into the tutor prompt", () => {
     // The tutor speaks English; the summary exists for the learner's card.
     expect(JSON.stringify(toMissionTemplate("custom-abc", scenario, 7))).not.toContain("Bạn nhận đơn");
+  });
+});
+
+describe("clampGeneratedScenarioLists", () => {
+  // Measured against the live model on 2026-09-20: it asked for four grammar
+  // points and got five, and the learner saw "Chưa tạo được chủ đề lúc này".
+  it("accepts a generation that returned one grammar point too many", () => {
+    const generous = {
+      ...scenario,
+      targetGrammar: ["past simple", "present perfect", "modals", "questions", "articles"],
+    };
+    expect(GeneratedScenarioSchema.safeParse(generous).success).toBe(false);
+
+    const clamped = GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(generous));
+    expect(clamped.targetGrammar).toEqual(["past simple", "present perfect", "modals", "questions"]);
+  });
+
+  it("keeps the first eight words when the model volunteers more", () => {
+    const generous = {
+      ...scenario,
+      targetVocabulary: ["a", "b", "c", "d", "e", "f", "g", "h", "i", "j"],
+    };
+    const clamped = GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(generous));
+    expect(clamped.targetVocabulary).toEqual(["a", "b", "c", "d", "e", "f", "g", "h"]);
+  });
+
+  it("still rejects a list that is too short, because a floor cannot be clamped", () => {
+    const thin = { ...scenario, targetVocabulary: ["order", "missing"] };
+    expect(GeneratedScenarioSchema.safeParse(clampGeneratedScenarioLists(thin)).success).toBe(false);
+  });
+
+  it("accepts a grammar point phrased longer than a vocabulary item", () => {
+    // The other live rejection: "present continuous for future arrangements" is
+    // a normal way to name a grammar point and was 11 characters over the cap a
+    // single word needs.
+    const phrased = {
+      ...scenario,
+      targetGrammar: ["present continuous for future arrangements"],
+    };
+    expect(GeneratedScenarioSchema.safeParse(clampGeneratedScenarioLists(phrased)).success).toBe(true);
+  });
+
+  it("drops an item too long even for grammar instead of cutting it in half", () => {
+    // A hint cut mid-phrase would go into a tutor prompt as nonsense.
+    const overlong = {
+      ...scenario,
+      targetGrammar: ["past simple", "g".repeat(80)],
+    };
+    const clamped = GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(overlong));
+    expect(clamped.targetGrammar).toEqual(["past simple"]);
+  });
+
+  it("drops entries that are not usable strings", () => {
+    const messy = {
+      ...scenario,
+      targetVocabulary: ["order", "  ", "missing", null, 7, "receipt"],
+    };
+    const clamped = GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(messy));
+    expect(clamped.targetVocabulary).toEqual(["order", "missing", "receipt"]);
+  });
+
+  it("leaves strings alone, so a mangled sentence never reaches a learner", () => {
+    const wordy = { ...scenario, openingLine: "x".repeat(400) };
+    const clampedOpening = (clampGeneratedScenarioLists(wordy) as { openingLine: string }).openingLine;
+    expect(clampedOpening).toHaveLength(400);
+    expect(GeneratedScenarioSchema.safeParse(clampGeneratedScenarioLists(wordy)).success).toBe(false);
+  });
+
+  it("passes a conforming generation through untouched", () => {
+    expect(clampGeneratedScenarioLists(scenario)).toEqual(scenario);
+  });
+
+  it("does not throw on a reply that is not an object at all", () => {
+    expect(clampGeneratedScenarioLists(null)).toBeNull();
+    expect(clampGeneratedScenarioLists("not json")).toBe("not json");
   });
 });

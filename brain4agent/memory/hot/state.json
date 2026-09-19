@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan23_shipped__ai_authoring_path_unverified_pending_a_password",
+  "system_status": "plan23_ai_path_proven_live_locally__a_real_bug_found_and_fixed__redeploy_pending",
   "active_plan": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "checkpoint": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -784,5 +784,44 @@
   "test_account_password": {
     "status": "UNKNOWN as of 2026-09-20 10:00",
     "note": "Listena#Prod-2026-09b no longer signs in. The error code is `credentials`, not `auth_locked`, so it is not the login throttle - the password itself changed. Most likely the user changed it after being told twice that it had passed through the chat transcript. Ask them for the current one before any test that needs a signed-in learner on production."
+  },
+  "plan23_live_ai_verification": {
+    "date": "2026-09-20",
+    "how": "the real authoring path run against live Vyce on a throwaway SQLite built from migrations in the OS temp directory; prisma/dev.db never opened",
+    "why_not_production": "sign-in is refused with code `credentials` - the test account password changed, most likely by the user after being told twice it had passed through chat history",
+    "bug_found": {
+      "symptom": "the learner typed an ordinary sentence and got 503 \"Chua tao duoc chu de luc nay\"",
+      "cause": "the model returned 5 grammar points against a cap of 4, and on another run a grammar label longer than MAX_TERM=32 - a number set for a vocabulary word",
+      "measured": "2 of 15 live generations rejected only for overshooting a list cap; grammar labels run 14-21 chars, vocabulary <=10; a further 2 of 15 failed at the provider (524 / non-JSON)",
+      "fix": "clampGeneratedScenarioLists() before zod + MAX_GRAMMAR_TERM=60; drop whole items, never truncate; zod still the gate for missing fields, empty strings and too-few items",
+      "forbidden": "do not reuse the clamp for GeneratedInterventionSchema - there a surplus item may be a quiz's correct answer"
+    },
+    "green_evidence": {
+      "authoring_seconds": 5.3,
+      "session_start_seconds": 4.3,
+      "weak_word_reached_the_fiction": "`check in` appeared in both targetVocabulary and the character's opening line",
+      "server_grading": "detectedError type `tense` with a Vietnamese explanation, score 0.6",
+      "voice_script": "[\"NPC/en\",\"NPC/en\",\"NPC/en\"] - SPEC-P231 proven on real model output, not a stub"
+    },
+    "kept_test": {
+      "path": "src/server/learning/live-scenario-authoring.test.ts",
+      "opt_in": "needs BOTH a configured provider AND LISTENAI_LIVE_AI_PROBE=1; skips otherwise and is never part of a gate run",
+      "why_not_in_the_suite": "it spends real AI calls and inherits the gateway's flakiness, and a flaky provider inside the gate teaches everyone to ignore a red run",
+      "run": "set -a && . ./.env && set +a; LISTENAI_LIVE_AI_PROBE=1 npx vitest run --disableConsoleIntercept src/server/learning/live-scenario-authoring.test.ts",
+      "roadmap_item_closed": "the post-outage priority #3 - a smoke that actually touches the provider"
+    },
+    "gateway_524": "seen 3 times at ~125s; the same inputHash succeeded on a resend - the trait the user accepted on 2026-09-20 07:00",
+    "gates": {
+      "type_check": "0",
+      "eslint": "0/0",
+      "vitest": "140 files (139 run + 1 skipped) / 949 tests (948 + 1 skipped)",
+      "build": "PASS",
+      "playwright": "53/53"
+    },
+    "open": [
+      "production still runs the build WITHOUT the clamp, so ~2/15 scenario creations can still answer 503; redeploy (no new migration, so deploy directly)",
+      "the by-hand production check still needs the current password for tuanank2112@gmail.com, or the user runs it",
+      "not committed - the user has not asked"
+    ]
   }
 }

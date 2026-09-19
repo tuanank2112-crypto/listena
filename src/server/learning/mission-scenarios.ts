@@ -13,6 +13,7 @@ import {
   GeneratedScenarioSchema,
   SCENARIO_AUTHOR_SYSTEM_PROMPT,
   buildScenarioAuthorInput,
+  clampGeneratedScenarioLists,
   type GeneratedScenario,
 } from "@/server/ai/scenario-author";
 import { AIUnavailableError } from "@/server/ai/errors";
@@ -206,7 +207,8 @@ export async function createLearnerMissionScenario(input: {
       safetyIdentifier: input.userId,
       maxOutputTokens: SCENARIO_MAX_OUTPUT_TOKENS,
     });
-    generated = GeneratedScenarioSchema.parse(response.output);
+    // Surplus list items are dropped first; the schema still decides.
+    generated = GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(response.output));
     await settleUserAICall(reservation, {
       success: true,
       provider: provider.providerName,

@@ -29,6 +29,8 @@ Migration **chỉ tạo một bảng mới**. Bản deploy đang chạy không b
 - `DELETE /api/learner/mission-scenarios/<uuid-bịa>` khi đã đăng nhập ⇒ `404`.
 - Một lượt Mission trên **chủ đề có sẵn** vẫn bắt đầu được — phép thử rằng việc nới `MissionScenarioKey` không làm hỏng đường cũ.
 - Tạo **một** chủ đề thật bằng AI và vào vai nó. Đây là thứ E2E **không** phủ (E2E gieo sẵn dữ liệu để khỏi tốn lượt AI), nên phải thử tay một lần.
+  - **2026-09-20:** đường này đã chạy thật với Vyce **ở local** (`LISTENAI_LIVE_AI_PROBE=1`, xem `TESTING-ACCEPTANCE.md` mục 3) và bắt được một lỗi thật đã sửa. Trên **production** vẫn chưa chạy: đăng nhập bị từ chối mã `credentials` — mật khẩu tài khoản kiểm thử đã đổi (nhiều khả năng user tự đổi sau khi được nhắc rằng nó đã đi qua lịch sử chat, tức họ làm đúng). **Cần user cho mật khẩu hiện tại**, hoặc tự chạy phép thử này.
+  - Production đang chạy bản **chưa** có `clampGeneratedScenarioLists`, nên tới khi deploy lại thì khoảng **2/15** lượt tạo chủ đề vẫn có thể trả `503`.
 
 ## 4. Rollback
 

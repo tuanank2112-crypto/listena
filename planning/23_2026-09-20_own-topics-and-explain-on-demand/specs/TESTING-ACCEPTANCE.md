@@ -24,6 +24,15 @@
 | T232-12 | Câu rất dài bị cắt còn 240 ký tự | như trên | unit |
 | T232-13 | **`maxTurns` là của máy chủ**, không phải của model | như trên | unit |
 | T232-14 | `summaryVi` **không** lọt vào prompt của tutor | như trên | unit |
+| T232-15 | **Bản sinh thừa một điểm ngữ pháp vẫn dùng được** (lỗi thật, đo 2026-09-20) | như trên | unit |
+| T232-16 | Model hào phóng hơn 8 từ thì giữ 8 từ đầu | như trên | unit |
+| T232-17 | **Nhãn ngữ pháp dài hơn một từ vựng vẫn hợp lệ** (`MAX_GRAMMAR_TERM`) | như trên | unit |
+| T232-18 | Mục dài quá cả cap ngữ pháp bị **bỏ cả mục**, không bị xén | như trên | unit |
+| T232-19 | Mục không phải chuỗi dùng được (rỗng, `null`, số) bị loại | như trên | unit |
+| T232-20 | **Quá ít** mục thì vẫn trượt — sàn không cắt được | như trên | unit |
+| T232-21 | Chuỗi học viên đọc **không bị đụng tới**, dài quá thì vẫn trượt | như trên | unit |
+| T232-22 | Bản sinh đúng chuẩn đi qua nguyên vẹn; đầu vào không phải object không làm ném lỗi | như trên | unit |
+| T232-L1 | **AI THẬT**: viết chủ đề từ một câu tiếng Việt, vào vai được nó, chấm đúng lỗi, `voiceScript` chỉ có `NPC/en` | `live-scenario-authoring.test.ts` | live, opt-in |
 | T233-01 | Cả ba route từ chối caller ẩn danh | `e2e/mission-scenarios.spec.ts` | E2E |
 | T233-02 | Học viên chỉ thấy chủ đề của mình | như trên | E2E |
 | T233-03 | **Xoá chủ đề người khác trả `404` và không xoá được gì** | như trên | E2E |
@@ -37,7 +46,7 @@
 |---|---|---|
 | `npm run type-check` | 0 lỗi | **0 lỗi** |
 | `npx eslint .` | 0 lỗi / 0 cảnh báo | **0 lỗi / 0 cảnh báo** |
-| `npx vitest run` | 138 file / 921 test | **139 file / 939 test** |
+| `npx vitest run` | 138 file / 921 test | **140 file (139 chạy + 1 skipped) / 949 test (948 + 1 skipped)** |
 | `npm run build` | PASS | **PASS**, có 2 route scenario |
 | `npx playwright test` | 50/50 | **53/53** |
 
@@ -47,9 +56,22 @@
 2. **Chủ đề là dữ liệu.** E2E tạo chủ đề bằng cách ghi thẳng vào bảng rồi vào vai được nó — không sửa một dòng mã nào. Trước Plan23 điều đó bất khả thi vì khoá là union type.
 3. **Ranh giới quyền sở hữu.** Cùng một E2E chứng minh khoá `custom-<id>` của người khác trả `404` khi vào vai, dù nó **đúng dạng** và qua được rào kiểm hình dạng.
 
-## 3. Điều test KHÔNG phủ
+## 3. Đường AI thật: đã chạy, và nó đỏ ngay lần đầu
 
-E2E **gieo sẵn** chủ đề thay vì gọi AI thật, để một lượt chạy suite không tốn lượt AI và không phụ thuộc gateway. Nghĩa là **đường sinh chủ đề bằng AI thật chưa được nghiệm thu tự động**. Phải thử tay một lần trên production sau khi deploy — ghi trong [`OPERATIONS.md`](OPERATIONS.md) mục 3.
+E2E vẫn **gieo sẵn** chủ đề thay vì gọi AI thật, để một lượt chạy suite không tốn lượt AI và không phụ thuộc gateway. Khoảng trống đó được bịt bằng **một test live riêng, opt-in**:
+
+```
+set -a && . ./.env && set +a
+LISTENAI_LIVE_AI_PROBE=1 npx vitest run --disableConsoleIntercept src/server/learning/live-scenario-authoring.test.ts
+```
+
+Phải có **cả** provider cấu hình đúng **và** `LISTENAI_LIVE_AI_PROBE=1`; thiếu một trong hai thì test tự `skip`, nên nó **không bao giờ** nằm trong một lượt gate. Lý do tách ra: nó tốn lượt AI thật và thừa hưởng độ phập phù của gateway, mà một test phập phù trong cổng kiểm sẽ dạy mọi người quen với màu đỏ. Nó dựng một SQLite tạm trong thư mục temp của hệ điều hành và xoá sau khi xong; `prisma/dev.db` không bị mở.
+
+**Lần chạy đầu tiên bắt được lỗi thật ngay** (chi tiết trong nhật ký quyết định của [`plan.md`](../plan.md), mục 10:20–11:40): một bản sinh thừa một điểm ngữ pháp, hoặc một nhãn ngữ pháp dài hơn mức một từ vựng cần, làm cả bản sinh bị `parse` ném đi và học viên nhận `503`. Đo được **2/15** lượt gọi thật rơi vào đó. Đã sửa bằng `clampGeneratedScenarioLists()` + `MAX_GRAMMAR_TERM`, ghim bằng T232-15…22.
+
+**Bằng chứng lượt chạy xanh** (2026-09-20 01:14): chủ đề viết xong trong 5.3s; từ hay sai đã gieo (`check in`) có mặt cả trong `targetVocabulary` lẫn câu mở đầu; vào vai được khoá `custom-<uuid>`; máy chủ chấm bắt đúng lỗi `tense` đã cài; `voiceScript` chỉ có `["NPC/en","NPC/en","NPC/en"]` — **SPEC-P231 được chứng minh trên đầu ra của model thật**, không phải của stub.
+
+**Còn lại đúng một việc cho production:** chạy tay một lần trên `https://listena.vercel.app` bằng tài khoản thật, vì mọi bằng chứng ở trên là hạ tầng local với provider thật. Cần mật khẩu hiện tại của tài khoản kiểm thử — xem [`OPERATIONS.md`](OPERATIONS.md) mục 3.
 
 ## 4. Exit Gates
 
@@ -57,6 +79,7 @@ E2E **gieo sẵn** chủ đề thay vì gọi AI thật, để một lượt ch�
 |---|---|
 | 5 gate local xanh | ✅ local / ⬜ server |
 | Migration cộng thêm, `dev.db` không bị áp | ✅ local |
-| Migration áp lên production + integrity | ⬜ server |
-| Deploy sau migration | ⬜ server |
-| **Tạo một chủ đề bằng AI thật và vào vai nó** | ⬜ server |
+| Migration áp lên production + integrity | ✅ server (33/65 → 34/66, integrity ok, 0 fk) |
+| Deploy sau migration | ✅ server (`listena-mpb3rwmfn`, 2026-09-20 09:50) |
+| **Tạo một chủ đề bằng AI thật và vào vai nó** | ✅ local (Vyce thật, 2026-09-20 01:14) / ⬜ server |
+| **Deploy lại kèm bản sửa `clampGeneratedScenarioLists`** | ⬜ server — production đang chạy bản **chưa** có bản sửa này |

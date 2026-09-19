@@ -39,6 +39,35 @@ Luật trong system prompt đáng giữ:
 - `targetVocabulary` là từ học viên **sẽ phải nói**, không phải từ nói **về** chủ đề.
 - Yêu cầu không an toàn ⇒ viết một tình huống đời thường vô hại và **không nhắc lại** yêu cầu đó.
 
+## 3b. Cap là của máy chủ, nên máy chủ phải tự làm cho vừa (bổ sung 2026-09-20, sau lượt chạy AI thật)
+
+Chữ ký:
+
+```ts
+export function clampGeneratedScenarioLists(output: unknown): unknown;
+// gọi TRƯỚC zod:
+GeneratedScenarioSchema.parse(clampGeneratedScenarioLists(response.output));
+```
+
+Số đo dẫn tới nó: gọi provider thật 15 lần, **2 lần bị từ chối CHỈ vì vượt cap danh sách** — một lần model trả năm điểm ngữ pháp thay vì bốn, một lần nhãn ngữ pháp dài hơn `MAX_TERM = 32` (con số đặt cho một *từ vựng*; nhãn ngữ pháp thật đo được 14–21 ký tự và có lúc vượt 32). Cả hai lần học viên nhận `503` *"Chưa tạo được chủ đề lúc này"* cho một yêu cầu hoàn toàn bình thường.
+
+**BẮT BUỘC:**
+
+- `MAX_GRAMMAR_TERM = 60` riêng cho nhãn ngữ pháp; `MAX_TERM = 32` giữ nguyên cho từ vựng.
+- Hàm chạy **trước** zod và **chỉ** đụng `targetVocabulary` + `targetGrammar`: loại mục không phải chuỗi dùng được, loại mục quá dài, rồi lấy `n` mục đầu.
+- Zod vẫn là cổng: thiếu trường, chuỗi rỗng, hoặc **quá ít** mục thì vẫn trượt.
+
+**CẤM (vùng cấm):**
+
+| Điều cấm | Lý do |
+|---|---|
+| Cắt cụt một chuỗi | Nhãn ngữ pháp cắt giữa chừng đi vào prompt tutor thành vô nghĩa. Bốn chuỗi học viên đọc (`title`, `openingLine`, `firstPrompt`, `summaryVi`) hàm này **không đụng tới** và vẫn bị zod từ chối nếu quá dài — thà bảo họ thử lại còn hơn đưa một câu cụt |
+| Khử trùng lặp | Có thể đẩy danh sách xuống dưới sàn ba mục và biến bản sinh dùng được thành một lần từ chối |
+| Nới cap trong zod thay vì clamp | Cap tồn tại để prompt của tutor không phình; bỏ cap là bỏ lý do có nó |
+| Dùng lại hàm này cho `GeneratedInterventionSchema` | Ở đó mục thừa có thể là **đáp án đúng** của một câu quiz; bỏ nó đi là chấm học viên theo đáp án chưa từng hiện ra. Chỉ bỏ phần thừa ở nơi **không mục nào là chỗ dựa** |
+
+Phân loại lỗi và hành vi bắt buộc của caller không đổi: bản sinh vẫn hỏng ⇒ `ZodError` ⇒ `createLearnerMissionScenario` ném ⇒ route trả `503` `AI_UNAVAILABLE`. Bản sửa này chỉ làm cho **trường hợp không đáng hỏng** thôi hỏng.
+
 ## 4. Khoá `custom-<uuid>`
 
 `isMissionScenarioKey` là rào kiểm ở **6 file**. Biến nó thành truy vấn DB thì planner, repository và session service đều phải thành async — sửa lớn, rủi ro cao, cho một tính năng nhỏ.

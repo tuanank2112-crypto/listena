@@ -22,6 +22,14 @@ const MAX_TITLE = 60;
 const MAX_SENTENCE = 160;
 const MAX_TERMS = 8;
 const MAX_TERM = 32;
+const MAX_GRAMMAR = 4;
+/**
+ * A grammar point is a phrase, not a word. Across 15 live generations
+ * (2026-09-20) they ran 14-21 characters -- "how long does it take" -- but they
+ * do overshoot 32, which is all a vocabulary item needs. Sharing one cap
+ * rejected perfectly good situations, so grammar gets its own.
+ */
+const MAX_GRAMMAR_TERM = 60;
 
 export const GeneratedScenarioSchema = z.object({
   /** English title of the situation, shown to the learner. */
@@ -36,12 +44,56 @@ export const GeneratedScenarioSchema = z.object({
   /** The first thing the learner is asked. */
   firstPrompt: z.string().trim().min(5).max(MAX_SENTENCE),
   targetVocabulary: z.array(z.string().trim().min(1).max(MAX_TERM)).min(3).max(MAX_TERMS),
-  targetGrammar: z.array(z.string().trim().min(1).max(MAX_TERM)).min(1).max(4),
+  targetGrammar: z.array(z.string().trim().min(1).max(MAX_GRAMMAR_TERM)).min(1).max(MAX_GRAMMAR),
   /** One line in Vietnamese so the learner can see what they are walking into. */
   summaryVi: z.string().trim().min(10).max(MAX_SENTENCE),
 });
 
 export type GeneratedScenario = z.infer<typeof GeneratedScenarioSchema>;
+
+/**
+ * Bound these two lists before validating, because the caps are ours, not theirs.
+ *
+ * Measured against the live model on 2026-09-20: 2 of 15 generations were
+ * rejected only for overshooting a list cap — five grammar points
+ * where four are allowed, or one grammar label longer than a vocabulary item is
+ * allowed to be. Nothing was wrong with what the learner asked for, yet `parse`
+ * threw the whole generation away and the route answered "Chưa tạo được chủ đề
+ * lúc này", which they can neither understand nor act on. These caps exist to
+ * keep a tutor prompt small, so surplus is dropped here and the schema stays the
+ * real gate: a missing field, an empty string, or too *few* items still fails.
+ *
+ * VÙNG CẤM — drop, never truncate. An over-long item is removed whole. A
+ * grammar hint cut mid-phrase would go into a tutor prompt as nonsense, and a
+ * sentence cut at 160 characters is worse than asking the learner to try again,
+ * which is why the strings the learner reads (`title`, `openingLine`,
+ * `firstPrompt`, `summaryVi`) are not touched here at all and still reject.
+ *
+ * VÙNG CẤM — do not de-duplicate. Two similar words are harmless, while
+ * de-duplicating can push a list under its floor of three and turn a usable
+ * generation into a rejection, which is the very failure this removes.
+ *
+ * VÙNG CẤM — do not reuse this for `GeneratedInterventionSchema`. There, a
+ * surplus item may be the correct answer among a quiz's options: dropping it
+ * would grade the learner against an answer they were never shown. Surplus is
+ * only safe to drop where no single item is load-bearing.
+ */
+export function clampGeneratedScenarioLists(output: unknown): unknown {
+  if (typeof output !== "object" || output === null) return output;
+  const row = { ...(output as Record<string, unknown>) };
+  for (const [field, maxItems, maxLength] of [
+    ["targetVocabulary", MAX_TERMS, MAX_TERM],
+    ["targetGrammar", MAX_GRAMMAR, MAX_GRAMMAR_TERM],
+  ] as const) {
+    const value = row[field];
+    if (!Array.isArray(value)) continue;
+    row[field] = value
+      .filter((item): item is string =>
+        typeof item === "string" && item.trim().length > 0 && item.trim().length <= maxLength)
+      .slice(0, maxItems);
+  }
+  return row;
+}
 
 export const GENERATED_SCENARIO_JSON_SCHEMA: JsonSchema = {
   type: "object",
@@ -62,8 +114,8 @@ export const GENERATED_SCENARIO_JSON_SCHEMA: JsonSchema = {
       items: { type: "string", maxLength: MAX_TERM },
     },
     targetGrammar: {
-      type: "array", minItems: 1, maxItems: 4,
-      items: { type: "string", maxLength: MAX_TERM },
+      type: "array", minItems: 1, maxItems: MAX_GRAMMAR,
+      items: { type: "string", maxLength: MAX_GRAMMAR_TERM },
     },
     summaryVi: { type: "string", maxLength: MAX_SENTENCE },
   },

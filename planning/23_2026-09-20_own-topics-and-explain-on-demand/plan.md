@@ -8,7 +8,7 @@
 | Loại | MINOR (SemVer) — đủ bộ SPEC theo luật §2 |
 | Phiên bản dự án | 0.7.0 (bump là quyết định của user) |
 | Ngày mở | 2026-09-20 |
-| Trạng thái | LOCAL ACCEPTED — 5/5 gate xanh; **có migration, chưa áp lên production** |
+| Trạng thái | SHIPPED — migration đã áp + deploy 2026-09-20 09:50; đường AI thật **đã chạy** (local, Vyce thật) và phơi ra một lỗi đã sửa; **bản sửa chưa deploy**; nghiệm thu tay trên production còn chờ mật khẩu |
 | Nguồn yêu cầu | User sau khi xem production: "quá ít chủ đề… cần có chức năng tạo chủ đề chứ không nên mock-data", "reasoning của AI không nên nói ra và dịch thành tiếng Việt, chỉ cần có thêm nút giải nghĩa", và "tôi không muốn nó bị truyền thống hoá khi có sự kết hợp của AI" |
 
 ## Bảng trỏ SPEC
@@ -71,6 +71,67 @@ Bỏ dòng đó. Lời giải thích lui về sau nút **"Giải nghĩa"**, và 
 
 **Giữ lại có chủ đích:** dòng `RECAST` — câu đã sửa, đọc chậm, bằng tiếng Anh. Nó là mẫu để bắt chước, không phải lời giảng.
 
+### 2026-09-20 10:20–11:40 — Chạy thật đường AI, và lỗi mà chỉ chạy thật mới thấy
+
+Mục "CHƯA NGHIỆM THU" ở trên nói đường sinh chủ đề bằng AI thật chưa ai chạy, vì E2E gieo sẵn chủ đề để khỏi tốn lượt AI. Không đăng nhập được production (mật khẩu đã đổi) nên **chạy tại chỗ với Vyce thật** trên một database SQLite dựng tạm từ migration trong thư mục temp của hệ điều hành — `prisma/dev.db` không bị mở.
+
+**Lượt chạy thật ĐẦU TIÊN đã đỏ.** Không phải vì hạ tầng, mà vì một lỗi thiết kế của chính kế hoạch này:
+
+```
+ZodError: targetGrammar — Array must contain at most 4 element(s)
+```
+
+Model trả **năm** điểm ngữ pháp trong khi schema cho phép bốn, `parse` ném cả bản sinh đi, và route trả `503` kèm câu *"Chưa tạo được chủ đề lúc này. Bạn thử lại sau ít phút nhé."* Học viên viết một câu hoàn toàn bình thường và bị từ chối vì một giới hạn **của chúng ta**, kèm một thông báo họ không thể làm gì với nó.
+
+**Lượt chạy thứ hai đỏ ở chỗ khác:** một nhãn ngữ pháp dài hơn 32 ký tự — `MAX_TERM`, con số đặt cho một *từ vựng*. "present continuous for future arrangements" là cách gọi tên bình thường của một điểm ngữ pháp.
+
+**Đo trước khi sửa, thay vì đoán.** Gọi provider thật 15 lần với sáu câu yêu cầu khác nhau và ghi lại kích thước thật:
+
+| Quan sát | Số đo |
+|---|---|
+| Độ dài nhãn ngữ pháp thường gặp | 14–21 ký tự (`"how long does it take"`) |
+| Độ dài từ vựng thường gặp | ≤ 10 ký tự |
+| Bị từ chối **chỉ vì** vượt cap danh sách | **2 / 15** |
+| Hỏng ở tầng provider (524 / JSON hỏng) | 2 / 15 |
+
+Nên `MAX_TERM = 32` là đủ cho từ vựng và **quá chật cho ngữ pháp**: một cap đặt không có số đo.
+
+**Sửa — cap là của máy chủ, nên máy chủ tự làm cho vừa:** thêm `clampGeneratedScenarioLists()` chạy **trước** zod, và `MAX_GRAMMAR_TERM = 60` riêng cho nhãn ngữ pháp.
+
+- **VÙNG CẤM — bỏ hẳn, không cắt cụt.** Mục quá dài bị **loại cả mục**, không bị xén. Một nhãn ngữ pháp cắt giữa chừng sẽ đi vào prompt của tutor thành vô nghĩa; còn bốn chuỗi học viên **đọc** (`title`, `openingLine`, `firstPrompt`, `summaryVi`) thì hàm này **không đụng tới** và vẫn bị zod từ chối nếu quá dài — thà bảo họ thử lại còn hơn đưa họ một câu cụt.
+- **VÙNG CẤM — không khử trùng lặp.** Hai từ na ná nhau thì vô hại, còn khử trùng lặp có thể đẩy danh sách xuống dưới sàn ba mục và biến một bản sinh dùng được thành một lần từ chối — đúng thứ vừa bỏ công xoá đi.
+- **VÙNG CẤM — không đem hàm này dùng cho `GeneratedInterventionSchema`.** Ở đó mục thừa có thể chính là **đáp án đúng** trong các lựa chọn của một câu quiz; bỏ nó đi là chấm học viên theo một đáp án chưa từng hiện ra. Chỉ được bỏ phần thừa ở nơi **không mục nào là chỗ dựa**.
+- Zod vẫn là cổng thật: thiếu trường, chuỗi rỗng, hay **quá ít** mục thì vẫn trượt.
+
+**Nghiệm thu đường đầy đủ bằng AI thật (01:14):**
+
+```
+authoring #1     ok in 5.3s
+title            Checking in During an Online Game
+npc              Alex — Online gaming teammate
+summaryVi        Bạn đang chơi game online với đồng đội và cần báo tình trạng nhân vật cho họ.
+targetVocabulary ["check in","status","mana","health","backup","need"]
+openingLine      Hey, just checking in — how's your mana and health looking? Do you need me to back you up?
+session start #1 ok in 4.3s
+graded turn #1   FAILED after 125.1s code=AI_UNAVAILABLE reason=upstream_failure
+graded turn #2   ok in 22.7s
+detectedError    {"type":"tense","actual":"play/lose","explanationVi":"Với từ 'hôm qua', cần dùng thì quá khứ đơn…"}
+score            0.6
+voiceScript      ["NPC/en","NPC/en","NPC/en"]
+```
+
+Ba điều chỉ lượt chạy thật mới chứng minh được:
+
+1. **Ngữ cảnh học viên thật sự đi vào tình huống.** `check in` là một trong ba từ hay sai đã gieo, và nó có mặt cả trong `targetVocabulary` lẫn **câu mở đầu** của nhân vật. Trước Plan23 `preferredTopics` bị bỏ qua hoàn toàn.
+2. **Đường chủ đề riêng chạy suốt qua session service**: khoá `custom-<uuid>` → nạp có kiểm quyền → vào vai → chấm điểm máy chủ bắt đúng lỗi `tense` đã cài, kèm giải thích tiếng Việt.
+3. **`voiceScript` chỉ có `NPC/en`** — SPEC-P231 được chứng minh trên đầu ra của model thật, không phải của stub. Trước đây chỉ có test với provider tất định nói điều này.
+
+**Gateway 524 đã gặp 3 lần, latency ~125s, cùng input gửi lại thì thành công** — đúng đặc tính user đã chấp nhận ngày 2026-09-20 07:00 ("Vyce là gateway api nên nó chậm 1 chút"). Không phải lỗi của đường này, và app vốn đã ánh xạ nó thành `AI_UNAVAILABLE` cho phép thử lại.
+
+**Giữ lại `src/server/learning/live-scenario-authoring.test.ts` — OPT-IN, không nằm trong gate.** Phải có **cả** provider cấu hình đúng **và** `LISTENAI_LIVE_AI_PROBE=1` mới chạy; không có thì `skipped`. Lý do không cho vào suite mặc định: nó tốn lượt AI thật và thừa hưởng độ phập phù của gateway, mà một test phập phù trong cổng kiểm sẽ dạy mọi người quen với màu đỏ. Đây chính là mục số 3 trong danh sách ưu tiên sau sự cố AI ở `roadmap.md`: *"thêm một smoke thật chạm provider vào quy trình; toàn bộ test hiện dùng provider tất định nên không bao giờ bắt được loại lỗi này."* Lượt chạy đầu tiên của nó bắt được lỗi thật, ngay lập tức.
+
+**Bẫy công cụ đã vấp, ghi để khỏi mất thời gian lần sau:** vitest **nuốt** `console.log` của một test **đã xanh**, nên probe chạy xong mà không thấy model viết gì. Phải chạy kèm `--disableConsoleIntercept` (đã ghi trong đầu file).
+
 ## Work Packages
 
 | WP | Nội dung | Trạng thái |
@@ -87,6 +148,7 @@ Bỏ dòng đó. Lời giải thích lui về sau nút **"Giải nghĩa"**, và 
 | WP10 | 3 ca E2E + cập nhật hồi quy đã đổi hành vi | ✅ |
 | WP11 | Bộ SPEC + đồng bộ não | ✅ |
 | WP12 | **Áp migration lên production**, rồi deploy | ✅ |
+| WP13 | **Chạy đường sinh chủ đề bằng AI thật** → tìm ra lỗi cắt danh sách, sửa, và giữ lại một live probe opt-in | ✅ |
 
 ## Exit Gates
 
@@ -94,9 +156,10 @@ Bỏ dòng đó. Lời giải thích lui về sau nút **"Giải nghĩa"**, và 
 |---|---|---|
 | `npm run type-check` | 0 lỗi | ✅ local / ⬜ server |
 | `npx eslint .` | 0 lỗi / 0 cảnh báo | ✅ local / ⬜ server |
-| `npx vitest run` | **939 test** (trước 921) | ✅ local / ⬜ server |
+| `npx vitest run` | **949 test** (948 + 1 live skipped; trước 939) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có 2 route scenario | ✅ local / ⬜ server |
 | `npx playwright test` | **53/53** (trước 50/50) | ✅ local / ⬜ server |
+| Đường sinh chủ đề bằng **AI thật** | chạy được, sau khi sửa lỗi cap danh sách | ✅ local (Vyce thật) / ⬜ server |
 | Migration áp lên production | **33 bảng/65 index → 34/66**, integrity ok, 0 vi phạm FK | ✅ **server** |
 
 ### 2026-09-20 09:50 — Migration production và deploy

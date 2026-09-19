@@ -681,3 +681,52 @@ User: "bạn cứ sáng tạo những gì bạn muốn để phù hợp ứng d�
 Migration `20260920080000`: `before tables=33 indexes=65` (khớp đúng trạng thái sau Plan22, xác nhận đúng database) → `applied 2 statements` → `after tables=34 indexes=66`, integrity ok, 0 vi phạm FK. Deploy **sau** migration: `listena-mpb3rwmfn` READY. Ba route scenario đều trả `401` khi ẩn danh; `/` 200; `/learner/games` 307.
 
 **KHÔNG nghiệm thu được đường sinh chủ đề bằng AI thật:** đăng nhập bị từ chối với mã **`credentials`** (không phải `auth_locked`, nên không phải khoá chống dò) — mật khẩu `Listena#Prod-2026-09b` không còn đúng. Kiểm bằng cả `fetch` lẫn trình duyệt thật, cùng kết quả. Nhiều khả năng user đã tự đổi sau khi tôi nhắc hai lần rằng nó đã đi qua lịch sử chat — tức họ làm đúng. Cần hỏi user mật khẩu hiện tại trước mọi phép thử cần một học viên đăng nhập trên production.
+
+## 2026-09-20 10:20–11:40+07 — Chạy đường AI thật của Plan23, và lỗi mà chỉ chạy thật mới thấy (root, auto-mode)
+
+User: "đọc não rồi làm tiếp đi". Việc còn mở duy nhất của Plan23 là **đường sinh chủ đề bằng AI thật chưa ai chạy** — E2E gieo sẵn chủ đề để khỏi tốn lượt AI, còn nghiệm thu tay trên production thì tắc vì mật khẩu đã đổi.
+
+**Không đứng chờ mật khẩu.** Mọi thứ không phụ thuộc production đều làm được: chạy chính đường đó **tại chỗ với Vyce thật**, trên một SQLite dựng tạm từ migration trong thư mục temp của hệ điều hành. `prisma/dev.db` không bị mở.
+
+### Lượt chạy thật đầu tiên đã ĐỎ — và nó là lỗi của chính Plan23
+
+```
+ZodError: targetGrammar — Array must contain at most 4 element(s)
+```
+
+Model trả **năm** điểm ngữ pháp, schema cho phép bốn, `parse` ném cả bản sinh đi, route trả `503` *"Chưa tạo được chủ đề lúc này"*. Học viên viết một câu bình thường và bị từ chối vì giới hạn **của chúng ta**, kèm thông báo họ không làm gì được với nó. Lượt sau đỏ ở chỗ khác: một nhãn ngữ pháp dài hơn `MAX_TERM = 32` — con số đặt cho một *từ vựng*.
+
+**Đo trước khi sửa, không đoán:** 15 lượt gọi provider thật với 6 câu yêu cầu khác nhau. Nhãn ngữ pháp thường 14–21 ký tự, từ vựng ≤ 10; **2/15 bị từ chối CHỈ vì vượt cap danh sách**; 2/15 hỏng ở tầng provider (524 / JSON hỏng).
+
+**Sửa:** `clampGeneratedScenarioLists()` chạy **trước** zod + `MAX_GRAMMAR_TERM = 60` riêng cho ngữ pháp. **Bỏ cả mục, không cắt cụt.** Vùng cấm đã ghi vào mã và SPEC-P232: không cắt chuỗi (bốn chuỗi học viên đọc thì không đụng tới, quá dài vẫn trượt); không khử trùng lặp (đẩy xuống dưới sàn 3 mục là tái tạo đúng lỗi vừa xoá); **không dùng lại hàm này cho `GeneratedInterventionSchema`** — ở đó mục thừa có thể là **đáp án đúng** của một quiz, bỏ nó là chấm học viên theo đáp án chưa từng hiện ra. Zod vẫn là cổng: thiếu trường / chuỗi rỗng / **quá ít** mục vẫn trượt.
+
+### Ba điều chỉ lượt chạy thật mới chứng minh được (01:14)
+
+1. **Ngữ cảnh học viên thật sự đi vào tình huống.** Từ hay sai đã gieo (`check in`) có mặt cả trong `targetVocabulary` lẫn **câu mở đầu** của nhân vật. Trước Plan23 `preferredTopics` bị bỏ qua hoàn toàn.
+2. **Đường chủ đề riêng chạy suốt:** authoring 5.3s → session start 4.3s trên khoá `custom-<uuid>` → chấm điểm máy chủ bắt đúng lỗi `tense` đã cài, kèm giải thích tiếng Việt, score 0.6.
+3. **`voiceScript` chỉ có `["NPC/en","NPC/en","NPC/en"]`** — SPEC-P231 được chứng minh trên đầu ra của **model thật**, không phải stub.
+
+### Giữ lại một live probe OPT-IN, không cho vào gate
+
+`src/server/learning/live-scenario-authoring.test.ts`: phải có **cả** provider đúng **và** `LISTENAI_LIVE_AI_PROBE=1`, thiếu thì `skipped`. Lý do không cho vào suite mặc định: tốn lượt AI thật và thừa hưởng độ phập phù của gateway, mà **một test phập phù trong cổng kiểm sẽ dạy mọi người quen với màu đỏ**. Đây đúng là mục số 3 trong ưu tiên sau sự cố AI ở `roadmap.md` ("thêm một smoke thật chạm provider… toàn bộ test hiện dùng provider tất định nên không bao giờ bắt được loại lỗi này") — và lượt chạy đầu tiên của nó bắt được lỗi thật ngay.
+
+### Gateway 524: đúng đặc tính user đã chấp nhận
+
+Gặp **3 lần** HTTP `524` sau đúng ~125s, cùng `inputHash` gửi lại thì thành công. Khớp với ghi nhận cũ ("gateway treo ~125s trả HTML") và với quyết định của user 07:00 ("Vyce là gateway api nên nó chậm 1 chút, k sao cả"). Không phải lỗi của đường này; app đã ánh xạ thành `AI_UNAVAILABLE` cho phép thử lại. Probe thử lại tối đa 3 lần **và in mã phân loại của provider mỗi lần**, nên một lỗi thật (400, sai key, schema hỏng) vẫn đỏ và vẫn nói rõ nó là gì.
+
+### Bẫy công cụ đã vấp, ghi để khỏi mất thời gian lần sau
+
+- **vitest NUỐT `console.log` của test đã xanh.** Probe chạy xong, xanh, mà không thấy model viết gì. Phải chạy kèm `--disableConsoleIntercept`.
+- **`server-only` không giải được ngoài Next.** Cả `tsx` lẫn vitest đều không resolve; trong test phải `vi.mock("server-only", () => ({}))` như các route test đã làm.
+- **vitest không nạp `.env`.** Phải `set -a && . ./.env && set +a` trước khi chạy, nếu không probe tự `skip` vì tưởng không có provider.
+- `--reporter=basic` **không tồn tại** trong vitest 4 (lỗi startup, không tốn lượt AI nào).
+
+### Gates sau thay đổi
+
+type-check 0; eslint **0/0**; vitest **140 file (139 chạy + 1 skipped) / 949 test (948 + 1 skipped)** (trước 139/939); build PASS; Playwright **53/53**.
+
+### CÒN MỞ
+
+1. **Production đang chạy bản CHƯA có `clampGeneratedScenarioLists`** ⇒ khoảng 2/15 lượt tạo chủ đề vẫn có thể trả `503`. Cần deploy lại (không có migration mới, nên deploy thẳng được).
+2. **Nghiệm thu tay trên production vẫn chưa làm** — cần **mật khẩu hiện tại** của tài khoản kiểm thử (`tuanank2112@gmail.com`), hoặc user tự chạy.
+3. Chưa commit: user chưa yêu cầu.

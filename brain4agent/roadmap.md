@@ -50,6 +50,7 @@ Tinh nang AI da chet hoan toan do `KIRAAI_MODEL` tro toi model khong ton tai; da
 1. Phan biet sai cau hinh voi qua tai trong tang provider; validate model luc doc cau hinh; log than loi cua provider. Khong de mot loi vinh vien nup duoi thong bao "thu lai sau".
 2. Chot model tra phi va han muc chi; free tier rate-limit gat nen khong dung cho nguoi hoc that.
 3. Them mot smoke that cham provider vao quy trinh; toan bo test hien dung provider tat dinh nen khong bao gio bat duoc loai loi nay.
+   - **DONE 2026-09-20** (Plan23 WP13): `src/server/learning/live-scenario-authoring.test.ts` — opt-in qua `LISTENAI_LIVE_AI_PROBE=1`, chay duong sinh chu de bang AI THAT tren mot SQLite dung tam. **Luot chay dau tien bat duoc mot loi that ngay**: cap danh sach lam 2/15 luot tra `503` cho hoc vien. Co y KHONG cho vao suite mac dinh — no ton luot AI that va thua huong do phap phu cua gateway.
 
 ## Voice (ngoài bậc thang Plan12)
 Plan18 (2026-09-19, DONE LOCAL) đóng phần "nghe hay mà không tốn tiền": catalog giọng trình duyệt đã thẩm định + học viên tự chọn giọng + skill `english-voices`. Việc còn lại của mảng voice là Plan16 WP2/WP4/WP5 và phụ thuộc **một đầu vào của user**: key ElevenLabs (giọng AI trả phí). Không có key thì app vẫn nghe tốt bằng giọng Natural miễn phí, nên đây không còn là đường tới hạn.

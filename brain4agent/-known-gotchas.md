@@ -122,3 +122,14 @@
 - `npm run ai:doctor` KHONG tu nap `.env` (tsx thuan): chay `set -a; . ./.env; set +a` truoc, neu khong no bao `AI_PROVIDER (unset)` va ket luan sai.
 - Trong phien auto-mode nay, classifier chan doc token Vercel (`%APPDATA%/com.vercel.cli/Data/auth.json`) va moi goi API production; `vercel`/`turso` CLI khong co tren PATH. Muon doc AIInteraction production phai co user cap quyen/CLI, khong lach.
 - Quyet dinh 18:50: timeout provider 180s, `maxDuration = 200`, `GENERATION_STALE_MS` 210s. Ba so nay phai doi cung nhau (provider < route < stale). Vercel Hobby chi cho >60s khi bat Fluid compute (tran 300s); deploy tu choi = plan chua cho, KHONG phai loi code.
+
+## Chay mot test live cham provider that (2026-09-20, Plan23 WP13)
+
+- `src/server/learning/live-scenario-authoring.test.ts` la test DUY NHAT cham provider that. Phai co CA `AI_PROVIDER=vyce` + `VYCE_API_KEY` VA `LISTENAI_LIVE_AI_PROBE=1`; thieu mot cai thi no `skip` im lang, khong bao loi.
+- **vitest KHONG nap `.env`** (giong `npm run ai:doctor`): `set -a; . ./.env; set +a` truoc khi chay, neu khong probe tu skip vi tuong khong co provider.
+- **vitest NUOT `console.log` cua test DA XANH.** Probe chay xong, xanh, ma khong in gi — tuong no khong chay. Phai them `--disableConsoleIntercept`.
+- `--reporter=basic` KHONG ton tai trong vitest 4 (startup error). Muon log ra file thi redirect stdout, dung doi reporter.
+- **`server-only` khong resolve duoc ngoai Next**: ca `tsx` lan vitest deu bao "Cannot find package 'server-only'". Trong test phai `vi.mock("server-only", () => ({}))` nhu cac route test da lam. Day la ly do mot script `tsx` thuan KHONG goi duoc `src/server/learning/*`.
+- Doi `DATABASE_URL` roi moi `await import("@/lib/prisma")`: Prisma client doc bien luc nap module, nen import tinh o dau file se tro vao `dev.db`.
+- Tren Windows, `rmSync` thu muc temp chua SQLite ngay sau khi xong thuong nem `EPERM` (file con bi giu). Boc trong `try/catch`, dung de no che mat ket qua that cua test.
+- Gateway Vyce tra **HTTP 524 sau dung ~125s** roi cung input gui lai thi thanh cong (gap 3 lan trong mot buoi). Mot test live phai thu lai VA IN MA PHAN LOAI cua provider moi lan (`code=` + `reason=`), neu khong se khong phan biet duoc gateway phap phu voi loi that (400 / sai key / schema hong).
