@@ -366,3 +366,36 @@ User: "check lại não, sau đó lấy voice bên elevenlab làm 1 skills voice
 - **Gates:** type-check 0; eslint 0/28; vitest **820/820**; build Compiled successfully (có route `/learner/settings`); Playwright **40/40**.
 - Ghi chú: một lượt E2E đầy đủ giữa buổi fail `learning-regressions.spec.ts:131`; chạy riêng xanh và các lượt sau xanh — do máy chạy song song server demo + browser, không liên quan thay đổi voice.
 - **Deploy production lần 2 (16:03):** `https://listena-41keicmoi-n-listen-ai.vercel.app` READY, alias https://listena.vercel.app trả 200; `/learner/settings` trả 307 về `/login?callbackUrl=%2Flearner%2Fsettings` — bằng chứng route mới đã lên và vẫn được guard. Commit `54e1c0f`.
+
+## 2026-09-19 16:20-17:55+07 - Toi uu production + no ky thuat (root, auto-mode) - DUNG THEO YEU CAU USER
+
+User chon ca 4 huong (don cau hinh production / kiem chung vong hoc that / don no ky thuat / tinh nang Vocab Master) va cho phep ghi DB production voi tuanank2112@gmail.com. Dung giua chung theo yeu cau; day la trang thai that.
+
+### DA XONG
+
+- **Ky uc lech da sua:** kernel noi "RAO CAN CUOI: khong ai dang nhap duoc vi mail chua cau hinh" la SAI o hien tai. `vercel env ls production` cho thay RESEND_API_KEY, EMAIL_FROM, EMAIL_REPLY_TO, SUPPORT_EMAIL deu da co (encrypted Config, tao 2 ngay truoc).
+- **Trung bien AI_PROVIDER (that):** production co 2 muc cung ten - mot `sensitive`, mot `encrypted`; khong biet cai nao thang, va `sensitive` vo hinh luc build (dung loai loi da lam hong build o 486626d). Da xoa ca hai va tao lai DUY NHAT mot muc `encrypted` = "vyce" cho ca production va preview (preview cung dang trung 2 muc).
+- **Xoa 9 bien chet khoi production:** KOKORO_MODEL_ID, KOKORO_DEFAULT_VOICE, NEXT_PUBLIC_KOKORO_MODEL_ID, NEXT_PUBLIC_KOKORO_DEFAULT_VOICE (Kokoro da go khoi repo, 0 tham chieu), TTS_PROXY_CACHE_DIR (0 tham chieu), TTS_API_KEY, TTS_CACHE_DIR, VIENEU_URL, VIENEU_DEFAULT_VOICE. Gia tri cua tat ca deu con trong `.env` local nen khong mat gi.
+- **Loi that do cau hinh cu (da sua bang ma, commit 781531e, DA DEPLOY):** `/api/tts/vie` chi kiem `TTS_API_KEY` roi goi sidecar o `VIENEU_URL ?? http://localhost:8001` voi ngan sach 30s. Tren Vercel sidecar khong the ton tai ⇒ moi loi Coach tieng Viet deu di mot vong vo ich truoc khi roi ve giong trinh duyet. Nay khi `APP_RUNTIME=vercel` ma URL thieu hoac la loopback thi tra 503 ngay. Sidecar dat o dia chi that van chay; local giu nguyen mac dinh localhost. 13/13 test.
+- **Lint that su bi nhieu (commit 2bc7a5c):** `npx eslint .` lint ca `playwright-report/` - mot lan E2E do la 257 "loi" trong JS cua bao cao, chon het tin hieu that. Da ignore `playwright-report/**` va `test-results/**`; gate tro lai 0 loi / 28 canh bao.
+- **Deploy production:** `listena-8q3knw91f` READY, alias tra 200, `/register` 200.
+
+### PHAT HIEN LON NHAT - CHUA SUA, CAN QUYEN CUA USER
+
+`NEXTAUTH_URL` tren production = `https://listena-n-listen-ai.vercel.app` - DUNG CAI DOMAIN DANG BI VERCEL SSO CHAN (tra 302). Hau qua day du:
+1. Dang nhap xong bi day ve domain bi chan (da quan sat: redirect toi `listena-n-listen-ai.vercel.app/login?error=CredentialsSignin`).
+2. `src/server/account-email.ts` dung `AUTH_URL || NEXTAUTH_URL || requestUrl` de dung link ⇒ **link xac minh email cung tro toi domain bi chan**.
+=> Day moi la rao can that khien khong ai dang nhap duoc, KHONG phai thieu mail. Sua = doi NEXTAUTH_URL thanh `https://listena.vercel.app` roi redeploy. **Bi auto-mode classifier chan (Secret-Store Writes); can user cap quyen hoac tu doi trong dashboard Vercel.**
+
+### DA LAM TREN DB PRODUCTION (user cho phep)
+
+- `POST /api/register` voi tuanank2112@gmail.com, mat khau sinh ngau nhien `LnUx4ifW0de9bMj6!7` (da bao user). Tra `202 {accepted:true, verificationEmailSent:true}` - nhung theo thiet ke chong do email, response NAY LUON GIONG NHAU du tai khoan da ton tai hay chua, nen KHONG chung minh duoc mail da gui.
+- Thu dang nhap ⇒ `CredentialsSignin`. Khong phan biet duoc "chua xac minh email" hay "sai mat khau do tai khoan da ton tai tu truoc" (auth config tu choi tai khoan chua xac minh bang cung mot loi). Chua ket luan gi them.
+
+### CON MO
+
+- Doi NEXTAUTH_URL (can quyen) → redeploy → dang ky/xac minh lai → dang nhap → chay mot Mission de LAN DAU chung minh AI chay that tren production.
+- 3 bien trung nhung CHI o Preview: NEXTAUTH_URL, NEXTAUTH_SECRET, DATABASE_URL. Khong tu doan gia tri nao dung nen de nguyen.
+- Flake E2E: bat duoc mot lan `voice-ai.spec.ts:163` fail `page.waitForURL timeout 20s` khi chay full (xanh khi chay rieng); `timeline.spec.ts:27` va `learning-regressions.spec.ts:131` cung tung fail kieu nay. Chua sua - nghi do tranh tai nguyen/thu tu chay, can dieu tra rieng.
+- Don 28 canh bao unused-vars: DA THU VA HOAN TAC. Hai loi khi lam: thay nham dong `const second` trong `speech.test.ts` (co hai cho giong nhau) lam vo type-check; va them block rules vao eslint.config khong co `files`. Lan sau: phan loai `_`-prefix (7 cai - nen cau hinh ignore pattern chu khong xoa) vs import chet (9) vs bien chet (8, trong do `danangLessonData` cho thay `dataset/danang-getaway-lesson.json` KHONG duoc import vao DB - dang nghi van) vs comma-operator trong 2 script dataset cu.
+- Tinh nang Vocab Master: chua bat dau.
