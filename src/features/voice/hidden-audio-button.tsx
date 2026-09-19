@@ -15,6 +15,13 @@ interface HiddenAudioButtonProps {
   size?: "large" | "small";
   label?: string;
   onError?: (message: string) => void;
+  /**
+   * Playback speed, applied to the audio element. The bytes are unchanged, so
+   * slowing a word down costs no extra request and still never reveals the
+   * hidden text. Browsers preserve pitch, so 0.75x stays a voice rather than a
+   * growl.
+   */
+  rate?: number;
 }
 
 /**
@@ -23,7 +30,7 @@ interface HiddenAudioButtonProps {
  * accent, caches the blob for replays, and reports a friendly message when
  * the AI voice is not configured (503) so the caller can show a fallback.
  */
-export function HiddenAudioButton({ src, fallbackUrl, autoPlay = false, size = "large", label = "Nghe từ", onError }: HiddenAudioButtonProps) {
+export function HiddenAudioButton({ src, fallbackUrl, autoPlay = false, size = "large", label = "Nghe từ", onError, rate = 1 }: HiddenAudioButtonProps) {
   const preferences = useVoicePreferences();
   const [state, setState] = useState<"idle" | "loading" | "playing" | "unavailable">("idle");
   const blobRef = useRef<{ key: string; url: string } | null>(null);
@@ -56,6 +63,7 @@ export function HiddenAudioButton({ src, fallbackUrl, autoPlay = false, size = "
         }
       }
       const audio = new Audio(objectUrl);
+      audio.playbackRate = rate;
       audioRef.current = audio;
       audio.onplay = () => setState("playing");
       audio.onended = () => setState("idle");
@@ -65,7 +73,7 @@ export function HiddenAudioButton({ src, fallbackUrl, autoPlay = false, size = "
       setState("idle");
       onError?.("Thiết bị không phát được âm thanh của lượt này.");
     }
-  }, [fallbackUrl, onError, url]);
+  }, [fallbackUrl, onError, rate, url]);
 
   useEffect(() => {
     if (!autoPlay) return;
@@ -76,6 +84,17 @@ export function HiddenAudioButton({ src, fallbackUrl, autoPlay = false, size = "
     // Only re-run when the source changes, not on every render of play().
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [src, autoPlay]);
+
+  // Choosing a speed is the learner asking to hear it that way, so replay at
+  // once. The guard keeps this from firing on mount, where `autoPlay` already
+  // decides whether anything should play.
+  const lastRateRef = useRef(rate);
+  useEffect(() => {
+    if (lastRateRef.current === rate) return;
+    lastRateRef.current = rate;
+    const timer = window.setTimeout(() => void play(), 0);
+    return () => window.clearTimeout(timer);
+  }, [rate, play]);
 
   useEffect(() => () => {
     audioRef.current?.pause();

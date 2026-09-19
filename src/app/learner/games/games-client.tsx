@@ -25,6 +25,18 @@ import { StartSessionButton } from "@/features/learning-session/start-session-bu
 import { speakCurated } from "@/core/tts/speech";
 import { HiddenAudioButton } from "@/features/voice/hidden-audio-button";
 import { SpeakButton } from "@/features/voice/speak-button";
+
+/**
+ * Plan20 SPEC-P203 — dictation speeds at the round itself. A learner who cannot
+ * catch a word needs it slower right there; the global voice setting is two
+ * screens away and changes every surface. Slowing playback re-reads the same
+ * bytes, so no extra request and nothing new reaches the client.
+ */
+const SPELL_SPEEDS = [
+  { rate: 0.75, label: "Nghe chậm" },
+  { rate: 1, label: "Bình thường" },
+  { rate: 1.2, label: "Nghe nhanh" },
+] as const;
 import { useVoicePreferences } from "@/features/voice/voice-preferences";
 import {
   createGameAnswerRequest,
@@ -106,6 +118,9 @@ export function GamesClient() {
   const [requestError, setRequestError] = useState("");
   const [runIssue, setRunIssue] = useState("");
   const [audioError, setAudioError] = useState("");
+  // Kept for the whole run: a learner who needs it slower needs it slower on
+  // the next word too.
+  const [spellRate, setSpellRate] = useState(1);
   const promptStartedAtRef = useRef(0);
   const resolvingRef = useRef(false);
   const pendingAnswerRef = useRef<PendingAnswer | null>(null);
@@ -412,6 +427,8 @@ export function GamesClient() {
                 onSpellAnswer={(answeredAt) => submitAnswer(answer.trim(), answeredAt)}
                 onAudioError={setAudioError}
                 audioError={audioError}
+                spellRate={spellRate}
+                onSpellRateChange={setSpellRate}
               />
               {requestError && (
                 <div className="mt-6 rounded-2xl bg-[#fff1bd] px-4 py-3 text-sm font-bold text-[#805c15]" role="alert">
@@ -440,6 +457,8 @@ function RoundView({
   onSpellAnswer,
   onAudioError,
   audioError,
+  spellRate,
+  onSpellRateChange,
 }: {
   runId: string;
   round: PublicGameRound;
@@ -452,6 +471,8 @@ function RoundView({
   onSpellAnswer: (answeredAt: number) => void;
   onAudioError: (message: string) => void;
   audioError: string;
+  spellRate: number;
+  onSpellRateChange: (rate: number) => void;
 }) {
   const content = round.content;
   if (content.kind === "quiz") {
@@ -494,7 +515,23 @@ function RoundView({
   return (
     <div className="mx-auto max-w-lg text-center">
       <p className="text-xs font-black uppercase tracking-[.18em] text-[#d89a2b]">{content.prompt}</p>
-      <div className="mt-8"><HiddenAudioButton key={round.id} src={`/api/game-runs/${runId}/rounds/${round.id}/audio`} fallbackUrl={content.audioUrl} autoPlay label="Nghe từ cần viết" onError={onAudioError} /></div>
+      <div className="mt-8"><HiddenAudioButton key={round.id} src={`/api/game-runs/${runId}/rounds/${round.id}/audio`} fallbackUrl={content.audioUrl} autoPlay label="Nghe từ cần viết" onError={onAudioError} rate={spellRate} /></div>
+      <fieldset className="mt-4 min-w-0">
+        <legend className="sr-only">Tốc độ nghe</legend>
+        <div className="flex justify-center gap-2">
+          {SPELL_SPEEDS.map(({ rate, label }) => (
+            <button
+              key={rate}
+              type="button"
+              aria-pressed={spellRate === rate}
+              onClick={() => onSpellRateChange(rate)}
+              className={`min-h-11 min-w-0 rounded-xl border-2 px-3 text-xs font-black transition ${spellRate === rate ? "border-[#d89a2b] bg-[#f7d779] text-[#18332d]" : "border-[#ded8cc] bg-white text-[#758078]"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </fieldset>
       <p className="mt-3 text-xs font-bold text-[#758078]">Nghe lại bao nhiêu lần tùy bạn; đáp án chỉ nằm ở máy chủ.</p>
       {audioError && <p className="mt-3 text-xs font-bold text-[#a06a18]">{audioError}</p>}
       <p className="mt-5 text-sm font-bold text-[#758078]">{content.meaning}</p>

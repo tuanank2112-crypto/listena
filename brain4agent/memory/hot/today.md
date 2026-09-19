@@ -429,3 +429,24 @@ User trả lời 3 câu hỏi: (1) NEXTAUTH_URL "làm gì cũng được nhưng 
 - **Bản build phơi ra một ca test xanh nhầm (không phải lỗi sản phẩm):** `integrity-flows.spec.ts:73` (T111-06) fail **tái hiện được**, kể cả chạy riêng. Ảnh chụp trang lúc fail cho thấy bài nộp **thành công** và trang đã sang màn hình kết quả (điểm 14, "4 lỗi", "Cần nhớ", "Luyện lại") — nút "Kiểm tra" biến mất đúng thiết kế. Khẳng định cũ `expect(reloadedSubmitBtn).not.toBeDisabled()` là cuộc đua hai đầu đều sai: xanh **trước khi** click kịp vô hiệu hoá nút (tức chưa nộp gì), hoặc mất phần tử sau khi chấm xong. Trên `next dev` đầu thứ nhất thường thắng nên test xanh **do may**. Sửa: `page.waitForResponse` cho `POST /api/attempt`, so khớp bằng `new URL(res.url()).pathname`. Khẳng định chống trùng lặp `attempts.length === 1` giữ nguyên.
 - **Bài học:** đừng dùng trạng thái `disabled` của nút để đợi một request xong — nút có thể chưa kịp disabled, hoặc đã bị thay bằng màn hình kế tiếp. Đợi đúng response.
 - Gate sau đổi: Playwright **40/40 hai lượt liên tiếp trên bản build**.
+
+## 2026-09-19 20:45-21:50+07 — Plan20: Từ hay sai + Ôn tập ngẫu nhiên + ba tốc độ nghe (root, auto-mode)
+
+User chọn "Tính năng Vocab Master", kèm ràng buộc **"không được thay đổi db"**. Lập `planning/20_2026-09-19_weak-words-random-review/` MINOR **đủ bộ SPEC** (00-ARCHITECTURE, 01-CONTRACTS, SPEC-P201/P202/P203, OPERATIONS, TESTING-ACCEPTANCE).
+
+**Cắt phạm vi bằng cách đối chiếu schema thật, không đoán:** `VocabularyMastery` đã có `correctCount`/`incorrectCount`/`masteryScore`/`nextReviewAt` ⇒ "Từ hay sai" và "Ôn tập ngẫu nhiên" làm được **không cần migration**; ba tốc độ nghe là thuần client. Hai mảng còn lại của tài liệu tham khảo — **vòng học 5 bước** và **combo do máy chủ tính** — bắt buộc cần bảng/cột mới nên **HOÃN, chờ user duyệt migration**.
+
+**Đã làm:**
+- `src/server/learning/weak-words.ts` — hàm thuần: `classifyStanding` (weak = sai ≥1 lần, kiểm TRƯỚC learned; learned = đúng ≥2 và sai 0), `rankWeakWords` (sai nhiều → chính xác thấp → mastery thấp → `localeCompare` làm khoá cuối để thứ tự KHÔNG nhảy giữa hai lần tải), `selectRandomReview` (`random() * (0.5 + masteryScore)`; từ nắm chắc VẪN có thể lọt — nếu lọc cứng theo mastery thì nhóm "ngẫu nhiên" chỉ là danh sách "hay sai" đổi tên), `countLearned`. `now` và `random` là **tham số**, không đọc `Date.now()`/`Math.random()` bên trong.
+- `GET /api/learner/vocabulary-review` — chỉ đọc, phạm vi chủ sở hữu, không nhận tham số từ client (chống client tự chọn từ), đi qua `databaseErrorResponse`.
+- Trang `/learner/vocabulary` + mục nav **"Từ yếu"** (nav 8 → 9 mục, `grid-cols-5` vẫn 2 hàng).
+- `HiddenAudioButton` nhận `rate`; ba nút **0.75 / 1.0 / 1.2** ngay tại vòng "Nghe & viết", đổi tốc độ thì **phát lại bằng chính khối audio đã tải** — không request mới, không tốn ký tự ElevenLabs, không thêm tham số vào route phục vụ đáp án ẩn.
+- **Vùng cấm đã ghi:** "Xem nghĩa" KHÔNG phải một câu trả lời — không gọi API, không ghi mastery. App tham khảo chấm ở client; ListenAI cấm. Trang dẫn về mặt CÓ chấm điểm để con số thay đổi.
+
+**PHÁT HIỆN LỚN — nguyên nhân thật của flake `timeline.spec.ts` (thay thế chẩn đoán Plan19 cho riêng ca này):** Plan19 quy mọi flake điều hướng về `next dev` biên dịch theo yêu cầu. Đúng cho các ca kia, **SAI cho ca này**: sau khi chuyển sang bản build nó vẫn fail. Lần này đọc được thông điệp thật `DatabaseUnavailableError`, truy ngược `src/lib/database-errors.ts` thấy đó là ánh xạ của **`SQLITE_BUSY` / "database is locked"** — tiến trình Playwright và tiến trình server **cùng ghi một file SQLite**, journal mặc định khoá cả database nên bên thua fail ngay. Sửa: `e2e/setup.ts` đặt `PRAGMA journal_mode=WAL` cho DB tạm (đã probe: WAL **bám vào file**, kết nối mới đọc được, nên cả hai tiến trình hưởng); setup **ném lỗi** nếu pragma không trả `wal`. CẤM áp WAL cho `prisma/dev.db` hay Turso. **Đo thật: flake này fail ~1/3 lượt từ 2026-09-17; sau WAL 43/43 BA LƯỢT LIÊN TIẾP.**
+
+**Gates:** type-check 0; eslint 0/0; vitest **131 file / 840 test** (trước 129/823); build PASS có `/learner/vocabulary` + `/api/learner/vocabulary-review`; Playwright **43/43 ba lượt**, 1.6-1.7 phút/lượt.
+
+**Bài học lặp lại:** heredoc Bash nhiều file tiếng Việt dài **lại** vỡ parse (não đã ghi từ Plan17) — dùng Write tool.
+
+**Còn mở:** deploy production + nghiệm thu; hỏi user về migration cho vòng 5 bước và combo; `NEXTAUTH_URL` vẫn chặn mọi nghiệm thu bằng người thật.

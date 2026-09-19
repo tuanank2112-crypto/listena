@@ -48,4 +48,13 @@ test("quiz rounds offer a listen button and spelling rounds explain a missing AI
   // the spelling hint still works; the answer text never reached the browser.
   await expect(page.getByText(/Giọng AI chưa được cấu hình/)).toBeVisible({ timeout: 10_000 });
   await expect(page.getByPlaceholder("Gõ từ tiếng Anh")).toBeVisible();
+
+  // Plan20 SPEC-P203: the three dictation speeds sit on the round itself, and
+  // the chosen one is the pressed one.
+  const speeds = page.getByRole("group", { name: "Tốc độ nghe" });
+  await expect(speeds.getByRole("button", { name: "Nghe chậm" })).toBeVisible();
+  await expect(speeds.getByRole("button", { name: "Bình thường" })).toHaveAttribute("aria-pressed", "true");
+  await speeds.getByRole("button", { name: "Nghe chậm" }).click();
+  await expect(speeds.getByRole("button", { name: "Nghe chậm" })).toHaveAttribute("aria-pressed", "true");
+  await expect(speeds.getByRole("button", { name: "Bình thường" })).toHaveAttribute("aria-pressed", "false");
 });

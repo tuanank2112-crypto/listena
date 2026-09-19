@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan19_tech_debt_local_accepted__uncommitted__blocked_on_nextauth_url_permission",
-  "active_plan": "planning/19_2026-09-19_tech-debt-lint-flake/plan.md",
-  "checkpoint": "planning/19_2026-09-19_tech-debt-lint-flake/plan.md",
+  "system_status": "plan20_weak_words_local_accepted__uncommitted__blocked_on_nextauth_url_permission",
+  "active_plan": "planning/20_2026-09-19_weak-words-random-review/plan.md",
+  "checkpoint": "planning/20_2026-09-19_weak-words-random-review/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -144,7 +144,8 @@
     },
     "new_issues": {
       "e2e_flake": "e2e/timeline.spec.ts:27 fails about 1 in 3 full-suite runs; passes in isolation",
-      "dev_db_drift": "prisma/dev.db missing Attempt.resultJson/enrichmentState and ReviewLog.resultJson; migration 20260916120000 not applied; blocks manual testing; root lacked permission to back up or apply"
+      "dev_db_drift": "prisma/dev.db missing Attempt.resultJson/enrichmentState and ReviewLog.resultJson; migration 20260916120000 not applied; blocks manual testing; root lacked permission to back up or apply",
+      "e2e_flake_resolution": "RESOLVED 2026-09-19 by Plan20: SQLITE_BUSY from two processes writing one file; PRAGMA journal_mode=WAL in e2e/setup.ts"
     },
     "version_0_6_0": "legitimate: D1 local + real CI success on HEAD"
   },
@@ -665,5 +666,24 @@
     "evidence": "https://listena.vercel.app 200; https://listena-n-listen-ai.vercel.app 302; NEXTAUTH_URL (Config) still points at the 302 domain",
     "attempt": "`vercel env rm NEXTAUTH_URL production` denied by auto-mode classifier (Secret-Store Writes)",
     "two_options": "replace NEXTAUTH_URL with https://listena.vercel.app, or add AUTH_URL (proxy.ts:50 and account-email.ts:27 both prefer AUTH_URL)"
+  },
+  "plan20_weak_words": {
+    "date": "2026-09-19",
+    "type": "MINOR with full SPEC set",
+    "committed": false,
+    "user_constraint": "khong duoc thay doi db - no schema change in this plan",
+    "shipped": [
+      "weak words list",
+      "random review pool",
+      "dictation speeds 0.75/1.0/1.2"
+    ],
+    "deferred_needs_migration": [
+      "5-step lesson journey",
+      "server-computed match combo"
+    ],
+    "unit": "840 across 131 files",
+    "e2e": "43/43 three consecutive runs",
+    "flake_root_cause": "timeline.spec.ts failed with DatabaseUnavailableError, which database-errors.ts maps from SQLITE_BUSY: the Playwright process and the app server write the same SQLite file. Fixed by PRAGMA journal_mode=WAL on the temp E2E database only; WAL persists in the file so both processes get it. Was ~1 in 3 runs since 2026-09-17.",
+    "supersedes": "Plan19's compile-on-demand diagnosis, for the timeline case only - that diagnosis still holds for the other navigation flakes"
   }
 }

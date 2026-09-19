@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
 import { clearOwnerIntents } from "@/lib/client-intent";
 import {
+  AlertTriangle,
   AudioLines,
   BarChart3,
   BrainCircuit,
@@ -27,6 +28,7 @@ const learnerNav = [
   { href: "/learner/personalized-lessons", label: "Bài AI", icon: BrainCircuit },
   { href: "/learner/games", label: "Trò chơi", icon: Gamepad2 },
   { href: "/learner/flashcards", label: "Ôn từ", icon: Sparkles },
+  { href: "/learner/vocabulary", label: "Từ yếu", icon: AlertTriangle },
   { href: "/learner/progress", label: "Tiến bộ", icon: BarChart3 },
   { href: "/learner/settings", label: "Giọng nói", icon: AudioLines },
   { href: "/feedback", label: "Phản hồi", icon: MessageSquareText },
