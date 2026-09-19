@@ -21,8 +21,10 @@ export interface JourneyWord {
  * because "I have read these" is the one step no other evidence can prove — so
  * the learner has to reach the end before it counts.
  */
-export function LessonWordCards({ words, onDone, onCancel }: {
+export function LessonWordCards({ words, saving = false, onDone, onCancel }: {
   words: JourneyWord[];
+  /** The last card's button is waiting on the server; do not let it be pressed twice. */
+  saving?: boolean;
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -73,9 +75,10 @@ export function LessonWordCards({ words, onDone, onCancel }: {
           <button
             type="button"
             onClick={onDone}
-            className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white"
+            disabled={saving}
+            className="inline-flex min-h-11 min-w-0 flex-1 items-center justify-center gap-2 rounded-2xl bg-[#176b55] px-4 text-sm font-black text-white disabled:opacity-60"
           >
-            <Check className="h-4 w-4" /> Đã đọc hết
+            <Check className="h-4 w-4" /> {saving ? "Đang lưu…" : "Đã đọc hết"}
           </button>
         ) : (
           <button

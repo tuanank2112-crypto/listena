@@ -52,6 +52,7 @@ export function LessonJourneyBand({
   const [journey, setJourney] = useState<JourneyView | null>(null);
   const [failed, setFailed] = useState(false);
   const [learning, setLearning] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -65,15 +66,25 @@ export function LessonJourneyBand({
     return () => { cancelled = true; };
   }, [lessonId]);
 
-  /** The learner finished the word cards; record it and refresh the path. */
+  /**
+   * The learner finished the word cards: record it, THEN come back to the path.
+   *
+   * Closing the cards first showed the band in its old state until the write
+   * landed, so the step they had just earned appeared not to tick and the
+   * button looked like it had missed. The cards stay up, with the button
+   * disabled, until the server has answered.
+   */
   const finishLearning = useCallback(async () => {
-    setLearning(false);
+    setSaving(true);
     try {
       const response = await fetch(`/api/learner/lessons/${lessonId}/journey`, { method: "POST" });
       if (response.ok) setJourney(await response.json());
     } catch {
       // The cards were still worth reading. Leaving the step unticked is better
       // than claiming progress that was never recorded.
+    } finally {
+      setSaving(false);
+      setLearning(false);
     }
   }, [lessonId]);
 
@@ -86,6 +97,7 @@ export function LessonJourneyBand({
     return (
       <LessonWordCards
         words={words}
+        saving={saving}
         onDone={() => void finishLearning()}
         onCancel={() => setLearning(false)}
       />
