@@ -533,3 +533,13 @@ User: "tôi cần sự sáng tạo của bạn trong repo này". Thay vì nghĩ 
 Commit `fd0dade`, deploy `https://listena-6fesmywcp-n-listen-ai.vercel.app` READY. Không dừng ở mã trạng thái: đăng nhập bằng học viên thật và gọi `/api/learner/mistakes` → `200` trả về đúng một họ `tense`, `labelVi` **"Thì của động từ"**, ví dụ `actual: "lose"`, `explanationVi: "Với 'Yesterday' cần dùng quá khứ đơn: 'I lost my suitcase'."`, `sessionGoal: "Báo thất lạc hành lý..."`.
 
 **Đây là vòng khép kín trên hạ tầng thật:** một giờ trước Vyce trả `detectedError.type = "tense"` cho câu cài lỗi cố ý; nay chính lời sửa đó quay lại với học viên dưới nhãn tiếng Việt, đi qua đúng đường chuẩn hoá SPEC-P211. Guard: `/learner/progress` 307 về login, API ẩn danh 401.
+
+### 02:00–02:20+07 — Demo thật trên production, và một lỗ hổng chỉ chạy thật mới thấy
+
+User: "đâu? demo luôn". Gửi 3 câu cài lỗi khác nhau vào phiên Mission trên production (Vyce thật, 60.5s / 17.3s / 13.8s — lượt đầu chậm bất thường), rồi chụp màn hình bằng Playwright ở 1280px và 390px.
+
+**Lỗ hổng thật, chỉ lộ khi chạy với model thật:** Vyce trả `detectedError.type = "grammar"` — cũng là một giá trị trong enum `ErrorType` của Prisma — mà **taxonomy chưa có họ nào nhận nó**, nên nó rơi vào "Lỗi khác" nằm cạnh các lỗi thật sự không phân loại được. Đã thêm họ `grammar` ("Ngữ pháp chung") **đặt CUỐI bảng** để mọi họ chính xác hơn vẫn được ưu tiên ("grammar tense" phải về `tense`). Ghim thêm `GRAMMAR` và `UNKNOWN` vào test enum. Commit riêng, deploy `listena-ca1rk3hor`. Gates: type-check 0, eslint 0/0, vitest **869 test**.
+
+**Kết quả demo (ảnh trong scratchpad):** khu "Lỗi hay lặp" hiện **"Thì của động từ" ×2** — gộp đúng hai lượt lỗi thì khác nhau — mở sẵn với hai ví dụ kèm lời Coach tiếng Việt và tên phiên học; dưới là **"Ngữ pháp chung" ×1**. Ở 390px `scrollWidth === clientWidth === 390`, không tràn ngang.
+
+**QUAN SÁT CÒN MỞ (chất lượng dữ liệu của model, không phải lỗi mã):** ở một lượt Vyce đặt vào `detectedError.actual` một **mô tả** ("present tense with incorrect verb form") thay vì đoạn học viên viết sai. Giao diện hiển thị nó trong dấu trích dẫn nên đọc hơi lạ. Cách sửa có nguyên tắc: chỉ trích dẫn `actual` khi nó thật sự xuất hiện trong câu học viên vừa gửi (lượt LEARNER đứng ngay trước trong cùng phiên). Chưa làm — cần quyết định xem có đáng thêm một lần đọc lượt kề hay không.
