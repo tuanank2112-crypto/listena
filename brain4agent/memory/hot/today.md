@@ -675,3 +675,9 @@ User: "bạn cứ sáng tạo những gì bạn muốn để phù hợp ứng d�
 **Gates:** type-check 0; eslint 0/0; vitest **139 file / 939 test** (trước 138/921); build PASS; Playwright **53/53** (trước 50/50).
 
 **CÒN MỞ:** áp migration production **trước** rồi mới deploy; và **E2E KHÔNG phủ đường sinh chủ đề bằng AI thật** (gieo sẵn để khỏi tốn lượt AI) — phải thử tay một lần trên production.
+
+### 09:50–10:00+07 — Migration production, deploy, và một chỗ chưa nghiệm thu được
+
+Migration `20260920080000`: `before tables=33 indexes=65` (khớp đúng trạng thái sau Plan22, xác nhận đúng database) → `applied 2 statements` → `after tables=34 indexes=66`, integrity ok, 0 vi phạm FK. Deploy **sau** migration: `listena-mpb3rwmfn` READY. Ba route scenario đều trả `401` khi ẩn danh; `/` 200; `/learner/games` 307.
+
+**KHÔNG nghiệm thu được đường sinh chủ đề bằng AI thật:** đăng nhập bị từ chối với mã **`credentials`** (không phải `auth_locked`, nên không phải khoá chống dò) — mật khẩu `Listena#Prod-2026-09b` không còn đúng. Kiểm bằng cả `fetch` lẫn trình duyệt thật, cùng kết quả. Nhiều khả năng user đã tự đổi sau khi tôi nhắc hai lần rằng nó đã đi qua lịch sử chat — tức họ làm đúng. Cần hỏi user mật khẩu hiện tại trước mọi phép thử cần một học viên đăng nhập trên production.

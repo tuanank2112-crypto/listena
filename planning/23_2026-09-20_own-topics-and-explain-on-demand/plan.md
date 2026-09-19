@@ -86,7 +86,7 @@ Bỏ dòng đó. Lời giải thích lui về sau nút **"Giải nghĩa"**, và 
 | WP9 | Khu "Chủ đề của bạn" | ✅ |
 | WP10 | 3 ca E2E + cập nhật hồi quy đã đổi hành vi | ✅ |
 | WP11 | Bộ SPEC + đồng bộ não | ✅ |
-| WP12 | **Áp migration lên production**, rồi deploy | ⬜ |
+| WP12 | **Áp migration lên production**, rồi deploy | ✅ |
 
 ## Exit Gates
 
@@ -97,10 +97,30 @@ Bỏ dòng đó. Lời giải thích lui về sau nút **"Giải nghĩa"**, và 
 | `npx vitest run` | **939 test** (trước 921) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có 2 route scenario | ✅ local / ⬜ server |
 | `npx playwright test` | **53/53** (trước 50/50) | ✅ local / ⬜ server |
-| Migration áp lên production | chưa chạy | ⬜ server |
+| Migration áp lên production | **33 bảng/65 index → 34/66**, integrity ok, 0 vi phạm FK | ✅ **server** |
+
+### 2026-09-20 09:50 — Migration production và deploy
+
+```
+before: tables=33 indexes=65 integrity=ok foreign_key_violations=0
+to apply: table LearnerMissionScenario, index LearnerMissionScenario_userId_archivedAt_createdAt_idx
+applied 2 statements
+after:  tables=34 indexes=66 integrity=ok foreign_key_violations=0
+```
+
+`before` khớp đúng trạng thái sau Plan22, xác nhận đúng database. Deploy **sau** migration: `https://listena-mpb3rwmfn-n-listen-ai.vercel.app` READY.
+
+Nghiệm thu ẩn danh: cả ba route scenario trả `401`; `/` trả `200`; `/learner/games` trả `307` về login.
+
+### 2026-09-20 10:00 — Không nghiệm thu được đường AI thật: mật khẩu tài khoản kiểm thử đã đổi
+
+Thử tạo chủ đề bằng AI thật thì đăng nhập bị từ chối. Mã lỗi là **`credentials`**, không phải `auth_locked`, nên **không phải** khoá do chống dò — mật khẩu `Listena#Prod-2026-09b` không còn đúng. Kiểm lại bằng cả `fetch` lẫn trình duyệt thật: cùng kết quả.
+
+Nhiều khả năng user đã tự đổi sau khi tôi nhắc hai lần rằng mật khẩu đó đã đi qua lịch sử chat — tức là họ làm đúng.
+
+**Hệ quả:** đường **sinh chủ đề bằng AI thật** vẫn chưa được nghiệm thu, đúng như `TESTING-ACCEPTANCE.md` mục 3 đã cảnh báo rằng E2E không phủ nó. Mọi thứ khác đã xanh.
 
 ## Việc còn mở
 
-- Áp migration `20260920080000_plan23_learner_mission_scenarios` **trước** khi deploy.
 - Chưa nghiệm thu sinh chủ đề bằng **AI thật** (E2E dùng bản gieo sẵn để không tốn lượt AI); phải thử trên production sau khi deploy.
 - User nói "vài thiếu sót" nhưng mới nêu rõ hai; cái thứ ba chưa biết.

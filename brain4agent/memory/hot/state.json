@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan23_local_accepted__migration_pending_on_production",
+  "system_status": "plan23_shipped__ai_authoring_path_unverified_pending_a_password",
   "active_plan": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "checkpoint": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -776,6 +776,13 @@
     "unit": "939 across 139 files",
     "e2e": "53/53",
     "not_covered_by_tests": "the real AI authoring path - E2E seeds scenarios to avoid spending AI calls, so authoring must be tried by hand once on production",
-    "committed": false
+    "committed": true,
+    "commit_sha": "8a615c4",
+    "migration_applied": "Turso production 2026-09-20: 33 tables/65 indexes -> 34/66, integrity ok, 0 foreign-key violations",
+    "deployment": "https://listena-mpb3rwmfn-n-listen-ai.vercel.app READY; all three scenario routes answer 401 anonymously"
+  },
+  "test_account_password": {
+    "status": "UNKNOWN as of 2026-09-20 10:00",
+    "note": "Listena#Prod-2026-09b no longer signs in. The error code is `credentials`, not `auth_locked`, so it is not the login throttle - the password itself changed. Most likely the user changed it after being told twice that it had passed through the chat transcript. Ask them for the current one before any test that needs a signed-in learner on production."
   }
 }
