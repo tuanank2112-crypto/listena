@@ -3,7 +3,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
-import type { Attempt, AttemptError, ErrorType } from "@prisma/client";
+import type { ErrorType } from "@prisma/client";
 
 export interface CreateAttemptInput {
   userId: string;

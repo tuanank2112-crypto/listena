@@ -267,7 +267,7 @@ async function main() {
   });
 
   // Segments
-  const s1 = await prisma.lessonSegment.create({
+  await prisma.lessonSegment.create({
     data: {
       lessonId: lesson1.id,
       position: 1,
@@ -307,7 +307,7 @@ async function main() {
       difficulty: 1.1,
     },
   });
-  const s6 = await prisma.lessonSegment.create({
+  await prisma.lessonSegment.create({
     data: {
       lessonId: lesson1.id,
       position: 6,

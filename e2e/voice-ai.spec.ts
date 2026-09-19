@@ -66,9 +66,12 @@ async function startMission(page: Page) {
   await page.goto("/learner/games");
   await page.getByRole("button", { name: "Vào vai" }).first().click();
   const startNew = page.getByRole("button", { name: "Bắt đầu phiên mới" });
+  // Starting a Mission compiles and renders the session route for the first
+  // time in a run; 20s was not enough on a loaded machine (see the note in
+  // playwright.config.ts).
   await Promise.race([
-    page.waitForURL(/\/learner\/session\/[0-9a-f-]+$/, { timeout: 20_000 }),
-    startNew.waitFor({ state: "visible", timeout: 20_000 }),
+    page.waitForURL(/\/learner\/session\/[0-9a-f-]+$/, { timeout: 30_000 }),
+    startNew.waitFor({ state: "visible", timeout: 30_000 }),
   ]);
   if (!/\/learner\/session\//.test(page.url())) await startNew.click();
   await expect(page).toHaveURL(/\/learner\/session\/[0-9a-f-]+$/);

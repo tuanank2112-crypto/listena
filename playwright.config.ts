@@ -31,9 +31,19 @@ export default defineConfig({
   workers: 1,
   outputDir: "./test-results",
   reporter: [["list"], ["html", { outputFolder: "./playwright-report", open: "never" }]],
+  // The web server below is `next dev`, which compiles a route the first time a
+  // test asks for it. The first navigation to a page therefore costs seconds
+  // that later ones do not, and on a loaded machine that pushed three specs
+  // past Playwright's 5s default (`voice-ai.spec.ts:163`, `timeline.spec.ts:27`,
+  // `learning-regressions.spec.ts:131` all failed on navigation, then passed
+  // when run alone). These budgets buy that compile time; every assertion is
+  // unchanged, so a genuinely broken navigation still fails, just later.
+  expect: { timeout: 15_000 },
   use: {
     baseURL: "http://127.0.0.1:3100",
     trace: "retain-on-failure",
+    navigationTimeout: 30_000,
+    actionTimeout: 15_000,
   },
   webServer: {
     command:

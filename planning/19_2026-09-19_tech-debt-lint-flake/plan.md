@@ -1,0 +1,80 @@
+# Kế hoạch 19 — Trả nợ kỹ thuật: 28 cảnh báo lint + flake E2E
+
+## Metadata Header
+
+| Trường | Giá trị |
+|---|---|
+| Mã kế hoạch | 19_2026-09-19_tech-debt-lint-flake |
+| Loại | PATCH (SemVer) — áp dụng ngoại lệ §2.5, chỉ `plan.md`, không bộ SPEC |
+| Phiên bản dự án | 0.7.0 (không bump) |
+| Ngày mở | 2026-09-19 |
+| Trạng thái | LOCAL ACCEPTED — 5/5 gate xanh, chờ user duyệt commit |
+| Nguồn yêu cầu | Mục "CÒN MỞ" trong `brain4agent/memory/hot/today.md` (2026-09-19 16:20–17:55), user: "tiếp tục thực thi công việc" |
+| Phạm vi | Cảnh báo lint, cấu hình lint, ngân sách thời gian E2E. **Không** đổi hành vi sản phẩm |
+
+## Nhật ký quyết định
+
+### 2026-09-19 18:30 — Phân loại 28 cảnh báo trước khi sửa
+
+Lần thử trước (ghi trong hot memory) đã **hoàn tác** vì sửa hàng loạt: thay nhầm một trong hai dòng `const second` giống hệt nhau trong `speech.test.ts` làm vỡ type-check, và thêm block rule vào `eslint.config.mjs` **thiếu khoá `files`**. Lần này bắt buộc phân loại từng cảnh báo rồi sửa theo nhóm, mỗi nhóm một lý do riêng:
+
+| Nhóm | Số | Cách xử lý | Lý do |
+|---|---|---|---|
+| A. Biến có tiền tố `_` | 7 | **Cấu hình**, không xoá | `_answer`, `_correctAnswer`, `_expectedTokens`… là ràng buộc chữ ký hoặc đáp án ẩn cố ý không đọc. Xoá chúng sẽ đổi chữ ký hoặc làm lộ thứ đã cố tình bỏ |
+| B. Import chết | 9 | Xoá | Không tham chiếu nào |
+| C. Biến/hàm chết | 10 | Xoá, trừ 1 ca ghi chú | Xem quyết định 18:40 |
+| D. Toán tử phẩy trong script dataset cũ | 2 | Viết lại thành block `{ }` | Hành vi y hệt, chỉ bỏ lối viết dồn dòng |
+
+### 2026-09-19 18:40 — `danangLessonData`: đây là phát hiện thật, không phải rác lint
+
+`scripts/import-dataset.ts` import `dataset/danang-getaway-lesson.json` nhưng **không bao giờ dùng**, và hằng `EDUCAPLAY_SOURCE` cũng chết. Tiêu đề file còn ghi "Import the verified TATQHP1 dataset **and Educaplay dictation**" — câu đó **sai**: bài Đà Nẵng chưa bao giờ đi qua script này.
+
+**Quyết định:** xoá mã chết + **sửa tiêu đề cho đúng sự thật**, và ghi rõ trong comment rằng `danang-getaway-lesson.json` / `educaplay-danang.json` là **mẫu tham khảo** (đúng như `dataset/manifest.json` mô tả), còn bài Đà Nẵng học viên thực sự thấy là do `prisma/seed.ts` tạo.
+
+**VÙNG CẤM:** KHÔNG tự nối JSON đó vào luồng import. Làm vậy là **thêm một bài vào giáo trình đang chạy** — quyết định sản phẩm của user, không phải việc sửa lint. Ai đọc sau đừng "sửa lại cho tốt hơn".
+
+### 2026-09-19 18:45 — `cleanMeaning` bị hàm dùng chung thay thế
+
+`import-dataset.ts` giữ bản sao cục bộ `cleanMeaning`, trong khi mã thật gọi `cleanVocabularyMeaning` từ `src/core/text/vocabulary`. Xoá bản sao; nguồn chân lý duy nhất là hàm dùng chung.
+
+### 2026-09-19 19:05 — Flake E2E: chẩn đoán cấu trúc, không phải nới lỏng khẳng định
+
+Ba ca từng fail (`voice-ai.spec.ts:163`, `timeline.spec.ts:27`, `learning-regressions.spec.ts:131`) đều fail **ở bước điều hướng**, đều xanh khi chạy riêng. Chạy lại toàn bộ trên máy rảnh: **40/40 xanh — không tái hiện được**.
+
+Nguyên nhân cấu trúc: `webServer` của Playwright là **`next dev`**, biên dịch route **theo yêu cầu**. Lần điều hướng **đầu tiên** tới một trang trong một lượt chạy tốn vài giây mà các lần sau không tốn; khi máy đang tải nặng (lần đó chạy song song server demo + browser) nó vượt mặc định 5s của `expect` và mốc 20s trong `startMission`.
+
+**Quyết định:** nâng ngân sách thời gian ở `playwright.config.ts` (`expect` 15s, `navigationTimeout` 30s, `actionTimeout` 15s) và mốc trong `startMission` 20s → 30s, kèm comment nêu đúng nguyên nhân.
+
+**VÙNG CẤM:**
+- KHÔNG bật `retries`. Retry giấu lỗi thật; ngân sách thời gian thì không — điều hướng hỏng thật vẫn fail, chỉ fail muộn hơn.
+- KHÔNG đổi bất kỳ khẳng định nào. Không assertion nào bị nới lỏng hay bỏ đi.
+- KHÔNG đổi `next dev` sang `next start` trong lượt này: chạy E2E trên bản build là thay đổi lớn hơn (thêm bước build, env phải có lúc build) và chưa có bằng chứng cần đến.
+
+## Checklist thực thi
+
+- [x] Phân loại 28 cảnh báo thành 4 nhóm trước khi sửa
+- [x] Nhóm A: thêm block `no-unused-vars` **có khoá `files`** + các `*IgnorePattern: "^_"` vào `eslint.config.mjs`
+- [x] Nhóm B: xoá 9 import chết
+- [x] Nhóm C: xoá 10 biến/hàm chết (`s1`/`s6`, `missingCount`, `SM2_INITIAL_EASE`, `router`, `second`, `EDUCAPLAY_SOURCE`, `cleanMeaning`, `danangLessonData`, 2 import type)
+- [x] Nhóm D: viết lại 2 toán tử phẩy thành block
+- [x] Sửa tiêu đề sai sự thật của `import-dataset.ts` + ghi vùng cấm vào comment
+- [x] Nâng ngân sách thời gian E2E kèm comment nêu nguyên nhân
+- [ ] Commit + push (chờ user cho phép)
+
+## Exit Gates
+
+| Gate | Trước | Sau | Môi trường |
+|---|---|---|---|
+| `npm run type-check` | 0 lỗi | **0 lỗi** | ✅ local / ⬜ server |
+| `npx eslint .` | 0 lỗi / **28 cảnh báo** | 0 lỗi / **0 cảnh báo** | ✅ local / ⬜ server |
+| `npx vitest run` | 823/823 | **823/823** (129 file) | ✅ local / ⬜ server |
+| `npm run build` | PASS | **PASS** | ✅ local / ⬜ server |
+| `npx playwright test` | 40/40 | **40/40** (2 lượt liên tiếp) | ✅ local / ⬜ server |
+
+Bằng chứng khác biệt thật: `scripts/import-dataset.ts` chạy trong `e2e/setup.ts` mỗi lượt E2E, nên 40/40 xanh chứng minh việc xoá mã chết trong script import không làm hỏng dữ liệu giống.
+
+## Việc còn mở sau kế hoạch này
+
+- `NEXTAUTH_URL` production vẫn trỏ domain bị Vercel SSO chặn — **cần quyền của user**, auto-mode chặn ghi secret store.
+- 3 biến trùng ở Preview (`NEXTAUTH_URL`, `NEXTAUTH_SECRET`, `DATABASE_URL`).
+- Tính năng Vocab Master (đề xuất MINOR trong Plan17) chưa bắt đầu.

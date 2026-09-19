@@ -255,7 +255,6 @@ export function calculateScores(
 
   const correctCount = diffs.filter((d) => d.type === "CORRECT").length;
   const spellingCount = diffs.filter((d) => d.type === "SPELLING").length;
-  const missingCount = diffs.filter((d) => d.type === "MISSING").length;
   const extraCount = diffs.filter((d) => d.type === "EXTRA").length;
   const substitutionCount = diffs.filter((d) => d.type === "SUBSTITUTION").length;
 

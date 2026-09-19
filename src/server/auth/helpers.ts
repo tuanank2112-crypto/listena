@@ -1,6 +1,5 @@
 import { auth } from "./config";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
 import type { Role } from "@prisma/client";
 
 export async function getSession() {

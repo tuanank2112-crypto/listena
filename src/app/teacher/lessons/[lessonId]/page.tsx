@@ -1,10 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ChevronLeft, CheckCircle, Send, Loader2, FileText, BookOpen, ListChecks, Languages, MessageSquareText } from "lucide-react";
+import { ChevronLeft, CheckCircle, Send, BookOpen, ListChecks, Languages, MessageSquareText } from "lucide-react";
 
 interface LessonData {
   id: string;
@@ -20,7 +19,6 @@ interface LessonData {
 }
 
 export default function LessonEditPage({ params }: { params: Promise<{ lessonId: string }> }) {
-  const router = useRouter();
   const [lesson, setLesson] = useState<LessonData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -58,7 +56,7 @@ export default function LessonEditPage({ params }: { params: Promise<{ lessonId:
         const err = await res.json();
         setMessage(`❌ ${err.error || "Thất bại"}`);
       }
-    } catch (err) {
+    } catch {
       setMessage("❌ Có lỗi xảy ra");
     } finally {
       setSaving(false);

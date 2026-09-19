@@ -165,7 +165,7 @@ describe("speak", () => {
     registerEnglishSpeechEngine(engine);
     const first = speak({ text: "first", lang: "en" });
     await vi.waitFor(() => expect(engine.speak).toHaveBeenCalledTimes(1));
-    const second = speak({ text: "second", lang: "en" });
+    void speak({ text: "second", lang: "en" });
     await vi.waitFor(() => expect(getSpeechState().phase).toBe("downloading-model"));
     await first;
     staleUpdate?.({ phase: "error" });

@@ -1,7 +1,7 @@
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
-import { ChevronRight, PlusCircle, FileText, Clock } from "lucide-react";
+import { ChevronRight, PlusCircle, FileText } from "lucide-react";
 
 export default async function TeacherLessonsPage() {
   // Owner-scoped like the API (Plan13 P130 §6): a teacher lists only lessons

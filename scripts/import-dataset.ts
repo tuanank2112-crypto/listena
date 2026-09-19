@@ -1,6 +1,13 @@
 /**
- * Import the verified TATQHP1 dataset and Educaplay dictation into ListenAI.
+ * Import the verified TATQHP1 dataset into ListenAI.
  * Run with: npm run dataset:import
+ *
+ * Scope note: despite an older header, this script has never imported the
+ * Educaplay "Da Nang family getaway" material. `dataset/danang-getaway-lesson.json`
+ * and `dataset/educaplay-danang.json` are reference samples only (see
+ * `dataset/manifest.json`); the Da Nang lesson learners actually see is built by
+ * `prisma/seed.ts`. Wiring the JSON in here would add a lesson to the live
+ * curriculum, which is a product decision, not an import fix.
  */
 import type { CefrLevel, ExerciseType } from "@prisma/client";
 import { prisma } from "../src/lib/prisma";
@@ -10,7 +17,6 @@ import lessonsData from "../dataset/lessons.json";
 import grammarData from "../dataset/grammar-reference.json";
 import exercisesData from "../dataset/exercises.json";
 import { cleanVocabularyMeaning } from "../src/core/text/vocabulary";
-import danangLessonData from "../dataset/danang-getaway-lesson.json";
 
 /**
  * Plan13 SPEC-P134 §4 (finding D8) — hosted import guard.
@@ -53,7 +59,6 @@ assertHostedImportConfirmed();
 
 const COURSE_TITLE = "TATQHP1 - SOLUTIONS Pre-Intermediate";
 const DATASET_SOURCE = "Sách HDH TATQHP1 SOLUTIONS đã chỉnh sửa theo ý kiến hội đồng lần 2.docx";
-const EDUCAPLAY_SOURCE = "https://www.educaplay.com/learning-resources/30215767-da_nang_family_getaway.html";
 
 const SOURCE_CORRECTIONS: Array<[RegExp, string]> = [
   [/\bicy hockey\b/gi, "ice hockey"],
@@ -63,12 +68,6 @@ const SOURCE_CORRECTIONS: Array<[RegExp, string]> = [
   [/\bpresent continous\b/gi, "present continuous"],
 ];
 
-function cleanMeaning(value: string, exampleSentence?: string | null) {
-  let meaning = value.trim();
-  if (exampleSentence) meaning = meaning.replace(exampleSentence, "").trim();
-  meaning = meaning.split(/\s+(?=(?:I|He|She|We|They|It|There|The|My|Our|People|Students|A lot of)\b)/)[0].trim();
-  return meaning.replace(/[.\s]+$/, "");
-}
 function normalizeSourceText(value: string) {
   return SOURCE_CORRECTIONS.reduce(
     (text, [pattern, replacement]) => text.replace(pattern, replacement),

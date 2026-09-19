@@ -132,7 +132,10 @@ function extractAnswers(unit) {
   for (const p of ps.slice(ansIdx + 1)) {
     for (const line of linesOf(p.text)) {
       const m = line.match(/^B\u00e0i t\u1eadp\s*(\d+)[\.\s:]*\s*(.*)$/);
-      if (m) current = { number: parseInt(m[1]), title: (m[2] || "").trim(), lines: [] }, answers.push(current);
+      if (m) {
+        current = { number: parseInt(m[1]), title: (m[2] || "").trim(), lines: [] };
+        answers.push(current);
+      }
       else if (current && line) current.lines.push(line);
     }
   }

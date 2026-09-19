@@ -399,3 +399,22 @@ User chon ca 4 huong (don cau hinh production / kiem chung vong hoc that / don n
 - Flake E2E: bat duoc mot lan `voice-ai.spec.ts:163` fail `page.waitForURL timeout 20s` khi chay full (xanh khi chay rieng); `timeline.spec.ts:27` va `learning-regressions.spec.ts:131` cung tung fail kieu nay. Chua sua - nghi do tranh tai nguyen/thu tu chay, can dieu tra rieng.
 - Don 28 canh bao unused-vars: DA THU VA HOAN TAC. Hai loi khi lam: thay nham dong `const second` trong `speech.test.ts` (co hai cho giong nhau) lam vo type-check; va them block rules vao eslint.config khong co `files`. Lan sau: phan loai `_`-prefix (7 cai - nen cau hinh ignore pattern chu khong xoa) vs import chet (9) vs bien chet (8, trong do `danangLessonData` cho thay `dataset/danang-getaway-lesson.json` KHONG duoc import vao DB - dang nghi van) vs comma-operator trong 2 script dataset cu.
 - Tinh nang Vocab Master: chua bat dau.
+
+## 2026-09-19 18:20-19:30+07 — Plan19: trả nợ kỹ thuật lint + flake E2E (root, auto-mode)
+
+User: "đọc não sau đó tiếp tục thực thi công việc". Bước 0 `init_brain.js --check` exit 0 (marker v1.4.0, root sạch). Cây làm việc sạch, đã push, 4 file untracked cần giữ nguyên.
+
+**Rào cản số 1 thử lại và VẪN BỊ CHẶN:** `vercel env rm NEXTAUTH_URL production` → auto-mode classifier từ chối (Secret-Store Writes). Đã xác nhận lại bằng probe đọc: `https://listena.vercel.app` trả **200**, `https://listena-n-listen-ai.vercel.app` trả **302**, và `NEXTAUTH_URL` (Config, tạo 2 ngày trước) vẫn trỏ domain 302. Production **không có** `AUTH_URL` (mà `proxy.ts:50` và `account-email.ts:27` đều ưu tiên `AUTH_URL` trước `NEXTAUTH_URL`) ⇒ có hai cách sửa, cần user chọn. Chưa sửa.
+
+**Đã làm trọn (Plan19, PATCH, `planning/19_2026-09-19_tech-debt-lint-flake/plan.md`):**
+
+- **28 cảnh báo lint → 0.** Phân loại trước khi sửa (lần trước sửa hàng loạt nên phải hoàn tác): (A) 7 biến `_`-prefix = **cấu hình** `argsIgnorePattern`/`varsIgnorePattern`/`caughtErrorsIgnorePattern`/`destructuredArrayIgnorePattern` `^_` trong `eslint.config.mjs` **có khoá `files`** — không xoá, vì `_answer`/`_correctAnswer` là đáp án ẩn cố ý không đọc; (B) 9 import chết; (C) 10 biến/hàm chết; (D) 2 toán tử phẩy trong script dataset cũ → viết lại thành block.
+- **Phát hiện thật trong lúc dọn:** `scripts/import-dataset.ts` có tiêu đề nói nó import "Educaplay dictation" — **SAI**. `dataset/danang-getaway-lesson.json` được import ở đầu file rồi **không dùng**, `EDUCAPLAY_SOURCE` cũng chết. Bài Đà Nẵng học viên thấy là do `prisma/seed.ts` tạo; hai file JSON kia là **mẫu tham khảo** (đúng như `dataset/manifest.json`). Đã xoá mã chết + sửa tiêu đề + ghi **vùng cấm** vào comment: KHÔNG tự nối JSON vào luồng import vì đó là thêm một bài vào giáo trình đang chạy = quyết định sản phẩm của user.
+- `cleanMeaning` trong `import-dataset.ts` là bản sao chết của `cleanVocabularyMeaning` (`src/core/text/vocabulary`) — đã xoá bản sao.
+- **Flake E2E — chẩn đoán xong, không tái hiện được.** Chạy full suite trên máy rảnh: **40/40 xanh**. Nguyên nhân cấu trúc: `webServer` là `next dev`, biên dịch route **theo yêu cầu**, nên lần điều hướng **đầu tiên** tới một trang tốn vài giây mà lần sau không tốn; máy đang tải nặng thì vượt mặc định **5s** của `expect` (cả ba ca từng fail đều fail ở bước điều hướng và đều xanh khi chạy riêng). Sửa: `playwright.config.ts` thêm `expect.timeout 15s`, `navigationTimeout 30s`, `actionTimeout 15s`; `startMission` 20s → 30s. **Vùng cấm: KHÔNG bật `retries`** (retry giấu lỗi thật, ngân sách thời gian thì không) và không đổi khẳng định nào.
+
+**Bài học lint:** lần trước vỡ vì thay chuỗi `catch (err)` trùng nhau — lần này cũng suýt lặp lại: file `teacher/lessons/[lessonId]/page.tsx` có **hai** khối `catch (err)`, một khối dùng `err` ở `console.error`. Đã type-check bắt được (`TS2304 Cannot find name 'err'`) và sửa ngay. Quy tắc: thay chuỗi trong file có khối lặp phải kèm dòng ngữ cảnh kế bên, không thay theo chuỗi trần.
+
+**5 gate local (số thật, chạy lại sau khi sửa):** type-check **0 lỗi**; eslint **0 lỗi / 0 cảnh báo** (từ 0/28); vitest **129 file / 823 test** (baseline mới sau commit 781531e, không phải 820); `npm run build` PASS; Playwright **40/40**, chạy **2 lượt liên tiếp** đều xanh. `scripts/import-dataset.ts` chạy trong `e2e/setup.ts` mỗi lượt nên 40/40 cũng là bằng chứng việc dọn script import không làm hỏng dữ liệu giống.
+
+**Còn mở:** commit/push (chờ user); `NEXTAUTH_URL` (cần quyền); 3 biến trùng ở Preview; Vocab Master chưa bắt đầu.

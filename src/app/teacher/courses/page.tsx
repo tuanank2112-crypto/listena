@@ -1,7 +1,6 @@
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
-import { ChevronRight, PlusCircle, FileText, Users } from "lucide-react";
+import { FileText, Users } from "lucide-react";
 
 export default async function TeacherCoursesPage() {
   // Owner-scoped like the API (Plan13 P130 §6); ADMIN sees every course.
