@@ -22,6 +22,11 @@ const eslintConfig = defineConfig([
     "coverage/**",
     "src/generated/**",
     "next-env.d.ts",
+    // Playwright writes a bundled HTML report and trace attachments here.
+    // They are build output, not source, and they drown the real signal
+    // (257 errors after one failing run).
+    "playwright-report/**",
+    "test-results/**",
   ]),
 ]);
 
