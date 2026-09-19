@@ -87,11 +87,6 @@ function useSystemVoices() {
   return useSyncExternalStore(subscribeSystemVoices, getSystemVoices, getServerSystemVoices);
 }
 
-/**
- * Learner-facing picker for the free voices already on this device
- * (Plan18 SPEC-P181 §5). Preview goes through `speakWithBrowserVoice` so it
- * plays the system voice even when the ElevenLabs engine is configured.
- */
 export interface BrowserVoiceOptions {
   /** Rows to render, best first: the top slice plus the pin when it fell outside. */
   shown: Array<VoiceChoice<SpeechSynthesisVoice>>;
@@ -127,6 +122,11 @@ export function buildBrowserVoiceOptions(
   };
 }
 
+/**
+ * Learner-facing picker for the free voices already on this device
+ * (Plan18 SPEC-P181 §5). Preview goes through `speakWithBrowserVoice` so it
+ * plays the system voice even when the ElevenLabs engine is configured.
+ */
 function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; rate: number; pinned?: string }) {
   const { voices, supported } = useSystemVoices();
 
@@ -151,7 +151,7 @@ function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; r
           <VoiceRow
             active={!pinned || pinnedMissing}
             title="Tự động (tốt nhất trên máy này)"
-            subtitle={auto ? `Đang dùng: ${describeChoice(auto)}` : "Thiết bị chưa có giọng tiếng Anh phù hợp."}
+            subtitle={auto ? `Đang dùng: ${voiceTitle(auto)} — ${describeChoice(auto)}` : "Thiết bị chưa có giọng tiếng Anh phù hợp."}
             onSelect={() => setPreferredBrowserVoice(accent, undefined)}
             onPreview={auto ? () => void speakWithBrowserVoice({ text: SAMPLE_LINE, lang: "en", voiceURI: auto.voice.voiceURI, rate }) : undefined}
             previewLabel="Nghe thử giọng tự động"
@@ -160,12 +160,12 @@ function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; r
             <VoiceRow
               key={choice.voice.voiceURI || choice.voice.name}
               active={Boolean(pinnedChoice) && pinnedChoice === choice}
-              title={choice.curated?.label ?? choice.voice.name}
+              title={voiceTitle(choice)}
               badge={choice.curated?.platform}
               subtitle={describeChoice(choice)}
               onSelect={() => setPreferredBrowserVoice(accent, choice.voice.voiceURI || choice.voice.name)}
               onPreview={() => void speakWithBrowserVoice({ text: SAMPLE_LINE, lang: "en", voiceURI: choice.voice.voiceURI, rate })}
-              previewLabel={`Nghe thử ${choice.curated?.label ?? choice.voice.name}`}
+              previewLabel={`Nghe thử ${voiceTitle(choice)}`}
             />
           ))}
         </div>
@@ -183,6 +183,11 @@ function BrowserVoicePicker({ accent, rate, pinned }: { accent: EnglishAccent; r
       )}
     </fieldset>
   );
+}
+
+/** Catalogue label when we have vetted the voice, else the raw device name. */
+function voiceTitle(choice: VoiceChoice<SpeechSynthesisVoice>) {
+  return choice.curated?.label ?? choice.voice.name;
 }
 
 function describeChoice(choice: VoiceChoice<SpeechSynthesisVoice>) {
