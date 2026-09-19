@@ -57,6 +57,7 @@ import {
   getEventClientTurnId,
   parseMissionState,
 } from "@/server/learning/state";
+import { canonicalErrorType } from "@/core/learning/error-taxonomy";
 import {
   getLearnerMemory,
   parseLearnerMemory,
@@ -932,7 +933,11 @@ async function persistLearningTurnWithAtomicBatch(input: {
       id: evidenceId,
       skillKey: input.output.targetSkill,
       score: input.output.score,
-      errorType: input.output.detectedError?.type ?? null,
+      // Plan21 SPEC-P211: canonicalise before counting. The model writes this
+      // field freely and learner memory matches entries by exact string, so
+      // "tense" and "verb_tense" would otherwise count as two separate
+      // mistakes and neither would reach the planner's threshold.
+      errorType: canonicalErrorType(input.output.detectedError?.type),
     },
   );
   const requiresPendingIntervention = input.intervention ? [

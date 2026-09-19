@@ -504,3 +504,26 @@ User dán link đặt lại mật khẩu từ hộp thư ⇒ **mail production G
 **Ý nghĩa:** đây là gate **D3 (live AI)** trong Definition of Done của Plan12, mở từ đầu dự án tới giờ. Chuỗi đầy đủ đã chạy trên hạ tầng thật: mail → xác minh → đăng nhập → planner → phiên học → chấm điểm máy chủ → coaching AI tiếng Việt → voiceScript.
 
 **Đã dọn:** xoá file cookie phiên trong scratchpad ngay sau khi dùng xong.
+
+## 2026-09-20 00:00–01:30+07 — Plan21: "Lỗi hay lặp" — hai lỗi THẬT tìm được bằng cách đọc mã (root, auto-mode)
+
+User: "tôi cần sự sáng tạo của bạn trong repo này". Thay vì nghĩ ra một tính năng nghe hay, rà đường dữ liệu của chính thứ vừa chứng minh chạy thật trên production vài giờ trước: `detectedError`. Lần từ `TutorTurnOutputSchema` → `service.ts` → `updateErrors` → `planner.ts` lộ ra **hai lỗi sai và một khoảng trống**.
+
+**LỖI A — số đếm bị chẻ, planner IM LẶNG bỏ sót học viên (lỗi sai thật):** `detectedError.type` là `z.string().max(80)` — model viết gì cũng được. `updateErrors` trong `learner-memory/repository.ts` gộp bằng **so sánh chuỗi CHÍNH XÁC**, planner lọc `count >= 3`. Hệ quả: học viên sai **cùng một lỗi** 4 lần, model gọi hai tên ("tense" và "verb_tense") ⇒ hai mục count 2 ⇒ **không mục nào chạm ngưỡng** ⇒ planner **không bao giờ** đưa họ đi luyện. Không có gì đổ vỡ, việc dạy đơn giản là không xảy ra. Chuỗi `"tense"` KHÔNG phải giả định — đúng là thứ Vyce trả về trên production lúc 23:45 cùng ngày.
+
+**LỖI B — tiếng Anh chuyên ngành giữa câu tiếng Việt:** `formatErrorType` tồn tại **HAI BẢN SAO** (`planner.ts`, `next-action.ts`), chỉ làm `replaceAll("_"," ").toLowerCase()` rồi ghép vào `Bạn đã lặp lại lỗi ${...} ${count} lần`. Học viên A1-A2 người Việt đọc được: **"Bạn đã lặp lại lỗi tense 4 lần gần đây."**
+
+**KHOẢNG TRỐNG C:** mỗi lượt AI đã mang sẵn câu học viên viết sai + lời Coach giải thích tiếng Việt, nhưng sau lượt đó **chỉ planner** còn nhìn, và chỉ nhìn số đếm. Plan20 vừa cho thấy **từ** hay sai; phần **cách nói sai** vẫn trống.
+
+**Đã làm (`planning/21_2026-09-19_recurring-mistakes/`, MINOR đủ bộ SPEC, KHÔNG migration):**
+- `src/core/learning/error-taxonomy.ts` — 18 họ lỗi có `key`/`labelVi`/`hintVi`. **Thứ tự bảng là cố ý**: `agreement` đứng TRƯỚC `tense`/`verb-form` vì "subject verb agreement" chứa "verb". Phép khớp: cụm nhiều chữ khớp nguyên cụm; một chữ khớp token chính xác, hoặc bỏ `s` cuối, hoặc tiền tố **chỉ với gốc ≥6 ký tự** — ngưỡng 6 chặn đúng `intense`→tense và `extraction`→extra-word, **đã ghim bằng test**. `String.includes` trần đã thử và LOẠI (để `order` khớp `disorder`).
+- **Chuẩn hoá ở TẦNG ĐẾM, không ràng buộc schema.** Ép `detectedError.type` thành enum đã loại: mất sắc thái và lỗi ngoài tập bị dồn về UNKNOWN. Vì chuẩn hoá **lũy đẳng** nên áp cả lúc đọc ⇒ dữ liệu cũ gộp đúng ngay ⇒ **không cần migration**.
+- **VÙNG CẤM quan trọng:** lỗi lạ **giữ slug riêng**, KHÔNG dồn vào một thùng "other". Gộp hai lỗi lạ khác nhau sẽ cộng dồn và có thể đẩy qua ngưỡng 3, gửi học viên đi luyện thứ họ **chưa từng lặp**. Đếm chẻ mất một lần nhắc; đếm bịa dạy sai.
+- Planner + next-action: **gộp TRƯỚC, lọc ngưỡng SAU** (thứ tự ngược lại loại mất đúng những mục bị chẻ mà việc gộp sinh ra để cứu). Xoá cả hai bản `formatErrorType`. Câu nay là "Bạn đã lặp lại lỗi **thì của động từ** 4 lần".
+- `mistakes.ts` + `GET /api/learner/mistakes` + khu **"Lỗi hay lặp"** trên trang **Tiến bộ** (không phải trang "Từ yếu" vì trang đó nói về TỪ; không thêm mục nav thứ 10). Hiện lỗi hay lặp nhất kèm **chính câu học viên viết sai** và lời Coach.
+- **Khu này CÂM có chủ ý** — vùng cấm Plan14: không bao giờ đọc to câu sai của học viên, mà cả khu làm bằng câu sai của họ. Ghi rõ trong SPEC để người sau đừng "bổ sung cho nhất quán".
+- **Quyết định có cân nhắc:** lỗi tải hoặc rỗng ⇒ khu **biến mất hoàn toàn**, không hộp lỗi. Trang Tiến bộ vẫn trọn vẹn khi thiếu nó.
+
+**Bằng chứng khác biệt thật (không phải "test xanh"):** `planner.test.ts` → "counts one mistake once, however the model spelled it": đầu vào hai mục `count: 2`; **trước** thay đổi planner KHÔNG trả `PRACTICE`, **sau** thì có. Và "names the mistake in Vietnamese": `reasonVi` chứa "thì của động từ" **và** khẳng định KHÔNG chứa "tense".
+
+**Gates:** type-check 0; eslint 0/0; vitest **134 file / 868 test** (trước 131/840); build PASS có `/api/learner/mistakes`; Playwright **46/46** (trước 43/43).

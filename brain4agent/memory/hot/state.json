@@ -1,9 +1,9 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "LIVE_AI_PROVEN_ON_PRODUCTION__d3_gate_open",
-  "active_plan": "planning/20_2026-09-19_weak-words-random-review/plan.md",
-  "checkpoint": "planning/20_2026-09-19_weak-words-random-review/plan.md",
+  "system_status": "plan21_recurring_mistakes_local_accepted__live_ai_proven_on_production",
+  "active_plan": "planning/21_2026-09-19_recurring-mistakes/plan.md",
+  "checkpoint": "planning/21_2026-09-19_recurring-mistakes/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
   "technical_contract_plan": "planning/11_2026-09-16_ai-native-evidence-gates/plan.md",
   "infrastructure_plan": "planning/07_2026-09-10_vercel-turso-migration/plan.md",
@@ -729,5 +729,18 @@
     },
     "gotcha": "POST /api/learning-sessions with mode MISSION and no scenarioKey returns 404 TARGET_UNAVAILABLE; take the scenarioKey from /api/learner/next-action the way the dashboard does",
     "plan12_gate": "D3 (live AI with reviewer quality) - the live half is now demonstrated; reviewer quality assessment is still open"
+  },
+  "plan21_recurring_mistakes": {
+    "date": "2026-09-19",
+    "type": "MINOR with full SPEC set, no migration",
+    "bug_a": "detectedError.type is free-form and learner memory matches it by exact string, so one mistake spelled two ways produced two counts of 2, neither reaching the planner's threshold of 3 - the learner was never sent to practise a mistake they kept making. Silent, not a crash.",
+    "bug_b": "formatErrorType existed in two copies and dropped the model's raw English type into a Vietnamese sentence: 'Ban da lap lai loi tense 4 lan' for A1-A2 Vietnamese learners.",
+    "fix": "src/core/learning/error-taxonomy.ts - 18 families, canonical key + Vietnamese label. Canonicalise at write AND at read (idempotent), so pre-existing rows fold correctly without a migration.",
+    "forbidden_zone": "an unrecognised type keeps its own slug and is NEVER pooled into one 'other' bucket - pooling would sum unrelated counts past the threshold and teach the wrong lesson",
+    "ordering_rule": "aggregate BEFORE the count>=3 filter; filtering first discards exactly the split entries the aggregation exists to rescue",
+    "new_surface": "GET /api/learner/mistakes + a 'Loi hay lap' panel on the Progress page showing the learner's own wrong sentences with the Coach's Vietnamese explanation; deliberately silent per Plan14's forbidden zone",
+    "unit": "868 across 134 files",
+    "e2e": "46/46",
+    "committed": false
   }
 }

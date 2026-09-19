@@ -81,6 +81,30 @@ describe("planNextLearningAction", () => {
     });
   });
 
+  it("counts one mistake once, however the model spelled it", async () => {
+    // Plan21: before canonicalisation these were two entries of 2, each below
+    // the threshold of 3, so a learner who had made the same tense mistake four
+    // times was never sent to practise it.
+    mocks.memory.mockResolvedValue({ recurringErrors: [
+      { errorType: "tense", count: 2, lastEvidenceId: "old-evidence" },
+      { errorType: "verb_tense", count: 2, lastEvidenceId: "old-evidence" },
+    ] });
+    mocks.referencedEvidence.mockResolvedValue({ id: "old-evidence" });
+    await expect(planNextLearningAction(userId, now)).resolves.toMatchObject({
+      kind: "PRACTICE",
+      reasonCode: "RECURRING_ERROR",
+    });
+  });
+
+  it("names the mistake in Vietnamese, never in the model's English", async () => {
+    mocks.memory.mockResolvedValue({ recurringErrors: [{ errorType: "verb_tense", count: 4, lastEvidenceId: "old-evidence" }] });
+    mocks.referencedEvidence.mockResolvedValue({ id: "old-evidence" });
+    const decision = await planNextLearningAction(userId, now);
+    expect(decision.reasonVi).toContain("thì của động từ");
+    expect(decision.reasonVi).not.toContain("verb_tense");
+    expect(decision.reasonVi).not.toContain("tense");
+  });
+
   it("puts due review before a previously observed weak skill", async () => {
     mocks.dueVocabulary.mockResolvedValue({ vocabularyItem: { displayText: "reservation" } });
     mocks.weakSkill.mockResolvedValue({ skillKey: "listening", masteryScore: 0.2, evidenceCount: 1 });

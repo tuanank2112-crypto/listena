@@ -2,6 +2,7 @@ import "server-only";
 
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
+import { aggregateRecurringErrors } from "@/core/learning/error-taxonomy";
 import { getLearnerMemory } from "@/server/learner-memory/repository";
 import { isMissionScenarioKey } from "@/server/ai/mission-templates";
 import type { NextAction } from "@/features/learning-session/types";
@@ -24,16 +25,17 @@ export async function computeNextAction(
 
   const evidenceRefs = evidence.map((item) => item.id);
   const memory = await getLearnerMemory(userId);
-  const recurringError = memory?.recurringErrors
-    .filter((item) => (
-      typeof item.errorType === "string" &&
-      item.errorType.trim().length > 0 &&
-      Number.isInteger(item.count) &&
-      item.count >= 3 &&
-      typeof item.lastEvidenceId === "string" &&
-      item.lastEvidenceId.length > 0
-    ))
-    .sort((left, right) => right.count - left.count)[0];
+  // Plan21 SPEC-P212: fold the stored spellings onto canonical families BEFORE
+  // the threshold. Entries written before canonicalisation, and any spelling the
+  // model still invents, would otherwise each sit below 3 while the learner has
+  // made the same mistake far more often than that.
+  const recurringError = aggregateRecurringErrors(
+    (memory?.recurringErrors ?? []).filter((item) => (
+      typeof item.errorType === "string"
+      && Number.isInteger(item.count)
+      && typeof item.lastEvidenceId === "string"
+    )),
+  ).filter((item) => item.count >= 3)[0];
 
   // Memory is advisory only. Its cited evidence must still be owned by the
   // learner; recurring errors intentionally survive across sessions.
@@ -49,8 +51,8 @@ export async function computeNextAction(
       return {
         kind: "PRACTICE",
         scenarioKey: await nextMissionScenario(userId, sessionId),
-        goal: `Practice correcting ${recurringError.errorType} in short English answers.`,
-        reason: `Bạn đã lặp lại lỗi ${formatErrorType(recurringError.errorType)} ${recurringError.count} lần gần đây. Hãy luyện lại trước khi đi tiếp.`,
+        goal: `Practice correcting ${recurringError.key} in short English answers.`,
+        reason: `Bạn đã lặp lại lỗi ${recurringError.labelVi.toLowerCase()} ${recurringError.count} lần gần đây. Hãy luyện lại trước khi đi tiếp.`,
         evidenceRefs: [referencedEvidence.id],
       };
     }
@@ -202,8 +204,4 @@ function formatSkill(skillKey: string) {
     communication: "giao tiếp",
   };
   return labels[skillKey] ?? skillKey;
-}
-
-function formatErrorType(errorType: string) {
-  return errorType.replaceAll("_", " ").toLowerCase();
 }

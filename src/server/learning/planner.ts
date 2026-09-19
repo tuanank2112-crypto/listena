@@ -6,6 +6,7 @@ import { isMissionScenarioKey } from "@/server/ai/mission-templates";
 import { getLearnerIntent } from "@/server/learner-intent";
 import { getLearnerMemory } from "@/server/learner-memory/repository";
 import { prisma } from "@/lib/prisma";
+import { aggregateRecurringErrors } from "@/core/learning/error-taxonomy";
 import type { EvidenceRef, LearningDecision } from "./decision";
 
 const MAX_PLANNING_EVIDENCE = 50;
@@ -106,9 +107,11 @@ export async function planNextLearningAction(
     };
   }
 
-  const recurringError = memory?.recurringErrors
-    .filter((item) => item.count >= 3 && item.errorType.trim() && item.lastEvidenceId)
-    .sort((left, right) => right.count - left.count || left.errorType.localeCompare(right.errorType))[0];
+  // Plan21 SPEC-P212: fold stored spellings onto canonical families BEFORE the
+  // threshold, so a mistake split across "tense" and "verb_tense" is counted
+  // once and actually reaches 3.
+  const recurringError = aggregateRecurringErrors(memory?.recurringErrors ?? [])
+    .filter((item) => item.count >= 3)[0];
   if (recurringError) {
     const ownedReference = await prisma.learningEvidence.findFirst({
       where: { id: recurringError.lastEvidenceId, session: { userId } },
@@ -120,11 +123,11 @@ export async function planNextLearningAction(
         ...base,
         kind: "PRACTICE",
         scenarioKey,
-        goal: `Practice correcting ${recurringError.errorType} in short English answers.`,
+        goal: `Practice correcting ${recurringError.key} in short English answers.`,
         reasonCode: "RECURRING_ERROR",
-        reasonVi: `Bạn đã lặp lại lỗi ${formatErrorType(recurringError.errorType)} ${recurringError.count} lần gần đây. Hãy sửa lỗi trong một tình huống ngắn rồi thử lại.`,
+        reasonVi: `Bạn đã lặp lại lỗi ${recurringError.labelVi.toLowerCase()} ${recurringError.count} lần gần đây. Hãy sửa lỗi trong một tình huống ngắn rồi thử lại.`,
         evidenceRefs: refs,
-        basis: { kind: "EVIDENCE", skillKey: recurringError.errorType, refs },
+        basis: { kind: "EVIDENCE", skillKey: recurringError.key, refs },
       };
     }
   }
@@ -318,8 +321,4 @@ function formatSkill(skillKey: string) {
     communication: "giao tiếp",
   };
   return labels[skillKey] ?? skillKey;
-}
-
-function formatErrorType(errorType: string) {
-  return errorType.replaceAll("_", " ").toLowerCase();
 }
