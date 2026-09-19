@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan21_recurring_mistakes_local_accepted__live_ai_proven_on_production",
+  "system_status": "plan21_shipped_and_verified_on_production__live_ai_proven",
   "active_plan": "planning/21_2026-09-19_recurring-mistakes/plan.md",
   "checkpoint": "planning/21_2026-09-19_recurring-mistakes/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -741,6 +741,8 @@
     "new_surface": "GET /api/learner/mistakes + a 'Loi hay lap' panel on the Progress page showing the learner's own wrong sentences with the Coach's Vietnamese explanation; deliberately silent per Plan14's forbidden zone",
     "unit": "868 across 134 files",
     "e2e": "46/46",
-    "committed": false
+    "committed": true,
+    "commit_sha": "fd0dade",
+    "production_proof": "https://listena-6fesmywcp-n-listen-ai.vercel.app READY; signed in as the real learner, GET /api/learner/mistakes returned the 'tense' correction Vyce made an hour earlier, labelled 'Thi cua dong tu', with the learner's own wrong word and the Coach's Vietnamese explanation"
   }
 }

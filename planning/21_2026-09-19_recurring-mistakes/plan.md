@@ -81,7 +81,7 @@ Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên*
 | WP6 | Khu "Lỗi hay lặp" trên trang Tiến bộ | ✅ |
 | WP7 | 3 ca E2E | ✅ |
 | WP8 | Bộ SPEC + đồng bộ não | ✅ |
-| WP9 | Deploy production + nghiệm thu | ⬜ |
+| WP9 | Deploy production + nghiệm thu | ✅ |
 
 ## Checklist thực thi
 
@@ -92,7 +92,7 @@ Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên*
 - [x] Test khẳng định câu tiếng Việt **không** chứa chuỗi tiếng Anh
 - [x] E2E chứng minh câu sai của học viên khác không rò ra
 - [x] Không migration, không env mới, không dependency mới
-- [ ] Deploy production và nghiệm thu
+- [x] Deploy production và nghiệm thu (`listena-6fesmywcp`, commit `fd0dade`)
 
 ## Exit Gates
 
@@ -103,10 +103,37 @@ Plan14 có vùng cấm: **không bao giờ đọc to câu sai của học viên*
 | `npx vitest run` | **134 file / 868 test** (trước 131/840) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có `/api/learner/mistakes` | ✅ local / ⬜ server |
 | `npx playwright test` | **46/46** (trước 43/43) | ✅ local / ⬜ server |
-| Nghiệm thu production | chưa chạy | ⬜ server |
+| Nghiệm thu production | `/learner/progress` **307** về login; `/api/learner/mistakes` ẩn danh **401**; và với học viên thật: **200** trả đúng một họ `tense` gắn nhãn **"Thì của động từ"** | ✅ **server** |
+
+### 2026-09-20 01:45 — Deploy và nghiệm thu bằng dữ liệu thật trên production
+
+Deploy `https://listena-6fesmywcp-n-listen-ai.vercel.app` READY, alias `https://listena.vercel.app`.
+
+Không dừng ở mã trạng thái. Đăng nhập bằng học viên thật và gọi `/api/learner/mistakes`:
+
+```json
+{ "families": [ {
+    "key": "tense",
+    "labelVi": "Thì của động từ",
+    "count": 1,
+    "examples": [ {
+      "actual": "lose",
+      "explanationVi": "Với 'Yesterday' cần dùng quá khứ đơn: 'I lost my suitcase'.",
+      "sessionGoal": "Báo thất lạc hành lý và mô tả chiếc vali đủ rõ để nhân viên tìm thấy."
+    } ] } ],
+  "correctedTurnCount": 1 }
+```
+
+Đây là **vòng khép kín trên hạ tầng thật**: một giờ trước Vyce chấm câu cài lỗi cố ý và trả `detectedError.type = "tense"`; nay chính lời sửa đó quay lại với học viên dưới nhãn tiếng Việt **"Thì của động từ"**, kèm từ họ viết sai và câu Coach đã giải thích. Chuỗi `"tense"` đi qua đúng đường chuẩn hoá mà SPEC-P211 mô tả.
+
+| Kiểm | Kết quả |
+|---|---|
+| `GET /` | `200` |
+| `GET /learner/progress` (chưa đăng nhập) | `307` về `/login?callbackUrl=%2Flearner%2Fprogress` |
+| `GET /api/learner/mistakes` (ẩn danh) | `401` |
+| `GET /api/learner/mistakes` (học viên thật) | `200`, một họ lỗi gắn nhãn tiếng Việt |
 
 ## Việc còn mở
 
-- Deploy và nghiệm thu production.
 - Theo dõi `rawTypes` sau một thời gian để biết model thực sự đặt tên lỗi thế nào, rồi bổ sung từ khoá cho các họ còn thiếu.
 - Vocab Master: vòng học 5 bước và combo do máy chủ tính vẫn chờ user duyệt migration.

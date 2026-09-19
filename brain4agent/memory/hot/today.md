@@ -527,3 +527,9 @@ User: "tôi cần sự sáng tạo của bạn trong repo này". Thay vì nghĩ 
 **Bằng chứng khác biệt thật (không phải "test xanh"):** `planner.test.ts` → "counts one mistake once, however the model spelled it": đầu vào hai mục `count: 2`; **trước** thay đổi planner KHÔNG trả `PRACTICE`, **sau** thì có. Và "names the mistake in Vietnamese": `reasonVi` chứa "thì của động từ" **và** khẳng định KHÔNG chứa "tense".
 
 **Gates:** type-check 0; eslint 0/0; vitest **134 file / 868 test** (trước 131/840); build PASS có `/api/learner/mistakes`; Playwright **46/46** (trước 43/43).
+
+### 01:45+07 — Deploy Plan21 và nghiệm thu bằng DỮ LIỆU THẬT trên production
+
+Commit `fd0dade`, deploy `https://listena-6fesmywcp-n-listen-ai.vercel.app` READY. Không dừng ở mã trạng thái: đăng nhập bằng học viên thật và gọi `/api/learner/mistakes` → `200` trả về đúng một họ `tense`, `labelVi` **"Thì của động từ"**, ví dụ `actual: "lose"`, `explanationVi: "Với 'Yesterday' cần dùng quá khứ đơn: 'I lost my suitcase'."`, `sessionGoal: "Báo thất lạc hành lý..."`.
+
+**Đây là vòng khép kín trên hạ tầng thật:** một giờ trước Vyce trả `detectedError.type = "tense"` cho câu cài lỗi cố ý; nay chính lời sửa đó quay lại với học viên dưới nhãn tiếng Việt, đi qua đúng đường chuẩn hoá SPEC-P211. Guard: `/learner/progress` 307 về login, API ẩn danh 401.
