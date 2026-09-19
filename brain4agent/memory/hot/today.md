@@ -418,3 +418,14 @@ User: "đọc não sau đó tiếp tục thực thi công việc". Bước 0 `in
 **5 gate local (số thật, chạy lại sau khi sửa):** type-check **0 lỗi**; eslint **0 lỗi / 0 cảnh báo** (từ 0/28); vitest **129 file / 823 test** (baseline mới sau commit 781531e, không phải 820); `npm run build` PASS; Playwright **40/40**, chạy **2 lượt liên tiếp** đều xanh. `scripts/import-dataset.ts` chạy trong `e2e/setup.ts` mỗi lượt nên 40/40 cũng là bằng chứng việc dọn script import không làm hỏng dữ liệu giống.
 
 **Còn mở:** commit/push (chờ user); `NEXTAUTH_URL` (cần quyền); 3 biến trùng ở Preview; Vocab Master chưa bắt đầu.
+
+### Bổ sung 20:00–20:40+07 — E2E chạy trên bản build (user duyệt), và nó bắt được một test xanh nhầm
+
+User trả lời 3 câu hỏi: (1) NEXTAUTH_URL "làm gì cũng được nhưng **không được thay đổi db**"; (2) commit + push; (3) làm tiếp: Vocab Master, dọn 3 biến trùng Preview, chạy E2E trên bản build.
+
+- **Commit `d0086c2` + push** `a6e6c8c..d0086c2` (Plan19 đợt 1).
+- **NEXTAUTH_URL vẫn KHÔNG sửa được:** thử lại `vercel env rm` sau khi user cho phép — auto-mode classifier **vẫn từ chối** (Secret-Store Writes). Lời cho phép bằng lời của user không gỡ được classifier; cần user thêm quy tắc permission cho lệnh `vercel env` hoặc tự đổi trong dashboard. Dọn 3 biến trùng ở Preview **cũng bị chặn cùng lý do**.
+- **`webServer` → `next build && next start --port 3100`** (timeout 120s → 420s). Stub `openai-responses-test-stub.cjs` nạp bằng `--require` **vẫn chặn được** `globalThis.fetch` trong `next start` — chứng minh bằng ca "learner completes and resumes an AI mission turn" xanh. Nhanh hơn `next dev`: **2.0–2.2 phút** so với 2.8–3.0 phút, **đã tính cả thời gian build**.
+- **Bản build phơi ra một ca test xanh nhầm (không phải lỗi sản phẩm):** `integrity-flows.spec.ts:73` (T111-06) fail **tái hiện được**, kể cả chạy riêng. Ảnh chụp trang lúc fail cho thấy bài nộp **thành công** và trang đã sang màn hình kết quả (điểm 14, "4 lỗi", "Cần nhớ", "Luyện lại") — nút "Kiểm tra" biến mất đúng thiết kế. Khẳng định cũ `expect(reloadedSubmitBtn).not.toBeDisabled()` là cuộc đua hai đầu đều sai: xanh **trước khi** click kịp vô hiệu hoá nút (tức chưa nộp gì), hoặc mất phần tử sau khi chấm xong. Trên `next dev` đầu thứ nhất thường thắng nên test xanh **do may**. Sửa: `page.waitForResponse` cho `POST /api/attempt`, so khớp bằng `new URL(res.url()).pathname`. Khẳng định chống trùng lặp `attempts.length === 1` giữ nguyên.
+- **Bài học:** đừng dùng trạng thái `disabled` của nút để đợi một request xong — nút có thể chưa kịp disabled, hoặc đã bị thay bằng màn hình kế tiếp. Đợi đúng response.
+- Gate sau đổi: Playwright **40/40 hai lượt liên tiếp trên bản build**.

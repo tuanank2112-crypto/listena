@@ -128,10 +128,15 @@ test.describe("Plan 11/12 — Learning and Authoring E2E Integrity (T111-06, T11
     await reloadedInput.fill(originalAnswer);
 
     const reloadedSubmitBtn = page.getByRole("button", { name: "Kiểm tra" });
+    // Wait for the replayed submission itself. Watching the button instead was a
+    // race: it could report "enabled" before the click had disabled it, and once
+    // grading lands the page swaps the button for the result screen, so the
+    // locator resolves to nothing. On a built server the swap always won.
+    const replayed = page.waitForResponse(
+      (res) => new URL(res.url()).pathname === "/api/attempt" && res.request().method() === "POST",
+    );
     await reloadedSubmitBtn.click();
-
-    // Wait for submission to complete (loading state finishes)
-    await expect(reloadedSubmitBtn).not.toBeDisabled({ timeout: 10000 });
+    await replayed;
 
     // Database verification: Exactly 1 attempt created in DB
     const attempts = await db.attempt.findMany({

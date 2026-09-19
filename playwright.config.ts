@@ -46,8 +46,13 @@ export default defineConfig({
     actionTimeout: 15_000,
   },
   webServer: {
+    // Build once, then serve the built app. `next dev` compiled each route the
+    // first time a test asked for it, which made the first navigation to a page
+    // cost seconds the later ones did not and was the source of the navigation
+    // flakes. A built server also means the suite exercises the artifact that
+    // ships rather than a dev-only compilation path.
     command:
-      "node --require ./e2e/openai-responses-test-stub.cjs ./node_modules/next/dist/bin/next dev --port 3100",
+      "node ./node_modules/next/dist/bin/next build && node --require ./e2e/openai-responses-test-stub.cjs ./node_modules/next/dist/bin/next start --port 3100",
     // Pass the isolated database and auth/provider settings explicitly to the
     // spawned Next process. Next also loads `.env`; inherited values must win
     // so browser auth and direct Prisma assertions address the same fixture.
@@ -65,7 +70,8 @@ export default defineConfig({
       AUTH_TRUST_HOST: "true",
     },
     url: "http://127.0.0.1:3100",
-    timeout: 120000,
+    // The command above builds before it serves.
+    timeout: 420000,
     reuseExistingServer: false,
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],

@@ -50,6 +50,28 @@ Nguyên nhân cấu trúc: `webServer` của Playwright là **`next dev`**, biê
 - KHÔNG đổi bất kỳ khẳng định nào. Không assertion nào bị nới lỏng hay bỏ đi.
 - KHÔNG đổi `next dev` sang `next start` trong lượt này: chạy E2E trên bản build là thay đổi lớn hơn (thêm bước build, env phải có lúc build) và chưa có bằng chứng cần đến.
 
+### 2026-09-19 20:10 — Quyết định bị thay thế: chạy E2E trên bản build (user duyệt)
+
+**Thay thế quyết định 19:05** ở phần "không đổi `next dev` sang `next start` trong lượt này". User chọn làm luôn. Lịch sử giữ nguyên: quyết định cũ đúng tại thời điểm đó (chưa có bằng chứng cần đến); nay user cho phép nên đi thẳng vào gốc.
+
+`webServer` đổi thành `next build && next start --port 3100`, `timeout` 120s → 420s. Stub `openai-responses-test-stub.cjs` **vẫn chặn được** `globalThis.fetch` khi nạp bằng `--require` vào `next start` — đã chứng minh bằng ca "learner completes and resumes an AI mission turn" xanh.
+
+Ngân sách thời gian ở quyết định 19:05 **giữ nguyên**: chúng không còn để bù thời gian biên dịch, mà để chịu tải máy. Không có lý do thu hẹp lại.
+
+### 2026-09-19 20:25 — Bản build phơi ra một ca test viết sai (không phải lỗi sản phẩm)
+
+Chạy trên bản build làm `integrity-flows.spec.ts:73` (T111-06) fail **tái hiện được**, kể cả khi chạy riêng. Đọc ảnh chụp trang lúc fail: bài nộp **thành công**, trang đã chuyển sang màn hình kết quả (điểm 14, "4 lỗi", mục "Cần nhớ", link "Luyện lại"). Nút "Kiểm tra" biến mất **đúng thiết kế**.
+
+Khẳng định cũ `await expect(reloadedSubmitBtn).not.toBeDisabled()` mang tiếng là "đợi bài nộp xong" nhưng thực chất là một cuộc đua hai đầu đều sai:
+- Nó có thể xanh **trước khi** cú click kịp vô hiệu hoá nút — tức là chưa nộp gì cả.
+- Khi chấm điểm xong, nút bị thay bằng màn hình kết quả nên locator không còn phần tử.
+
+Trên `next dev` đầu đua thứ nhất thường thắng nên test xanh **do may**. Trên bản build, đầu thứ hai luôn thắng.
+
+**Sửa:** đợi đúng thứ cần đợi — `page.waitForResponse` cho `POST /api/attempt` (so khớp bằng `new URL(res.url()).pathname` để không dính route khác). Khẳng định chống trùng lặp `attempts.length === 1` giữ nguyên, nay chạy trên trạng thái tất định.
+
+**Đây là lợi ích thật đầu tiên của việc đổi sang bản build:** nó bắt được một test xanh nhầm, không phải một lỗi sản phẩm.
+
 ## Checklist thực thi
 
 - [x] Phân loại 28 cảnh báo thành 4 nhóm trước khi sửa
@@ -59,7 +81,10 @@ Nguyên nhân cấu trúc: `webServer` của Playwright là **`next dev`**, biê
 - [x] Nhóm D: viết lại 2 toán tử phẩy thành block
 - [x] Sửa tiêu đề sai sự thật của `import-dataset.ts` + ghi vùng cấm vào comment
 - [x] Nâng ngân sách thời gian E2E kèm comment nêu nguyên nhân
-- [ ] Commit + push (chờ user cho phép)
+- [x] Commit + push đợt 1 (`d0086c2`)
+- [x] Đổi `webServer` sang `next build && next start`, chứng minh stub AI vẫn hoạt động
+- [x] Sửa ca test xanh nhầm T111-06 bằng `waitForResponse`
+- [ ] Commit + push đợt 2
 
 ## Exit Gates
 
@@ -69,7 +94,8 @@ Nguyên nhân cấu trúc: `webServer` của Playwright là **`next dev`**, biê
 | `npx eslint .` | 0 lỗi / **28 cảnh báo** | 0 lỗi / **0 cảnh báo** | ✅ local / ⬜ server |
 | `npx vitest run` | 823/823 | **823/823** (129 file) | ✅ local / ⬜ server |
 | `npm run build` | PASS | **PASS** | ✅ local / ⬜ server |
-| `npx playwright test` | 40/40 | **40/40** (2 lượt liên tiếp) | ✅ local / ⬜ server |
+| `npx playwright test` (trên `next dev`) | 40/40 | **40/40** (2 lượt liên tiếp) | ✅ local / ⬜ server |
+| `npx playwright test` (trên bản build) | — | **40/40** (2 lượt liên tiếp, 2.0–2.2 phút so với 2.8–3.0 phút của `next dev`, đã tính cả thời gian build) | ✅ local / ⬜ server |
 
 Bằng chứng khác biệt thật: `scripts/import-dataset.ts` chạy trong `e2e/setup.ts` mỗi lượt E2E, nên 40/40 xanh chứng minh việc xoá mã chết trong script import không làm hỏng dữ liệu giống.
 
