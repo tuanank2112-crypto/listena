@@ -7,7 +7,9 @@ import { getLearnerMemory } from "@/server/learner-memory/repository";
 import { buildMistakeHistory } from "@/server/learning/mistakes";
 
 /** Plan21 SPEC-P213 §3. Read caps, so a long history cannot page the server to death. */
-const AI_TURN_QUERY_LIMIT = 120;
+// Covers both actors now, because a correction is only quotable next to the
+// learner turn it answered — so this is roughly half as many exchanges.
+const TURN_QUERY_LIMIT = 240;
 const MAX_FAMILIES = 6;
 const MAX_EXAMPLES_PER_FAMILY = 3;
 
@@ -27,23 +29,26 @@ export async function GET() {
 
     const userId = session.user.id;
 
-    const [memory, aiTurns] = await Promise.all([
+    const [memory, turns] = await Promise.all([
       getLearnerMemory(userId),
       prisma.learningTurn.findMany({
-        where: { actor: "AI", session: { userId } },
+        where: { actor: { in: ["LEARNER", "AI"] }, session: { userId } },
         select: {
+          actor: true,
+          sessionId: true,
+          sequence: true,
           contentJson: true,
           createdAt: true,
           session: { select: { goal: true } },
         },
         orderBy: { createdAt: "desc" },
-        take: AI_TURN_QUERY_LIMIT,
+        take: TURN_QUERY_LIMIT,
       }),
     ]);
 
     const families = buildMistakeHistory({
       recurringErrors: memory?.recurringErrors ?? [],
-      aiTurns,
+      turns,
       maxFamilies: MAX_FAMILIES,
       maxExamplesPerFamily: MAX_EXAMPLES_PER_FAMILY,
     });

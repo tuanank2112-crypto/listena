@@ -2,24 +2,33 @@ import "server-only";
 
 import { aggregateRecurringErrors, canonicalErrorType, describeErrorType } from "@/core/learning/error-taxonomy";
 import type { AggregatedError } from "@/core/learning/error-taxonomy";
+import { findHighlights } from "@/core/learning/text-highlight";
 
 /**
  * Plan21 SPEC-P213 — turning the AI's coaching into a record the learner can
  * read back.
  *
- * Every corrected turn already carries what the learner wrote wrong and the
- * Coach's Vietnamese explanation. Until now that lived for one screen and then
- * only the planner ever looked at it again. This module reads it back, grouped
- * by mistake family.
+ * Every corrected turn already carries the Coach's Vietnamese explanation. What
+ * it does not reliably carry is the learner's wrong words: `detectedError.actual`
+ * is whatever the model chose to put there, and production has produced a
+ * description — "present tense with incorrect verb form" — where a fragment was
+ * expected. Quoting that back at the learner is showing them something they
+ * never wrote.
+ *
+ * So the quote is the learner's own message, taken from the turn they actually
+ * sent, and `actual` is used only to point inside it.
  */
 
-/** One correction, as it was stored on an AI turn. */
 export interface MistakeExample {
-  /** The learner's own wrong fragment. */
-  actual: string;
+  /** What the learner sent, verbatim. Empty when the turn cannot be found. */
+  learnerText: string;
+  /**
+   * Fragments of `detectedError.actual` that genuinely occur in `learnerText`.
+   * Empty when the model described the mistake instead of quoting it.
+   */
+  highlights: string[];
   /** What the Coach said about it, in Vietnamese. */
   explanationVi: string;
-  /** The goal of the session it happened in, for context. */
   sessionGoal: string;
   occurredAt: string;
 }
@@ -28,14 +37,15 @@ export interface MistakeFamily {
   key: string;
   labelVi: string;
   hintVi: string;
-  /** How often learner memory has counted this family. */
   count: number;
-  /** The learner's own recent sentences in this family, newest first. */
   examples: MistakeExample[];
 }
 
-/** An AI turn as this module needs to read it. */
-export interface StoredAiTurn {
+/** A stored turn as this module needs to read it. */
+export interface StoredTurn {
+  actor: string;
+  sessionId: string;
+  sequence: number;
   contentJson: string;
   createdAt: Date;
   session: { goal: string };
@@ -47,7 +57,10 @@ interface ParsedDetectedError {
   explanationVi: string;
 }
 
-function parseDetectedError(contentJson: string): ParsedDetectedError | null {
+/** Longest learner message kept; a whole essay is not a useful quote. */
+const MAX_LEARNER_TEXT = 400;
+
+function parseObject(contentJson: string): Record<string, unknown> | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(contentJson);
@@ -55,16 +68,66 @@ function parseDetectedError(contentJson: string): ParsedDetectedError | null {
     // A turn whose content will not parse is not a reason to fail the page.
     return null;
   }
-  if (typeof parsed !== "object" || parsed === null) return null;
-  const detected = (parsed as { detectedError?: unknown }).detectedError;
+  return typeof parsed === "object" && parsed !== null ? parsed as Record<string, unknown> : null;
+}
+
+function parseDetectedError(contentJson: string): ParsedDetectedError | null {
+  const content = parseObject(contentJson);
+  if (!content) return null;
+  const detected = content.detectedError;
   if (typeof detected !== "object" || detected === null) return null;
   const { type, actual, explanationVi } = detected as Record<string, unknown>;
   if (typeof type !== "string" || typeof explanationVi !== "string") return null;
-  return {
-    type,
-    actual: typeof actual === "string" ? actual : "",
-    explanationVi,
-  };
+  return { type, actual: typeof actual === "string" ? actual : "", explanationVi };
+}
+
+function parseLearnerMessage(contentJson: string): string {
+  const content = parseObject(contentJson);
+  const message = content?.message;
+  return typeof message === "string" ? message.trim().slice(0, MAX_LEARNER_TEXT) : "";
+}
+
+/**
+ * Pair every AI correction with the learner turn it answered.
+ *
+ * Turns arrive newest-first across sessions, so they are grouped per session and
+ * walked in sequence order: within a session the learner message that precedes
+ * an AI turn is the one that turn is talking about.
+ */
+function collectExamples(turns: StoredTurn[]): Array<{ key: string; example: MistakeExample }> {
+  const bySession = new Map<string, StoredTurn[]>();
+  for (const turn of turns) {
+    const group = bySession.get(turn.sessionId) ?? [];
+    group.push(turn);
+    bySession.set(turn.sessionId, group);
+  }
+
+  const collected: Array<{ key: string; example: MistakeExample }> = [];
+  for (const group of bySession.values()) {
+    let lastLearnerText = "";
+    for (const turn of [...group].sort((a, b) => a.sequence - b.sequence)) {
+      if (turn.actor === "LEARNER") {
+        lastLearnerText = parseLearnerMessage(turn.contentJson);
+        continue;
+      }
+      if (turn.actor !== "AI") continue;
+      const detected = parseDetectedError(turn.contentJson);
+      if (!detected) continue;
+      const key = canonicalErrorType(detected.type);
+      if (!key) continue;
+      collected.push({
+        key,
+        example: {
+          learnerText: lastLearnerText,
+          highlights: findHighlights(lastLearnerText, detected.actual),
+          explanationVi: detected.explanationVi,
+          sessionGoal: turn.session.goal,
+          occurredAt: turn.createdAt.toISOString(),
+        },
+      });
+    }
+  }
+  return collected;
 }
 
 /**
@@ -79,7 +142,7 @@ function parseDetectedError(contentJson: string): ParsedDetectedError | null {
  */
 export function buildMistakeHistory(input: {
   recurringErrors: Array<{ errorType: string; count: number; lastEvidenceId: string }>;
-  aiTurns: StoredAiTurn[];
+  turns: StoredTurn[];
   maxFamilies: number;
   maxExamplesPerFamily: number;
 }): MistakeFamily[] {
@@ -89,19 +152,12 @@ export function buildMistakeHistory(input: {
   }
 
   const examples = new Map<string, MistakeExample[]>();
-  for (const turn of input.aiTurns) {
-    const detected = parseDetectedError(turn.contentJson);
-    if (!detected) continue;
-    const key = canonicalErrorType(detected.type);
-    if (!key) continue;
+  const collected = collectExamples(input.turns)
+    .sort((a, b) => b.example.occurredAt.localeCompare(a.example.occurredAt));
+  for (const { key, example } of collected) {
     const bucket = examples.get(key) ?? [];
     if (bucket.length < input.maxExamplesPerFamily) {
-      bucket.push({
-        actual: detected.actual,
-        explanationVi: detected.explanationVi,
-        sessionGoal: turn.session.goal,
-        occurredAt: turn.createdAt.toISOString(),
-      });
+      bucket.push(example);
       examples.set(key, bucket);
     }
   }

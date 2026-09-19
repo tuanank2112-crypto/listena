@@ -17,8 +17,16 @@ async function login(page: Page) {
   return db.user.findUniqueOrThrow({ where: { email: "learner@example.com" } });
 }
 
-/** A session with one AI turn carrying a correction, as the service writes it. */
-async function seedCorrection(userId: string, detectedError: { type: string; actual: string; explanationVi: string }, goal: string) {
+/**
+ * A session holding the exchange the service writes: what the learner sent,
+ * then the AI turn correcting it.
+ */
+async function seedCorrection(
+  userId: string,
+  learnerMessage: string,
+  detectedError: { type: string; actual: string; explanationVi: string },
+  goal: string,
+) {
   const session = await db.learningSession.create({
     data: { userId, mode: "MISSION", status: "COMPLETED", goal, completedAt: new Date() },
   });
@@ -26,6 +34,16 @@ async function seedCorrection(userId: string, detectedError: { type: string; act
     data: {
       sessionId: session.id,
       sequence: 1,
+      clientTurnId: randomUUID(),
+      actor: "LEARNER",
+      turnType: "RESPONSE",
+      contentJson: JSON.stringify({ message: learnerMessage, responseTimeMs: 12_000 }),
+    },
+  });
+  await db.learningTurn.create({
+    data: {
+      sessionId: session.id,
+      sequence: 2,
       clientTurnId: randomUUID(),
       actor: "AI",
       turnType: "COACH",
@@ -42,14 +60,15 @@ test("the mistakes route rejects anonymous callers", async ({ request }) => {
 test("a learner reads their own corrections grouped and named in Vietnamese", async ({ page }) => {
   const learner = await login(page);
   const suffix = randomUUID().slice(0, 8);
-  const wrongOne = `I lose my bag ${suffix}`;
-  const wrongTwo = `yesterday I go ${suffix}`;
+  const sentenceOne = `I lose my bag ${suffix}`;
+  const sentenceTwo = `yesterday I go there ${suffix}`;
 
-  // The model names the same mistake two different ways; the learner must see
-  // one entry, not two.
+  // The model names the same mistake two different ways, and on the second turn
+  // it describes the mistake instead of quoting it — both shapes come from
+  // production.
   const sessions = [
-    await seedCorrection(learner.id, { type: "tense", actual: wrongOne, explanationVi: "Dùng quá khứ đơn: I lost." }, `Sân bay ${suffix}`),
-    await seedCorrection(learner.id, { type: "verb_tense", actual: wrongTwo, explanationVi: "Yesterday đi với quá khứ." }, `Quán ăn ${suffix}`),
+    await seedCorrection(learner.id, sentenceOne, { type: "tense", actual: "lose", explanationVi: "Dùng quá khứ đơn: I lost." }, `Sân bay ${suffix}`),
+    await seedCorrection(learner.id, sentenceTwo, { type: "verb_tense", actual: "present tense with incorrect verb form", explanationVi: "Yesterday đi với quá khứ." }, `Quán ăn ${suffix}`),
   ];
 
   try {
@@ -57,17 +76,26 @@ test("a learner reads their own corrections grouped and named in Vietnamese", as
     const tense = body.families.find((family: { key: string }) => family.key === "tense");
     expect(tense).toBeTruthy();
     expect(tense.labelVi).toBe("Thì của động từ");
-    const actuals = tense.examples.map((example: { actual: string }) => example.actual);
-    expect(actuals).toContain(wrongOne);
-    expect(actuals).toContain(wrongTwo);
+
+    const texts = tense.examples.map((example: { learnerText: string }) => example.learnerText);
+    expect(texts).toContain(sentenceOne);
+    expect(texts).toContain(sentenceTwo);
+
+    // A genuine fragment is marked; a description of the mistake is not.
+    const quoted = tense.examples.find((example: { learnerText: string }) => example.learnerText === sentenceOne);
+    const described = tense.examples.find((example: { learnerText: string }) => example.learnerText === sentenceTwo);
+    expect(quoted.highlights).toEqual(["lose"]);
+    expect(described.highlights).toEqual([]);
 
     await page.goto("/learner/progress");
     const panel = page.locator("section[aria-labelledby='mistakes-heading']");
     await expect(panel.getByText("Thì của động từ")).toBeVisible();
-    // The panel must never print the model's English type name.
+    // The panel must never print the model's English type name, nor its prose
+    // description dressed up as something the learner wrote.
     await expect(panel.getByText("verb_tense")).toHaveCount(0);
+    await expect(panel.getByText("present tense with incorrect verb form")).toHaveCount(0);
     // The first family opens by default, showing the learner's own sentence.
-    await expect(panel.getByText(wrongOne)).toBeVisible();
+    await expect(panel.getByText(sentenceOne)).toBeVisible();
   } finally {
     await db.learningSession.deleteMany({ where: { id: { in: sessions } } });
   }
@@ -85,7 +113,7 @@ test("one learner's corrections never reach another", async ({ page }) => {
     },
   });
   const secret = `private sentence ${suffix}`;
-  await seedCorrection(other.id, { type: "article", actual: secret, explanationVi: "Riêng tư." }, `Riêng ${suffix}`);
+  await seedCorrection(other.id, secret, { type: "article", actual: "private", explanationVi: "Riêng tư." }, `Riêng ${suffix}`);
 
   try {
     const body = await (await page.request.get("/api/learner/mistakes")).json();

@@ -16,10 +16,25 @@ vi.mock("@/lib/prisma", () => ({ prisma: { learningTurn: { findMany: mocks.turns
 
 import { GET } from "./route";
 
-const turn = (type: string, actual: string) => ({
+let sequence = 0;
+const base = () => {
+  sequence += 1;
+  return {
+    sessionId: "s1",
+    sequence,
+    createdAt: new Date(`2026-09-19T10:00:${String(sequence).padStart(2, "0")}.000Z`),
+    session: { goal: "Đặt món" },
+  };
+};
+const learnerTurn = (message: string) => ({
+  ...base(),
+  actor: "LEARNER",
+  contentJson: JSON.stringify({ message }),
+});
+const aiTurn = (type: string, actual: string) => ({
+  ...base(),
+  actor: "AI",
   contentJson: JSON.stringify({ detectedError: { type, actual, explanationVi: "Giải thích." } }),
-  createdAt: new Date("2026-09-19T10:00:00.000Z"),
-  session: { goal: "Đặt món" },
 });
 
 describe("GET /api/learner/mistakes", () => {
@@ -42,7 +57,7 @@ describe("GET /api/learner/mistakes", () => {
     await GET();
     expect(mocks.memory).toHaveBeenCalledWith("learner-1");
     expect(mocks.turns).toHaveBeenCalledWith(expect.objectContaining({
-      where: { actor: "AI", session: { userId: "learner-1" } },
+      where: { actor: { in: ["LEARNER", "AI"] }, session: { userId: "learner-1" } },
     }));
   });
 
@@ -53,7 +68,12 @@ describe("GET /api/learner/mistakes", () => {
         { errorType: "verb_tense", count: 3, lastEvidenceId: "e2" },
       ],
     });
-    mocks.turns.mockResolvedValue([turn("tense", "I lose"), turn("past simple", "I go")]);
+    mocks.turns.mockResolvedValue([
+      learnerTurn("I lose my bag"),
+      aiTurn("tense", "I lose"),
+      learnerTurn("I go there"),
+      aiTurn("past simple", "I go"),
+    ]);
 
     const body = await (await GET()).json();
 
@@ -61,6 +81,34 @@ describe("GET /api/learner/mistakes", () => {
     expect(body.families[0]).toMatchObject({ key: "tense", labelVi: "Thì của động từ", count: 5 });
     expect(body.families[0].examples).toHaveLength(2);
     expect(body.correctedTurnCount).toBe(2);
+  });
+
+  it("quotes the learner's own sentence and points inside it", async () => {
+    mocks.turns.mockResolvedValue([
+      learnerTurn("Yesterday I lose my suitcase."),
+      aiTurn("tense", "lose"),
+    ]);
+
+    const body = await (await GET()).json();
+
+    expect(body.families[0].examples[0]).toMatchObject({
+      learnerText: "Yesterday I lose my suitcase.",
+      highlights: ["lose"],
+    });
+  });
+
+  it("marks nothing when the model described the mistake instead of quoting it", async () => {
+    mocks.turns.mockResolvedValue([
+      learnerTurn("I arrived in Monday."),
+      aiTurn("tense", "present tense with incorrect verb form"),
+    ]);
+
+    const body = await (await GET()).json();
+
+    expect(body.families[0].examples[0]).toMatchObject({
+      learnerText: "I arrived in Monday.",
+      highlights: [],
+    });
   });
 
   it("returns an empty history rather than failing for a learner with nothing yet", async () => {

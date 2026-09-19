@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { ChevronDown, Quote } from "lucide-react";
+import { segmentHighlights } from "@/core/learning/text-highlight";
 
 interface MistakeExample {
-  actual: string;
+  learnerText: string;
+  highlights: string[];
   explanationVi: string;
   sessionGoal: string;
   occurredAt: string;
@@ -27,6 +29,11 @@ interface MistakeFamily {
  *
  * Deliberately silent. Plan14 forbids speaking a learner's own error aloud, and
  * this whole panel is made of learner errors, so it carries no listen button.
+ *
+ * The quote is the sentence the learner actually sent. `detectedError.actual`
+ * only decides what to underline inside it, and only when it really occurs
+ * there: production has produced a description in that field, and showing a
+ * learner words they never wrote is worse than showing no underline at all.
  */
 export function LearnerMistakes() {
   const [families, setFamilies] = useState<MistakeFamily[] | null>(null);
@@ -88,11 +95,19 @@ export function LearnerMistakes() {
                   <ul className="space-y-3">
                     {family.examples.map((example, index) => (
                       <li key={`${family.key}-${index}`} className="min-w-0">
-                        <p className="flex items-start gap-2 text-sm font-black text-[#a0443f]">
-                          <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden />
-                          <span className="min-w-0 break-words">{example.actual || "(câu của bạn)"}</span>
-                        </p>
-                        <p className="mt-1 break-words text-xs font-bold leading-5 text-[#4a5750]">{example.explanationVi}</p>
+                        {example.learnerText && (
+                          <p className="flex items-start gap-2 text-sm font-bold text-[#4a5750]">
+                            <Quote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#a0443f]" aria-hidden />
+                            <span className="min-w-0 break-words">
+                              {segmentHighlights(example.learnerText, example.highlights).map((segment, part) => (
+                                segment.marked
+                                  ? <mark key={part} className="rounded bg-[#ffd9d4] px-0.5 font-black text-[#a0443f]">{segment.text}</mark>
+                                  : <span key={part}>{segment.text}</span>
+                              ))}
+                            </span>
+                          </p>
+                        )}
+                        <p className={`break-words text-xs font-bold leading-5 text-[#4a5750] ${example.learnerText ? "mt-1" : ""}`}>{example.explanationVi}</p>
                         <p className="mt-1 truncate text-[11px] font-bold text-[#9aa19d]">trong: {example.sessionGoal}</p>
                       </li>
                     ))}
