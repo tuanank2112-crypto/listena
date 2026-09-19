@@ -103,3 +103,4 @@
 | 2026-09-19 15:30 | WP9 demo local (DB tạm :3101, AI Vyce thật) | 4 ảnh Playwright; dòng "Tự động" chưa nêu tên giọng ⇒ sửa ở `8cbf459` |
 | 2026-09-19 15:55 | WP10 trang `/learner/settings` + nav 5 cột | build liệt kê route `/learner/settings`; E2E voice 5/5 |
 | 2026-09-19 16:00 | F-01 tràn ngang 360px | `scrollWidth` 538 → 360 sau khi thêm `min-w-0` cho 3 `<fieldset>`; đã ghim bằng test |
+| 2026-09-19 16:03 | Deploy production lần 2 | `https://listena-41keicmoi-n-listen-ai.vercel.app` READY, alias trả 200; `/learner/settings` trả 307 → `/login?callbackUrl=…` (route mới đã lên và được guard) |

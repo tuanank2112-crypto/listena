@@ -542,16 +542,16 @@
       "result": "only Microsoft David Desktop and Microsoft Zira Desktop (legacy SAPI, scores 32/34)",
       "meaning": "the user must open the app in Edge or install Windows natural voices to actually hear the improvement; the UI now says so"
     },
-    "commit": "dd6a69f",
+    "commit": "54e1c0f",
     "pushed": "origin/codex/vercel-turso-migration",
     "deployment": {
-      "url": "https://listena-qm16tv2ln-n-listen-ai.vercel.app",
+      "url": "https://listena-41keicmoi-n-listen-ai.vercel.app",
       "alias": "https://listena.vercel.app",
       "target": "production",
       "readyState": "READY",
-      "created": "2026-09-19T15:11:55+07:00",
-      "verified": "GET / -> 200; Permissions-Policy: camera=(), microphone=(self), geolocation=(); alias points at this deployment",
-      "cli_lesson": "npx vercel --prod --yes fails with \"Not authorized\" unless --scope n-listen-ai is passed; the CLI default scope is the personal account. A branch push also triggers an automatic Preview build, which is NOT the production deployment."
+      "created": "2026-09-19T16:03:31+07:00",
+      "verified": "GET / -> 200; GET /learner/settings -> 307 to /login?callbackUrl=%2Flearner%2Fsettings, which proves the new route is deployed and guarded",
+      "cli_lesson": "npx vercel --prod --yes needs --scope n-listen-ai or it answers \"Not authorized\"; a branch push separately builds a Preview that is not production"
     },
     "local_demo_2026_09_19": {
       "how": "fresh temporary SQLite in temp dir, next start on :3101 with the real Vyce key; prisma/dev.db untouched",
@@ -568,6 +568,13 @@
       "nav": "learnerNav gains { href: /learner/settings, label: Giọng nói, icon: AudioLines }; mobile grid switched to grid-cols-5 so 9 cells stay two rows",
       "reason": "the picker only existed inside the session player, so changing voice required starting a Mission (one AI call) even though the voice is used on every screen",
       "kept": "VoiceSettings stays in the session player too"
-    }
+    },
+    "commits": [
+      "2f55862 plan17 skill",
+      "dd6a69f plan18 feat",
+      "a81c79b plan18 brain",
+      "8cbf459 plan18 auto-row label",
+      "54e1c0f plan18 settings page + overflow fix"
+    ]
   }
 }
