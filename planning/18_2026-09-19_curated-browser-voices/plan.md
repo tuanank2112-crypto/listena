@@ -2,7 +2,7 @@
 
 - STT: 18
 - Created: 2026-09-19, Asia/Saigon
-- Status: DONE LOCAL 2026-09-19 — 5 gate local xanh 100%; commit/deploy và smoke thủ công chờ user.
+- Status: COMMITTED + DEPLOYED 2026-09-19 — 5 gate local xanh 100%; commit `dd6a69f`, production Vercel READY. Còn mở: smoke thủ công Edge/Chrome (chỉ user làm được) và CI (máy này chưa `gh auth login`).
 - SemVer: **MINOR** (thêm năng lực người dùng thấy được + preference mới) ⇒ bắt buộc đủ bộ SPEC (luật AGENTS.md §2). Version đề xuất 0.8.0 khi mọi gate xanh — **user quyết**, không tự bump.
 - Owner: root (một agent, auto-mode).
 - Input user 2026-09-19: *"thêm các voice khác nghe thanh thoát hơn, dễ nghe hơn mà chuẩn tiếng anh hơn… tôi cần voices đó là các skills chứ k phải dùng api key của elevenlab"*.
@@ -48,7 +48,7 @@
 | WP5 | Skill `english-voices` (`.agents/skills/english-voices/` + shim `.claude/skills/`) | root | SPEC-P182 | ✅ |
 | WP6 | 5 gate local + ghi số đo thật | root | TESTING-ACCEPTANCE | ✅ |
 | WP7 | Đồng bộ não + ADR 0004 + `index.md`/`roadmap`/`changelog` | root | diff + `--check` exit 0 | ✅ |
-| WP8 | Commit/push/deploy | — | user cho phép 2026-09-19 15:05 | 🔄 |
+| WP8 | Commit/push/deploy | — | commit `dd6a69f` (+ `2f55862` cho Plan17), push `origin/codex/vercel-turso-migration`, deploy production `https://listena-qm16tv2ln-n-listen-ai.vercel.app`, alias https://listena.vercel.app trả 200 | ✅ |
 
 ## Checklist thực thi
 
@@ -90,3 +90,6 @@
 | 2026-09-19 15:10 | WP7 đồng bộ não + ADR 0004 | today/state/kernel/index/roadmap/changelog |
 | 2026-09-19 15:05 | Bổ sung 7 giọng rating cao (user yêu cầu) | catalog 40 → 47; SPEC-P180 §4 sửa trước; 5 gate xanh lại (820 test, 39/39) |
 | 2026-09-19 15:05 | Đo giọng thật trên máy user | chỉ David/Zira Desktop (SAPI cũ) ⇒ phải dùng Edge hoặc cài giọng Natural |
+| 2026-09-19 15:08 | Commit | `2f55862` docs(plan17), `dd6a69f` feat(plan18) |
+| 2026-09-19 15:09 | Push | `origin/codex/vercel-turso-migration` d9321f4..dd6a69f |
+| 2026-09-19 15:12 | Deploy production | `https://listena-qm16tv2ln-n-listen-ai.vercel.app` READY; alias https://listena.vercel.app trả 200, header `microphone=(self)`; CLI cần `--scope n-listen-ai` |

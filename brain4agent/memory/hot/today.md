@@ -345,3 +345,13 @@ User: "check lại não, sau đó lấy voice bên elevenlab làm 1 skills voice
 - Thêm 7 giọng được đánh giá cao vào catalog (sửa bảng SPEC-P180 §4 trước theo luật C7): Christopher, Eric, Ana (Microsoft Natural en-US), Alex, Nicky, Aaron (Apple en-US), Arthur (Apple en-GB). Catalog 40 → **47 mục**.
 - Ana và Maisie là giọng trẻ em: hạ điểm có chủ ý (50/55) dù Ana nằm trong tier NEURAL, nếu không nó sẽ chen lên đầu danh sách.
 - 5 gate chạy lại: type-check 0; eslint 0/28; vitest 129 file / **820 test**; build Compiled successfully; Playwright **39/39**.
+
+### 15:08–15:15+07 — Commit, push, deploy (user cho phép tường minh)
+
+- Commit `2f55862` `docs(plan17)` (skill elevenlabs-voice + tham khảo Vocab Master, vốn còn treo từ phiên trước) và `dd6a69f` `feat(plan18)`.
+- Push `origin/codex/vercel-turso-migration`: `d9321f4..dd6a69f`.
+- Deploy production Vercel: `https://listena-qm16tv2ln-n-listen-ai.vercel.app` **READY**, alias https://listena.vercel.app trả **200**, header `Permissions-Policy: camera=(), microphone=(self), geolocation=()`.
+- **Bài học CLI:** `npx vercel --prod --yes` báo `Not authorized` vì scope mặc định là tài khoản cá nhân; phải thêm `--scope n-listen-ai`. Ngoài ra chính cú push đã tự sinh một bản **Preview** (`listena-pynnyl2ce`) — đừng nhầm nó là production.
+- **Giới hạn trung thực:** không nghiệm thu được picker **trên production** vì chưa ai đăng nhập được (thiếu RESEND_API_KEY… — rào cản Plan09 có từ trước, không phải do đợt này). Bằng chứng hiện có là 5 gate local + Playwright chạy trong Chromium thật.
+- Version giữ **0.7.0**; bump 0.8.0 là quyết định của user.
+- Giữ nguyên ngoài commit: `foo`, `test.xlsx`, `prisma/dev.db.bak-plan10`, file ký tự đặc biệt.

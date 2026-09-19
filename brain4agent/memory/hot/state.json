@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan18_curated_browser_voices_done_local__plan16_wp2_wp4_wp5_open",
+  "system_status": "plan18_curated_browser_voices_committed_and_deployed__plan16_wp2_wp4_wp5_open",
   "active_plan": "planning/18_2026-09-19_curated-browser-voices/plan.md",
   "checkpoint": "planning/18_2026-09-19_curated-browser-voices/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -474,9 +474,10 @@
     "scope": "docs-only PATCH: skill elevenlabs-voice (.agents/skills canonical + .claude/skills shim, upstream elevenlabs/skills MIT 9edcbd4) + docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md",
     "code_changed": false,
     "db_changed": false,
-    "committed": false,
+    "committed": true,
     "brain_check": "exit 0 (2026-09-19 02:40+07, after sync)",
-    "open": "Plan16 WP2/WP4/WP5 (ElevenLabs key, cost, bump 0.8.0); AI Studio editor link needs Google login; no UI screenshots"
+    "open": "Plan16 WP2/WP4/WP5 (ElevenLabs key, cost, bump 0.8.0); AI Studio editor link needs Google login; no UI screenshots",
+    "commit": "2f55862"
   },
   "plan18": {
     "date": "2026-09-19",
@@ -514,10 +515,12 @@
       "Google/REMOTE still ranked, not removed"
     ],
     "adr": "docs/adr/0004-curated-browser-voices.md",
-    "committed": false,
+    "committed": true,
     "open": [
-      "commit/push/deploy (user approval)",
-      "manual smoke on Edge + Chrome (Plan18 OPERATIONS 2.4)",
+      "manual smoke on Edge + Chrome (Plan18 OPERATIONS 2.4) - only the user can do this",
+      "the picker cannot be verified ON production: nobody can sign in there because mail is unconfigured (pre-existing Plan09 blocker), so evidence is the 5 local gates plus Playwright in real Chromium",
+      "CI run on the pushed commit not checked (gh not logged in on this machine)",
+      "version bump to 0.8.0 is the user decision; package.json stays 0.7.0",
       "Plan16 WP2/WP4/WP5 still blocked on an ElevenLabs key"
     ],
     "voices_added_second_round": {
@@ -538,6 +541,17 @@
       "probe": "System.Speech GetInstalledVoices on the user machine",
       "result": "only Microsoft David Desktop and Microsoft Zira Desktop (legacy SAPI, scores 32/34)",
       "meaning": "the user must open the app in Edge or install Windows natural voices to actually hear the improvement; the UI now says so"
+    },
+    "commit": "dd6a69f",
+    "pushed": "origin/codex/vercel-turso-migration",
+    "deployment": {
+      "url": "https://listena-qm16tv2ln-n-listen-ai.vercel.app",
+      "alias": "https://listena.vercel.app",
+      "target": "production",
+      "readyState": "READY",
+      "created": "2026-09-19T15:11:55+07:00",
+      "verified": "GET / -> 200; Permissions-Policy: camera=(), microphone=(self), geolocation=(); alias points at this deployment",
+      "cli_lesson": "npx vercel --prod --yes fails with \"Not authorized\" unless --scope n-listen-ai is passed; the CLI default scope is the personal account. A branch push also triggers an automatic Preview build, which is NOT the production deployment."
     }
   }
 }

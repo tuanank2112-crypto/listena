@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased — 2026-09-19 (Plan18 giọng Anh miễn phí nghe hay hơn + học viên tự chọn giọng, MINOR, chưa commit)
+## Unreleased — 2026-09-19 (Plan18 giọng Anh miễn phí nghe hay hơn + học viên tự chọn giọng, MINOR, commit `dd6a69f`, đã deploy production)
 - **Catalog giọng đã thẩm định:** `src/core/voice/browser-voice-catalog.ts` — 47 giọng miễn phí (Microsoft Natural, Apple, Google, SAPI đời cũ) với điểm `listenability` 0..99 cho học viên A1–A2, nhãn và mô tả tiếng Việt. Khớp theo **tên đã chuẩn hoá** (`normaliseVoiceName` cắt đuôi locale, nhãn hãng, hậu tố "Multilingual" của Edge), không theo `voiceURI` vì URI khác nhau giữa các trình duyệt. Đợt bổ sung theo yêu cầu user: Christopher, Eric, Ana (Microsoft Natural en-US), Alex, Nicky, Aaron (Apple en-US), Arthur (Apple en-GB).
 - **Sửa lỗi xếp hạng thật:** trước đây `rankEnglishVoices` rơi xuống `name.localeCompare` nên trong tier NEURAL trên Windows + Edge giọng thắng là giọng đầu alphabet (Andrew thắng Ava). Nay `quality = TIER_RANK*100 + listenability` quyết định; **điểm không bao giờ vượt một bậc tier** nên thứ tự Plan14 (accent → tier → default → local) và vị trí cuối của Google/REMOTE còn nguyên.
 - **Học viên tự chọn giọng:** preference `browserVoices` theo từng accent (chỉ `localStorage`, khoá `listena.voice.v1` không đổi), `setPreferredBrowserVoice`, `WebSpeechEngine.getPreferredVoiceURI` đọc lúc phát và khoá `voiceCache` chứa cả giọng ghim nên đổi giọng ăn ngay không cần F5. Không gửi server, không ghi mastery/LearningEvidence/planner.
@@ -8,9 +8,9 @@
 - **UI:** khu "Giọng tiếng Anh trên thiết bị này" trong `voice-settings.tsx` — "Tự động" luôn đầu, tối đa 6 mục cộng mục đã ghim, nút nghe thử từng giọng, cảnh báo khi giọng đã ghim bị gỡ, gợi ý cài giọng Natural khi máy không có giọng NEURAL.
 - **Skill:** `.agents/skills/english-voices/` (SKILL.md luật E1–E10 + công thức A–D, `references/voice-catalog.md`, `references/install-voices.md`) và shim `.claude/skills/english-voices/SKILL.md`. Không thêm dependency, không sidecar, không key, không endpoint, không đụng DB.
 - **ADR:** `docs/adr/0004-curated-browser-voices.md` (đã loại: sidecar Piper/Kokoro vì không chạy trên Vercel; để điểm vượt tier; lọc bỏ giọng ngoài catalog; loại giọng Google).
-- Gates local: type-check 0; eslint 0 lỗi / 28 cảnh báo; vitest 129 file / 820 test (trước 126/779); `next build` PASS (66 dòng route); Playwright 39/39. Còn mở: commit/deploy và smoke thủ công trên Edge + Chrome.
+- Gates local: type-check 0; eslint 0 lỗi / 28 cảnh báo; vitest 129 file / 820 test (trước 126/779); `next build` PASS (66 dòng route); Playwright 39/39. Đã commit `dd6a69f`, push `origin/codex/vercel-turso-migration`, deploy production Vercel (`https://listena-qm16tv2ln-n-listen-ai.vercel.app`, alias https://listena.vercel.app trả 200). Version giữ 0.7.0 — bump là quyết định của user. Còn mở: smoke thủ công trên Edge + Chrome; không nghiệm thu được trên production vì chưa ai đăng nhập được (mail chưa cấu hình, rào cản có trước).
 
-## Unreleased — 2026-09-19 (Plan17 skill elevenlabs-voice + tham khảo Vocab Master, docs-only, chưa commit)
+## Unreleased — 2026-09-19 (Plan17 skill elevenlabs-voice + tham khảo Vocab Master, docs-only, commit `2f55862`)
 - **Skill `elevenlabs-voice`:** `.agents/skills/elevenlabs-voice/` (SKILL.md luật R1–R10 + công thức; `references/listenai-voice-contract.md`; `references/upstream/` chép nguyên văn từ github.com/elevenlabs/skills MIT commit 9edcbd4: text-to-speech, setup-api-key, installation, streaming, voice-settings, LICENSE) và shim `.claude/skills/elevenlabs-voice/SKILL.md`. Không đổi mã, không thêm dependency.
 - **Tài liệu tham khảo:** `docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md` — chức năng app AI Studio (không LLM), đối chiếu ListenAI, đề xuất plan MINOR, vùng cấm.
 - Gates: `init_brain.js --check` exit 0; không chạy 5 gate mã vì không đổi mã.

@@ -34,8 +34,8 @@
 | G4 build | `npm run build` | ✅ 66 dòng route | — |
 | G5 E2E | `npm run test:e2e` | ✅ 39/39 | — |
 | G6 brain | `init_brain.js --check` exit 0 | ✅ | — |
-| G7 smoke Edge + Chrome (OPERATIONS §2.4) | thủ công | ⬜ | ⬜ |
-| G8 CI xanh sau push | GitHub Actions | — | ⬜ |
+| G7 smoke Edge + Chrome (OPERATIONS §2.4) | thủ công | ⬜ | ⬜ chỉ user làm được; **không nghiệm thu được trên production** vì chưa ai đăng nhập được (mail chưa cấu hình, rào cản Plan09 có trước) |
+| G8 CI xanh sau push | GitHub Actions | — | ⬜ chưa kiểm (`gh` chưa đăng nhập trên máy này) |
 
 Kế hoạch **chỉ được đóng** khi G1–G7 local ✅ **và** G7/G8 môi trường thật ✅.
 
@@ -50,7 +50,7 @@ Kế hoạch **chỉ được đóng** khi G1–G7 local ✅ **và** G7/G8 môi 
 | Playwright | 38/38 | **39/39** |
 | T4 `chooseEnglishVoice` trên máy Windows/Edge giả lập | `Microsoft Andrew Online (Natural)` | **`Microsoft Ava Online (Natural)`** |
 
-G7 (smoke thủ công Edge + Chrome) và G8 (CI) vẫn ⬜ — cần user chạy trình duyệt thật và cho phép push.
+G1–G6 ✅. Deploy production đã chạy 2026-09-19: `https://listena-qm16tv2ln-n-listen-ai.vercel.app` READY, alias https://listena.vercel.app trả 200 với `Permissions-Policy: microphone=(self)`. G7 và G8 vẫn ⬜: smoke phải do user mở Edge/Chrome thật, và production hiện **không thể đăng nhập** (mail chưa cấu hình) nên picker chỉ nghiệm thu được ở local + Playwright.
 
 ## 3. Bằng chứng phải ghi lại (số thật, không chỉ "xanh")
 
