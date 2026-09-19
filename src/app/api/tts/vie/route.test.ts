@@ -54,6 +54,49 @@ describe("VieNeu TTS route", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("fails closed on a hosted runtime when the sidecar URL is missing or loopback", async () => {
+    vi.stubEnv("TTS_API_KEY", "shared-key");
+    vi.stubEnv("APP_RUNTIME", "vercel");
+
+    // A leftover key with no reachable address: answer immediately, do not dial out.
+    const missing = await POST(request({ text: "xin chào" }));
+    expect(missing.status).toBe(503);
+
+    vi.stubEnv("VIENEU_URL", "http://localhost:8001");
+    const loopback = await POST(request({ text: "xin chào" }));
+    expect(loopback.status).toBe(503);
+
+    vi.stubEnv("VIENEU_URL", "http://127.0.0.1:8001");
+    const ipLoopback = await POST(request({ text: "xin chào" }));
+    expect(ipLoopback.status).toBe(503);
+
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("still uses a published sidecar on a hosted runtime", async () => {
+    vi.stubEnv("TTS_API_KEY", "shared-key");
+    vi.stubEnv("APP_RUNTIME", "vercel");
+    vi.stubEnv("VIENEU_URL", "https://sidecar.example.com");
+    vi.stubEnv("VIENEU_DEFAULT_VOICE", "vi-1");
+    fetchMock.mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+
+    const response = await POST(request({ text: "xin chào" }));
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith("https://sidecar.example.com/tts", expect.anything());
+  });
+
+  it("keeps the local default when the runtime is not hosted", async () => {
+    vi.stubEnv("TTS_API_KEY", "shared-key");
+    vi.stubEnv("VIENEU_DEFAULT_VOICE", "vi-1");
+    fetchMock.mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+
+    const response = await POST(request({ text: "xin chào" }));
+
+    expect(response.status).toBe(200);
+    expect(fetchMock).toHaveBeenCalledWith("http://localhost:8001/tts", expect.anything());
+  });
+
   it("fails closed when the shared sidecar key is absent", async () => {
     const response = await POST(request({ text: "xin chào" }));
 

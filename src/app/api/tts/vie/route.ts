@@ -10,9 +10,31 @@ const RequestSchema = z.object({
   speed: z.literal(1.0).default(1.0),
 });
 
+const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]", "::1", "0.0.0.0"]);
+
+/** A serverless function cannot reach a sidecar bound to its own loopback. */
+function isLoopback(url: string) {
+  try {
+    return LOOPBACK_HOSTS.has(new URL(url).hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The sidecar is a separate process, so on a hosted runtime it only exists if
+ * someone published it at a reachable address. A leftover key plus the local
+ * default used to send every hosted request on a pointless round trip to
+ * localhost (30s budget) before the learner fell back to the browser voice;
+ * failing closed here answers 503 immediately instead.
+ */
 function sidecarConfig() {
   const key = process.env.TTS_API_KEY?.trim();
-  return key ? { url: process.env.VIENEU_URL ?? "http://localhost:8001", key } : null;
+  if (!key) return null;
+  const hosted = process.env.APP_RUNTIME === "vercel";
+  const url = process.env.VIENEU_URL?.trim() || (hosted ? "" : "http://localhost:8001");
+  if (!url || (hosted && isLoopback(url))) return null;
+  return { url, key };
 }
 
 async function fetchVoices(config: NonNullable<ReturnType<typeof sidecarConfig>>) {
