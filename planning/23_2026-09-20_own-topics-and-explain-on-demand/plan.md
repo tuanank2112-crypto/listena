@@ -8,7 +8,7 @@
 | Loại | MINOR (SemVer) — đủ bộ SPEC theo luật §2 |
 | Phiên bản dự án | 0.7.0 (bump là quyết định của user) |
 | Ngày mở | 2026-09-20 |
-| Trạng thái | SHIPPED — migration đã áp + deploy 2026-09-20 09:50; đường AI thật **đã chạy** (local, Vyce thật) và phơi ra một lỗi đã sửa; **bản sửa chưa deploy**; nghiệm thu tay trên production còn chờ mật khẩu |
+| Trạng thái | **HOÀN TẤT** — mọi exit gate xanh cả local lẫn server. Deploy cuối `listena-lyc7k1jj8` (commit `9b37073`); đường sinh chủ đề bằng AI thật đã nghiệm thu **trên production** bằng tài khoản thật 2026-09-20 12:30 |
 | Nguồn yêu cầu | User sau khi xem production: "quá ít chủ đề… cần có chức năng tạo chủ đề chứ không nên mock-data", "reasoning của AI không nên nói ra và dịch thành tiếng Việt, chỉ cần có thêm nút giải nghĩa", và "tôi không muốn nó bị truyền thống hoá khi có sự kết hợp của AI" |
 
 ## Bảng trỏ SPEC
@@ -159,7 +159,7 @@ Ba điều chỉ lượt chạy thật mới chứng minh được:
 | `npx vitest run` | **949 test** (948 + 1 live skipped; trước 939) | ✅ local / ⬜ server |
 | `npm run build` | PASS, có 2 route scenario | ✅ local / ⬜ server |
 | `npx playwright test` | **53/53** (trước 50/50) | ✅ local / ⬜ server |
-| Đường sinh chủ đề bằng **AI thật** | chạy được, sau khi sửa lỗi cap danh sách | ✅ local (Vyce thật) / ⬜ server |
+| Đường sinh chủ đề bằng **AI thật** | chủ đề 201/12s, Mission 201/15s, lượt chấm 201/103s, `voiceScript` chỉ NPC/en | ✅ local / ✅ **server** |
 | Migration áp lên production | **33 bảng/65 index → 34/66**, integrity ok, 0 vi phạm FK | ✅ **server** |
 
 ### 2026-09-20 09:50 — Migration production và deploy

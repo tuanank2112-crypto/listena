@@ -71,7 +71,18 @@ Phải có **cả** provider cấu hình đúng **và** `LISTENAI_LIVE_AI_PROBE=
 
 **Bằng chứng lượt chạy xanh** (2026-09-20 01:14): chủ đề viết xong trong 5.3s; từ hay sai đã gieo (`check in`) có mặt cả trong `targetVocabulary` lẫn câu mở đầu; vào vai được khoá `custom-<uuid>`; máy chủ chấm bắt đúng lỗi `tense` đã cài; `voiceScript` chỉ có `["NPC/en","NPC/en","NPC/en"]` — **SPEC-P231 được chứng minh trên đầu ra của model thật**, không phải của stub.
 
-**Còn lại đúng một việc cho production:** chạy tay một lần trên `https://listena.vercel.app` bằng tài khoản thật, vì mọi bằng chứng ở trên là hạ tầng local với provider thật. Cần mật khẩu hiện tại của tài khoản kiểm thử — xem [`OPERATIONS.md`](OPERATIONS.md) mục 3.
+**ĐÃ CHẠY TRÊN PRODUCTION 2026-09-20 12:30** (deploy `listena-lyc7k1jj8`, tài khoản thật `lê ý`):
+
+| Bước | Kết quả |
+|---|---|
+| `POST /api/learner/mission-scenarios` | **201 trong 12s** — chủ đề `Online Game Teammate`, `summaryVi` tiếng Việt, từ cần nói: strategy/move/coordinate/plan/attack/defend/ready/teamwork |
+| `POST /api/learning-sessions` MISSION trên `custom-5db0beaf…` | **201 trong 15s**, lượt mở đầu `voiceScript ["NPC/en","NPC/en"]` |
+| `POST …/turns` (câu cài lỗi quá khứ) | **201 trong 103s** — npcReply nằm **trong tình huống học viên tự đặt** và dùng chính từ của nó; `detectedError.type = "tense"`; score 0.5 |
+| `voiceScript` lượt chấm | **`["NPC/en","NPC/en","NPC/en"]`** — không dòng COACH nào |
+
+⇒ SPEC-P231 và SPEC-P232 được chứng minh **trên production**, không phải trên stub.
+
+**Hai phát hiện mới, ngoài phạm vi Plan23** (ghi ở `brain4agent/memory/hot/today.md` mục 12:10–12:40): đường **lượt chấm** trên production chỉ **1/4 lần thành công** (3 lần `524` ở 125–130s), và **một lần `schema_validation_failed`** — đầu ra lượt chấm của model trượt `TutorTurnOutputSchema`, cùng họ lỗi vừa sửa ở đây nhưng trên đường chính. Cả hai cần quyết định của user, **chưa sửa**.
 
 ## 4. Exit Gates
 
@@ -81,5 +92,5 @@ Phải có **cả** provider cấu hình đúng **và** `LISTENAI_LIVE_AI_PROBE=
 | Migration cộng thêm, `dev.db` không bị áp | ✅ local |
 | Migration áp lên production + integrity | ✅ server (33/65 → 34/66, integrity ok, 0 fk) |
 | Deploy sau migration | ✅ server (`listena-mpb3rwmfn`, 2026-09-20 09:50) |
-| **Tạo một chủ đề bằng AI thật và vào vai nó** | ✅ local (Vyce thật, 2026-09-20 01:14) / ⬜ server |
-| **Deploy lại kèm bản sửa `clampGeneratedScenarioLists`** | ⬜ server — production đang chạy bản **chưa** có bản sửa này |
+| **Tạo một chủ đề bằng AI thật và vào vai nó** | ✅ local (01:14) / ✅ **server** (production, tài khoản thật, 12:30) |
+| **Deploy lại kèm bản sửa `clampGeneratedScenarioLists`** | ✅ server (`listena-lyc7k1jj8`, commit `9b37073`) |

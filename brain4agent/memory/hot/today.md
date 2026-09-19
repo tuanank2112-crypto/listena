@@ -730,3 +730,51 @@ type-check 0; eslint **0/0**; vitest **140 file (139 chạy + 1 skipped) / 949 t
 1. **Production đang chạy bản CHƯA có `clampGeneratedScenarioLists`** ⇒ khoảng 2/15 lượt tạo chủ đề vẫn có thể trả `503`. Cần deploy lại (không có migration mới, nên deploy thẳng được).
 2. **Nghiệm thu tay trên production vẫn chưa làm** — cần **mật khẩu hiện tại** của tài khoản kiểm thử (`tuanank2112@gmail.com`), hoặc user tự chạy.
 3. Chưa commit: user chưa yêu cầu.
+
+## 2026-09-20 12:10–12:40+07 — Deploy bản sửa, và nghiệm thu Plan23 TRÊN PRODUCTION bằng học viên thật
+
+User duyệt "commit rồi deploy luôn" và đưa mật khẩu hiện tại của `tuanank2112@gmail.com` (**`12345678`** — user đã đồng ý sẽ đổi lại sau; mật khẩu này lại đi qua lịch sử chat nên **phải nhắc user đổi**).
+
+Commit `9b37073` + push `codex/vercel-turso-migration`. Deploy production `listena-lyc7k1jj8` READY. **Không có migration mới** nên deploy thẳng, không cần thứ tự đặc biệt.
+
+### Đường Plan23 ĐÃ CHẠY THẬT TRÊN PRODUCTION — xanh
+
+| Bước | Kết quả |
+|---|---|
+| `POST /api/auth/callback/credentials` | 302, session `lê ý` / `isEmailVerified: true` |
+| `POST /api/learner/mission-scenarios` (AI thật viết chủ đề) | **201 trong 12s** |
+| Chủ đề sinh ra | `Online Game Teammate` / Alex / `summaryVi` tiếng Việt; từ cần nói: strategy, move, coordinate, plan, attack, defend, ready, teamwork |
+| `POST /api/learning-sessions` mode MISSION trên khoá `custom-5db0beaf…` | **201 trong 15s**, lượt mở đầu `voiceScript: ["NPC/en","NPC/en"]` |
+| `POST …/turns` với câu cài lỗi quá khứ | **201 trong 103s** (lần thứ 3 thử) |
+| Lượt AI trả về | npcReply nằm **trong tình huống học viên tự đặt** và dùng chính từ của nó ("Let's plan our next move so we can attack together"); `detectedError.type = "tense"`; `score 0.5` |
+| `voiceScript` của lượt chấm | **`["NPC/en","NPC/en","NPC/en"]`** — không có dòng COACH nào |
+
+⇒ **SPEC-P231 và SPEC-P232 được chứng minh trên production, bằng tài khoản thật, với AI thật.** Exit gate cuối của Plan23 đóng.
+
+### PHÁT HIỆN MỚI 1 — đường LƯỢT CHẤM trên production phập phù hơn nhiều so với local
+
+5 lần gọi `POST …/turns` cùng một nội dung, cùng một phiên:
+
+| Lần | Kết quả | Thời gian |
+|---|---|---|
+| 1 | `503 AI_UNAVAILABLE` + `retryAfterSeconds: 15` | 130s |
+| 2 | `503 AI_UNAVAILABLE` **không có** `retryAfterSeconds` | **14s** |
+| 3 | **`201` thành công** | 103s |
+| 4 | `503 AI_UNAVAILABLE` + `retryAfterSeconds` | 128s |
+
+**1/4 thành công.** Local cùng đường này mất 10–23s và thành công ở lần 1 hoặc 2.
+
+**Giả thuyết (ghi rõ là giả thuyết, chưa chứng minh):** prompt lượt chấm trên một tài khoản **có lịch sử thật** (learner memory, lỗi hay lặp, từ yếu) sinh dài hơn nhiều so với tài khoản gieo sạch ở local, nên thời gian sinh nằm **sát trần ~125s của gateway Vyce**. Mỗi lần vượt trần là một `524`. Đây **KHÁC** thứ user đã chấp nhận ngày 07:00: user chấp nhận **chậm hơn một chút**, không phải **1/4 lượt thành công**. Cần user quyết có mở kế hoạch riêng không.
+
+### PHÁT HIỆN MỚI 2 — `schema_validation_failed` trên lượt chấm (cùng họ lỗi vừa sửa cho Plan23)
+
+Lần thử số 2 hỏng sau **14s** và **không kèm `retryAfterSeconds`**. Truy theo mã: chỉ `tutor-orchestrator.ts:223` `AIUnavailableError({reason:"schema_validation_failed"})` là đường tạo ra đúng dạng đó (mọi nhánh `upstream_*` trong provider đều kèm `DEFAULT_RETRY_AFTER_SECONDS`). ⇒ **đầu ra lượt chấm của model trượt `TutorTurnOutputSchema`**, và học viên đang giữa cuộc hội thoại nhận "Gia sư AI hiện chưa sẵn sàng" rồi **mất lượt đó**.
+
+Đây đúng là họ lỗi vừa sửa cho `GeneratedScenarioSchema` (cap đặt không có số đo), nhưng **trên đường chính của sản phẩm**. CHƯA SỬA, cố ý: vùng cấm vừa ghi trong SPEC-P232 nói **không** được đem `clampGeneratedScenarioLists` sang schema khác — ở lượt chấm, mục thừa có thể là chỗ dựa (đáp án, câu recast), nên phải **đo trường nào trượt trước**, y như cách đã làm cho chủ đề. Việc này cần một kế hoạch riêng và quyết định của user.
+
+### Tác dụng phụ đã gây ra, phải nói rõ
+
+- Gọi `POST /api/learning-sessions` kèm **`replaceActive: true`** nên **phiên đang dở trước đó của user đã bị đóng** (theo SPEC-P131: abandon nếu chưa có bằng chứng, PARTIAL completion nếu có). Phiên đang dở mà ảnh chụp 07:05 nhìn thấy không còn ở trạng thái cũ.
+- Dashboard của user **hiện đang trỏ "tiếp tục phiên chưa hoàn tất"** vào phiên kiểm thử `fc5b10ac` (có 1 lượt chấm thật, score 0.5).
+- Tài khoản user nay có **một chủ đề thật** `Online Game Teammate` do phép thử tạo. Để nguyên vì nó là bằng chứng user xem được, và nó là một chủ đề dùng được.
+- **PHẢI nhắc user đổi mật khẩu** `12345678` — nó đã đi qua lịch sử chat.

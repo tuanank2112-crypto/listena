@@ -1,7 +1,7 @@
 {
   "current_version": "0.7.0",
   "brain_template_version": "1.4.0",
-  "system_status": "plan23_ai_path_proven_live_locally__a_real_bug_found_and_fixed__redeploy_pending",
+  "system_status": "plan23_verified_on_production__two_new_findings_on_the_graded_turn_path",
   "active_plan": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "checkpoint": "planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md",
   "planned_improvement_plan": "planning/12_2026-09-17_project-completion-release/plan.md",
@@ -822,6 +822,38 @@
       "production still runs the build WITHOUT the clamp, so ~2/15 scenario creations can still answer 503; redeploy (no new migration, so deploy directly)",
       "the by-hand production check still needs the current password for tuanank2112@gmail.com, or the user runs it",
       "not committed - the user has not asked"
+    ]
+  },
+  "plan23_production_verification": {
+    "date": "2026-09-20",
+    "commit": "9b37073",
+    "deployment": "listena-lyc7k1jj8 (production, Ready) - no new migration, so deployed directly",
+    "authorized_by": "the user chose commit+deploy and supplied the current test-account password",
+    "MUST_TELL_THE_USER": "rotate the password for tuanank2112@gmail.com - it passed through chat history again",
+    "green": {
+      "scenario_authoring": "POST /api/learner/mission-scenarios -> 201 in 12s; 'Online Game Teammate', Vietnamese summaryVi, words to say: strategy/move/coordinate/plan/attack/defend/ready/teamwork",
+      "mission_start": "POST /api/learning-sessions MISSION on custom-5db0beaf -> 201 in 15s, opening voiceScript ['NPC/en','NPC/en']",
+      "graded_turn": "201 in 103s; npcReply stayed inside the learner's own situation using its own words; detectedError.type 'tense'; score 0.5",
+      "voice_invariant": "voiceScript ['NPC/en','NPC/en','NPC/en'] - no COACH line, so SPEC-P231 is proven on production with a real account and a real model"
+    },
+    "finding_1_graded_turn_flaky_on_production": {
+      "measured": "4 calls, same content, same session: 130s 503, 14s 503, 103s 201, 128s 503 - 1 of 4 succeeded",
+      "local_comparison": "the same path locally takes 10-23s and succeeds on the first or second try",
+      "hypothesis_not_proven": "the turn prompt on an account with real history generates far more than on a freshly seeded local account, so generation sits at the Vyce gateway's ~125s ceiling and each overshoot is a 524",
+      "why_it_is_not_the_accepted_trait": "on 2026-09-20 07:00 the user accepted that a gateway is somewhat slower - not that 1 turn in 4 succeeds",
+      "status": "needs the user's decision on whether to open a plan"
+    },
+    "finding_2_schema_validation_failed_on_the_graded_turn": {
+      "evidence": "one attempt failed after 14s with AI_UNAVAILABLE and NO retryAfterSeconds; only tutor-orchestrator.ts:223 produces that shape, since every upstream_* branch carries DEFAULT_RETRY_AFTER_SECONDS",
+      "meaning": "the model's turn output failed TutorTurnOutputSchema, and a learner mid-conversation loses that turn to 'Gia su AI hien chua san sang'",
+      "same_family": "the cap-without-a-measurement bug just fixed for GeneratedScenarioSchema, but on the product's main path",
+      "deliberately_not_fixed": "SPEC-P232's forbidden zone says the scenario clamp must not be reused on another schema - on a graded turn a surplus item may be load-bearing (an answer, a recast), so the failing field has to be measured first, exactly as it was for scenarios",
+      "status": "needs its own plan and the user's decision"
+    },
+    "side_effects_caused": [
+      "replaceActive: true closed the user's previously unfinished session (SPEC-P131: abandoned without evidence, PARTIAL completion with it)",
+      "the dashboard now points 'resume your unfinished session' at the probe session fc5b10ac, which holds one real graded turn at score 0.5",
+      "the account now owns one real scenario, 'Online Game Teammate' - left in place because it is usable and is evidence the user can look at"
     ]
   }
 }
