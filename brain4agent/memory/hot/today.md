@@ -581,3 +581,15 @@ User: "làm cái vocab master đi. đợi gì nữa?" ⇒ **duyệt migration t�
 **Gates:** type-check 0; eslint 0/0; vitest **138 file / 921 test** (trước 135/887); build PASS có `/api/learner/lessons/[lessonId]/journey`; Playwright **50/50** (trước 46/46). `prisma migrate status`: 11 migration, cái mới **đang chờ** trên dev.db (cố ý).
 
 **CÒN MỞ — thứ tự BẮT BUỘC:** áp migration lên Turso production **TRƯỚC**, rồi mới deploy. Deploy trước sẽ làm hỏng production vì mã mới truy vấn bảng/cột chưa tồn tại.
+
+### 05:00–05:40+07 — Công cụ áp migration, và chỗ tôi KHÔNG tự làm được
+
+**Không có đường nào để tôi áp migration lên Turso production:** `TURSO_DATABASE_URL`/`TURSO_AUTH_TOKEN` là biến **sensitive** trên Vercel (không đọc ngược được), máy **không có** file `.env` chứa chúng, và **turso CLI chưa cài**. Não ghi kết quả của Plan13 ("4 migration đã apply") nhưng **không ghi cách làm**.
+
+**Đã viết `scripts/apply-turso-migration.ts`** theo đúng chuẩn repo (cạnh `verify-turso-migration.ts` vốn chỉ đọc): áp **một** migration có tên, **không** bao giờ "all pending"; từ chối migration đã ghi trong `_prisma_migrations`; **từ chối migration áp dở** (một phần object đã có) thay vì áp chồng; chạy toàn bộ trong **một batch** nên hỏng thì không để lại gì; và **không bao giờ in** URL, token hay một dòng dữ liệu nào.
+
+**Đã diễn tập thật:** dựng một DB từ 14 migration còn lại — ra đúng **32 bảng / 62 index**, khớp chính xác con số não ghi cho production. Sau khi áp: **33 bảng / 65 index**, integrity ok, 0 vi phạm FK. Chạy lần hai: "Nothing to do". Một lần chạy hỏng (do biến shell mất giữa hai lệnh) cũng chứng minh batch **thất bại nguyên khối, không tạo gì**.
+
+**Production hiện vẫn lành và vẫn là mã Plan21** (`/` 200, `/learner/progress` 307, route journey **404** — đúng kỳ vọng vì chưa deploy). Commit `4f52537` + công cụ đã push nhưng **CHƯA deploy**, đúng thứ tự bắt buộc.
+
+**CẦN USER:** đặt `TURSO_DATABASE_URL` + `TURSO_AUTH_TOKEN` của production rồi chạy applier (hoặc đưa tôi credential). Sau đó tôi deploy và nghiệm thu.
