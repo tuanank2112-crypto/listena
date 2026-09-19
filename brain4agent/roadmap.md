@@ -1,31 +1,33 @@
 # ListenAI roadmap
 
-## 2026-09-20 — Yêu cầu user sau khi xem production (ĐÃ GHI, CHƯA LÀM)
+## 2026-09-20 — Trạng thái ngay lúc này
 
-User xem toàn bộ sản phẩm trên production rồi nêu ba thiếu sót. Đây là **ưu tiên kế tiếp**, chưa mở plan:
+Bốn kế hoạch đã lên production trong hai ngày: [Plan20](../planning/20_2026-09-19_weak-words-random-review/plan.md) (Từ yếu, Ôn tập ngẫu nhiên, ba tốc độ nghe), [Plan21](../planning/21_2026-09-19_recurring-mistakes/plan.md) (Lỗi hay lặp), [Plan22](../planning/22_2026-09-20_vocab-master-journey/plan.md) (chặng học 5 bước, combo máy chủ) và [Plan23](../planning/23_2026-09-20_own-topics-and-explain-on-demand/plan.md) (chủ đề do học viên tạo, giải nghĩa khi được hỏi).
 
-**1. Chủ đề sinh bài tập phải là dữ liệu, không phải mã.** Hiện chỉ có **3 chủ đề** và chúng là union type biên dịch (`mission-templates.ts:4`) cộng một bản sao hard-code ở client (`games-client.tsx:66`), nên thêm một chủ đề phải sửa hai nơi rồi deploy. User muốn có **chức năng tạo chủ đề**. Điểm khó thật: `isMissionScenarioKey` đang làm rào kiểm ở planner và `next-action.ts` — thay union type bằng dữ liệu thì **vẫn phải kiểm**, tuyệt đối không nới thành nhận chuỗi tự do từ client vì như thế client điều khiển được prompt của AI.
+Hai yêu cầu user nêu sau khi xem production — **quá ít chủ đề, chủ đề là mock-data** và **reasoning bị đọc/dịch tự động** — đã làm xong trong Plan23.
 
-**2. Không đọc to và không dịch sẵn reasoning của AI.** `voice-script.ts` đang đẩy `coachMessage` thành dòng `COACH` tiếng Việt trong `voiceScript`, tức lời giải thích bị phát tự động mỗi lượt. User muốn bỏ hẳn phần đó, **thay bằng nút "giải nghĩa"** để học viên chủ động bấm. Đây là thu hẹp thêm vùng cấm Plan14: không chỉ câu sai của học viên, cả lời giải thích cũng không tự phát.
+**Việc còn mở, theo thứ tự đáng làm:**
 
-**3.** (chưa nêu chi tiết — user nói "vài thiếu sót", hai mục trên là hai mục được nêu rõ.)
+1. **Nghiệm thu đường sinh chủ đề bằng AI thật.** E2E gieo sẵn dữ liệu để khỏi tốn lượt AI, nên đường gọi provider thật chưa ai chạy. Lần thử tay bị chặn vì mật khẩu tài khoản kiểm thử đã đổi — cần user cấp lại hoặc tự thử.
+2. **Thiếu sót thứ ba.** User nói "vài thiếu sót" nhưng mới nêu rõ hai; cái còn lại chưa biết.
+3. **Một đợt thử với người học thật.** Sản phẩm đã đúng về mặt kỹ thuật; chưa ai chứng minh nó **dạy được**. Đây là thứ duy nhất không ai trong repo làm thay được.
+4. **Bump 0.8.0** — quyết định của user. Gate D3 (live AI) đã mở từ 2026-09-19.
 
-Việc đã xong trước đó: Plan20/21/22 đã lên production và nghiệm thu bằng học viên thật. Còn mở: bump 0.8.0 (quyết định của user), và một đợt thử với người học thật để biết sản phẩm có dạy được hay không.
+**Đã đóng:** rào cản `NEXTAUTH_URL` (2026-09-19), sự cố Vyce chậm lượt đầu (user xác nhận là đặc tính gateway, 2026-09-20).
 
-
-## 2026-09-19 — Plan17 skill `elevenlabs-voice` + tham khảo Vocab Master (DONE LOCAL, docs-only, chưa commit)
+## 2026-09-19 — Plan17 skill `elevenlabs-voice` + tham khảo Vocab Master (DONE, docs-only, commit `2f55862`)
 
 Skill ElevenLabs đưa vào repo dưới dạng tài liệu quy trình ([canonical](../.agents/skills/elevenlabs-voice/SKILL.md), shim `.claude/skills/`), không thêm mã/SDK. Khảo sát app "English Vocab Master A2-B1" ghi ở [tham khảo](../docs/REFERENCE_VOCAB_MASTER_A2_B1_2026-09-19.md): ứng viên plan MINOR kế tiếp = lesson journey 5 bước cho remediation lesson, màn "Từ hay sai" + "Ôn tập ngẫu nhiên" từ evidence hiện có, 3 tốc độ nghe tại Nghe & viết, combo/điểm do server tính. Vùng cấm: chấm điểm client, bỏ đăng nhập, Firebase. Ưu tiên trước đó vẫn là Plan16 WP2/WP4/WP5 (key ElevenLabs thật, chi phí, bump 0.8.0) và mail production.
 
-## 2026-09-18 — Plan16 rollout Voice AI (PLANNED, worker thực thi)
+## 2026-09-18 — Plan16 rollout Voice AI (DONE một phần, commit `f6f6a5b` + `d9321f4`, đã deploy; WP2/WP4/WP5 vẫn mở vì chưa có key ElevenLabs)
 
 Bước kế tiếp là [Plan16](../planning/16_2026-09-18_voice-rollout/plan.md): commit Plan15 + CI → xác minh giọng thật bằng `voice:doctor` với key ElevenLabs → env Vercel + deploy + smoke → theo dõi chi phí → bump 0.8.0 → đồng bộ não. Cần user: key, duyệt commit, Vercel, duyệt bump.
 
-## 2026-09-18 — Plan15 Voice ở mọi màn hình + ElevenLabs (LOCAL ACCEPTED, chưa commit)
+## 2026-09-18 — Plan15 Voice ở mọi màn hình + ElevenLabs (DONE, commit `f6f6a5b`, đã deploy production)
 
 Giọng AI ElevenLabs server-side (không key = giọng trình duyệt), chính sách xếp hạng giọng của tài khoản (giọng Default hết hạn 31/12/2026 nên không hard-code ID), route audio cho đáp án ẩn, voice ở game/bài riêng/session mở đầu/bài học/flashcards. Việc tiếp theo: user tạo key → `npm run voice:doctor -- --probe` → env Vercel → deploy → smoke; commit/CI; bump version. Sau pilot: cân nhắc ngân sách TTS theo user.
 
-## 2026-09-18 — Plan14 Voice AI (LOCAL ACCEPTED, chưa commit)
+## 2026-09-18 — Plan14 Voice AI (DONE, commit `8d8c3e6` + `ec4fbd4`, đã deploy production)
 
 Voice AI được thêm theo yêu cầu user: văn bản nói chuẩn hoá (`prepareSpokenText`), chính sách giọng chọn lọc (neural trước, novelty loại, accent học viên), `voiceScript` do server dựng cho từng lượt AI (không bao giờ đọc câu sai của học viên), nói để trả lời bằng recogniser trình duyệt, `POST /api/voice/pronunciation` chấm mức từ và ghi `VOICE_PRACTICE` vào sổ phiên. Không env mới, không sidecar, chạy nguyên trên Vercel. Việc tiếp theo: user commit/push → CI → deploy → smoke thủ công theo trình duyệt (Plan14 OPERATIONS §3) → quyết định bump 0.8.0. Sau pilot mới cân nhắc dùng điểm phát âm làm bằng chứng kỹ năng.
 
